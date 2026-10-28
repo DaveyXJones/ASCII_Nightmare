@@ -26,12 +26,10 @@ minutes, so `main` must always be playable.
   settings; they need a computer.
 - **Still to do, owner's side:** put it on the phone's home screen (Safari: Share → **Add to Home
   Screen**; Chrome: ⋮ → **Add to Home screen**). Opened from the icon, it runs full screen.
-- **Optional, ask first:** old branches already contained in `main` (the first version,
-  `claude/ascii-game-character-movement-3rlu42`, and finished `ccr-…` session branches) can be
-  deleted. A Claude session can only push to its own branch (deleting another is cut off with
-  "unexpected disconnect"), so the owner does it: https://github.com/DaveyXJones/ASCII_Nightmare/branches,
-  trash-can icon at the right end of each branch's row. A merged PR's page also has a **Delete
-  branch** button.
+- **Old branches.** Finished `ccr-…` session branches can be deleted once merged (ask first). A
+  Claude session can only push to its own branch (deleting another is cut off with "unexpected
+  disconnect"), so the owner does it: https://github.com/DaveyXJones/ASCII_Nightmare/branches,
+  trash-can icon at the right end of each branch's row, or **Delete branch** on a merged PR's page.
 
 ## Hard rules
 
@@ -43,7 +41,7 @@ minutes, so `main` must always be playable.
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → render →
-  input → survival → game`. A file may use globals from files before it at load time, and from any
+  input → survival → crafting → game`. A file may use globals from files before it at load time, and from any
   file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
@@ -60,11 +58,12 @@ minutes, so `main` must always be playable.
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things) and `PLAYER_SPRITES`/`PLAYER_INK`. Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`). |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites) and `warmth` (heal faster nearby). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
-| `js/survival.js` | `ITEMS`, vitals and drain rates, `findTarget`, `useTarget`, `eatBerry`, particles and floating text. |
+| `js/survival.js` | `ITEMS`, vitals and drain rates, `besideFire`, `findTarget`, `useTarget`, `eatBerry`, `BURSTS`, particles and floating text. |
+| `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
 | `js/game.js` | `state`, player movement and collision, menus, death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
 | `fonts/` | DejaVu Sans Mono (regular and bold) as WOFF2, with its license. |
@@ -82,6 +81,22 @@ minutes, so `main` must always be playable.
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
+
+## Crafting and build mode (js/crafting.js)
+
+- `RECIPES` drives everything: the craft panel makes one card per recipe at startup
+  (`setupCrafting`), in table order, and number keys pick by that order. A recipe with `tool` puts
+  a key in `survivor.tools` (lost on death, like the pack); one with `builds` starts build mode.
+  A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
+  `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
+- The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not
+  `pointerdown`, so the tap that opens a panel can't land on the panel as it appears.
+- Build mode is `state.building` (a recipe key) and `state.buildSpot` (`{ x, y, problem }`,
+  recomputed each update). The spot is the tile one past the front edge of the feet, so it never
+  overlaps the player. While building, `findTarget` is skipped and the action button builds once
+  per press (the `'action'` press from `input.js`), not on hold. Anything built is an ordinary
+  object with an `action` that takes it down again, so a misplaced wall is never a trap.
+- `.game > canvas` is the map; the panel's previews are canvases too, copied from `spriteImage`.
 
 ## Rendering (js/render.js)
 
@@ -106,6 +121,10 @@ minutes, so `main` must always be playable.
   grid). Anything new that's drawn in this pass must call `noteDrawn` so cliffs and the player's
   ghost outline stay correct.
 - Tall grass is in the ground cache and drawn again over the player's feet (`drawPlayer`).
+- Objects with `frames` pick a sprite by `state.flameFrame` plus the tile index (`objectSprite`);
+  the counter stops under reduced motion, like `waterFrame`.
+- The build-mode ghost (`drawBuildSpot`) is drawn translucent after the standing pass, on top of
+  everything, so it's visible even behind a tree.
 
 ## Sprites (js/sprites.js)
 

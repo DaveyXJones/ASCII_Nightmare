@@ -70,7 +70,7 @@ body {
   -webkit-touch-callout: none;
 }
 
-.game canvas {
+.game > canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -180,6 +180,12 @@ button:focus-visible {
   animation: pulse 0.9s ease-in-out infinite alternate;
 }
 
+/* Warming yourself by a campfire: the heart glows while health comes back faster. */
+.health.warm .vital-icon {
+  color: #ffb347;
+  text-shadow: 0 0 6px #ff8a2a;
+}
+
 @keyframes pulse {
   from { box-shadow: 0 0 0 1px rgba(255, 90, 80, 0.2); }
   to { box-shadow: 0 0 0 1px rgba(255, 90, 80, 0.9); }
@@ -227,6 +233,13 @@ button:focus-visible {
 .wood dt { color: #d0a46a; }
 .stone dt { color: #b4b8b0; }
 .berries dt { color: #ff5a6e; }
+.axe dt { color: #c9ccc4; }
+
+.tool dd {
+  min-width: 0;
+  color: var(--fog);
+  font-weight: 400;
+}
 
 .menu-button {
   width: 40px;
@@ -314,7 +327,7 @@ button:focus-visible {
   right: var(--edge-right);
   bottom: var(--edge-bottom);
   width: 170px;
-  height: 150px;
+  height: 176px;
 }
 
 .btn {
@@ -353,7 +366,18 @@ button:focus-visible {
   font-weight: 700;
 }
 
-.btn.pressed {
+.btn-craft {
+  right: 22px;
+  bottom: 108px;
+  width: 60px;
+  height: 60px;
+  color: #d0a46a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.btn.pressed,
+.btn-craft:active {
   transform: scale(0.92);
   border-color: var(--lantern);
 }
@@ -488,6 +512,103 @@ button:focus-visible {
   display: none;
 }
 
+/* ---- Craft panel ---- */
+
+.craft-panel {
+  flex-direction: column;
+  gap: 12px;
+  width: min(720px, 100%);
+}
+
+.craft-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.button.close {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.recipes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+/* Each recipe is one big button: tap it to make that thing. */
+.recipe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+  cursor: pointer;
+}
+
+.recipe:hover:not(:disabled) {
+  border-color: var(--lantern);
+}
+
+.recipe:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.recipe-picture {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 48px;
+  color: #c9ccc4;
+  font-size: 40px;
+  line-height: 1;
+}
+
+.recipe-name {
+  color: var(--moss);
+  font-weight: 700;
+}
+
+.recipe kbd {
+  display: none;
+}
+
+.recipe-about {
+  color: var(--fog);
+  font-size: 12px;
+}
+
+.recipe-cost {
+  display: flex;
+  gap: 12px;
+  font-weight: 700;
+}
+
+.cost.wood { color: #d0a46a; }
+.cost.stone { color: #b4b8b0; }
+.cost.berries { color: #ff5a6e; }
+.cost.short { color: var(--health); }
+
+/* A tool you already carry: no cost to show, just a note. */
+.recipe.owned .recipe-cost {
+  display: none;
+}
+
+.recipe.owned::after {
+  content: "You have one";
+  color: var(--fog);
+  font-size: 12px;
+}
+
 /* ---- Turn sideways ---- */
 
 .rotate {
@@ -536,6 +657,10 @@ button:focus-visible {
 
   .btn kbd {
     display: block;
+  }
+
+  .recipe kbd {
+    display: inline-block;
   }
 }
 

@@ -27,6 +27,8 @@ const VOID_COLOR = '#0a1930'; // beyond the edge of the world: more deep sea
 const SHADOW_COLOR = 'rgba(0, 0, 0, 0.3)';
 const BANK_COLOR = '#2a2214'; // the earth bank where land drops into water
 const TARGET_COLOR = '#ffd75e';
+const BLOCKED_COLOR = '#ff6b5e'; // brackets round a spot you can't build on
+const GHOST_ALPHA = 0.55; // how solid the see-through copy in build mode looks
 
 const view = {
   canvas: null,
@@ -265,6 +267,7 @@ function drawFrame(game) {
   if (inside) dimOutside(world.house);
   if (view.playerCovered) drawPlayer(game, 0.4);
   if (game.target) drawTarget(game.target, game.time);
+  if (game.buildSpot) drawBuildSpot(game);
   drawParticles(game.fx);
   drawFloaters(game.fx);
 }
@@ -562,7 +565,7 @@ function drawStanding(game, range, inside) {
       if (!key) continue;
       const shake = game.fx.shake && game.fx.shake.index === i ? game.fx.shake : null;
       const offset = shake ? Math.round(Math.sin(game.time * 70) * view.cw * 0.2) : 0;
-      drawSprite(SPRITES[OBJECTS[key].sprite], tx, ty, offset);
+      drawSprite(objectSprite(OBJECTS[key], i, game.flameFrame), tx, ty, offset);
     }
     if (inside && ty === house.top) drawHouseImage(backWallImage(house), house.left, house.top - WALL_ROWS);
     if (!inside && ty === house.top + house.height - 1) {
@@ -571,6 +574,13 @@ function drawStanding(game, range, inside) {
     if (!playerDrawn && player.y < ty + 1) placePlayer();
   }
   if (!playerDrawn) placePlayer();
+}
+
+// The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
+// tile starts at a different point so two fires side by side don't flicker in step.
+function objectSprite(object, i, flameFrame) {
+  if (!object.frames) return SPRITES[object.sprite];
+  return SPRITES[object.frames[(flameFrame + i) % object.frames.length]];
 }
 
 // ---- The cottage ----
@@ -721,14 +731,25 @@ function noteDrawn(x0, y0, x1, y1) {
 // ---- Effects ----
 
 // Brackets around whatever the action button will use.
-function drawTarget(target, time) {
+function drawTarget(target, time, color = TARGET_COLOR) {
   const ctx = view.ctx;
   const x = screenX(target.x);
   const y = screenY(target.y);
   ctx.globalAlpha = 0.65 + Math.sin(time * 5) * 0.3;
-  drawGlyph(ctx, '[', TARGET_COLOR, x - view.cw, y);
-  drawGlyph(ctx, ']', TARGET_COLOR, x + view.tw, y);
+  drawGlyph(ctx, '[', color, x - view.cw, y);
+  drawGlyph(ctx, ']', color, x + view.tw, y);
   ctx.globalAlpha = 1;
+}
+
+// In build mode: a see-through copy of what you're building, standing where it would go, with
+// red brackets instead of yellow if it can't go there.
+function drawBuildSpot(game) {
+  const spot = game.buildSpot;
+  const object = OBJECTS[RECIPES[game.building].builds];
+  view.ctx.globalAlpha = spot.problem ? GHOST_ALPHA / 2 : GHOST_ALPHA;
+  drawSprite(SPRITES[object.sprite], spot.x, spot.y);
+  view.ctx.globalAlpha = 1;
+  drawTarget(spot, game.time, spot.problem ? BLOCKED_COLOR : TARGET_COLOR);
 }
 
 function drawParticles(fx) {

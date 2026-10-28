@@ -6,6 +6,7 @@ const FOOT_HALF_WIDTH = 0.3; // the player's feet, in tiles: what bumps into tre
 const FOOT_HALF_DEPTH = 0.2;
 const CORNER_SLIP = 0.4; // how far off-center you can be and still slide around a corner or into a doorway
 const WATER_FRAME_SECONDS = 0.45; // how often the water ripples
+const FLAME_FRAME_SECONDS = 0.15; // how often campfire flames flicker
 const MESSAGE_SECONDS = 3.5;
 
 const FACINGS = {
@@ -18,6 +19,7 @@ const FACINGS = {
 const elements = {
   game: document.getElementById('game'),
   canvas: document.getElementById('map'),
+  healthVital: document.querySelector('.vital.health'), // glows while you're warming by a fire
   bars: {
     health: document.getElementById('bar-health'),
     food: document.getElementById('bar-food'),
@@ -27,10 +29,16 @@ const elements = {
   counts: Object.fromEntries(
     Object.keys(ITEMS).map((item) => [item, document.getElementById(`count-${item}`)]),
   ),
+  // One slot in the pack for each tool, with the id tool-<tool>, shown once you've made it.
+  tools: Object.fromEntries(
+    Object.keys(TOOLS).map((tool) => [tool, document.getElementById(`tool-${tool}`)]),
+  ),
   toast: document.getElementById('toast'),
   actionButton: document.getElementById('btn-action'),
   actionLabel: document.getElementById('action-label'),
   eatButton: document.getElementById('btn-eat'),
+  craftButton: document.getElementById('btn-craft'),
+  craftLabel: document.getElementById('craft-label'),
   menuButton: document.getElementById('menu-button'),
   stickZone: document.getElementById('stick-zone'),
   stick: document.getElementById('stick'),
@@ -44,6 +52,9 @@ const elements = {
   deathTime: document.getElementById('death-time'),
   againButton: document.getElementById('again'),
   deathNewWorldButton: document.getElementById('death-new-world'),
+  craft: document.getElementById('craft'),
+  recipes: document.getElementById('recipes'),
+  craftClose: document.getElementById('craft-close'),
 };
 
 const portrait = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -55,10 +66,14 @@ const state = {
   survivor: null,
   fx: { particles: [], floaters: [], shake: null },
   target: null,
+  building: null, // in build mode: the key in RECIPES being built, otherwise null
+  buildSpot: null, // in build mode: where it would go, from findBuildSpot()
   time: 0, // seconds of play, paused while a menu is open
   lifeStarted: 0,
   waterFrame: 0,
   waterClock: 0,
+  flameFrame: 0,
+  flameClock: 0,
   messageUntil: 0,
   bumpedInto: null,
   paused: true,
@@ -87,6 +102,7 @@ function wakeUp() {
   };
   state.survivor = newSurvivor();
   state.fx = { particles: [], floaters: [], shake: null };
+  stopBuilding(state);
   state.dead = false;
   state.lifeStarted = state.time;
   snapCamera(state.world, state.player);
@@ -101,11 +117,16 @@ function update(dt) {
   player.clock += dt;
 
   movePlayer(dt);
-  state.target = findTarget(state);
-
-  if (actionHeld() && state.target && player.clock >= survivor.nextSwingAt) {
-    useTarget(state);
-    survivor.nextSwingAt = player.clock + SWING_SECONDS;
+  if (state.building) {
+    // In build mode the action button builds (see the 'action' press in frame()) instead.
+    state.target = null;
+    state.buildSpot = findBuildSpot(state);
+  } else {
+    state.target = findTarget(state);
+    if (actionHeld() && state.target && player.clock >= survivor.nextSwingAt) {
+      useTarget(state);
+      survivor.nextSwingAt = player.clock + SWING_SECONDS;
+    }
   }
 
   updateVitals(state, dt);
@@ -285,13 +306,28 @@ function updateHud() {
     hud[item] = pack[item];
     elements.counts[item].textContent = String(pack[item]);
   }
+  for (const tool of Object.keys(TOOLS)) {
+    const has = Boolean(state.survivor.tools[tool]);
+    if (hud[`tool-${tool}`] === has) continue;
+    hud[`tool-${tool}`] = has;
+    elements.tools[tool].hidden = !has;
+  }
+  const warm = state.survivor.warm;
+  if (hud.warm !== warm) {
+    hud.warm = warm;
+    elements.healthVital.classList.toggle('warm', warm);
+  }
 
-  const label = state.target ? state.target.label : 'Use';
+  let label = state.target ? state.target.label : 'Use';
+  let ready = Boolean(state.target);
+  if (state.building) {
+    label = 'Build';
+    ready = Boolean(state.buildSpot && !state.buildSpot.problem);
+  }
   if (hud.action !== label) {
     hud.action = label;
     elements.actionLabel.textContent = label;
   }
-  const ready = Boolean(state.target);
   if (hud.ready !== ready) {
     hud.ready = ready;
     elements.actionButton.classList.toggle('idle', !ready);
@@ -300,6 +336,17 @@ function updateHud() {
   if (hud.canEat !== canEat) {
     hud.canEat = canEat;
     elements.eatButton.classList.toggle('idle', !canEat);
+  }
+  // The Craft button is bright when there's something you could make, and says Done in build mode.
+  const craftLabel = state.building ? 'Done' : 'Craft';
+  if (hud.craftLabel !== craftLabel) {
+    hud.craftLabel = craftLabel;
+    elements.craftLabel.textContent = craftLabel;
+  }
+  const canCraft = Boolean(state.building) || Object.values(RECIPES).some((r) => canMake(state.survivor, r));
+  if (hud.canCraft !== canCraft) {
+    hud.canCraft = canCraft;
+    elements.craftButton.classList.toggle('idle', !canCraft);
   }
 
   if (state.time > state.messageUntil && elements.toast.classList.contains('visible')) {
@@ -315,16 +362,30 @@ function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000);
   lastFrame = now;
 
+  let playing = !state.paused && !state.dead && !portrait.matches;
   for (let press = takePress(); press; press = takePress()) {
-    if (press === 'menu') {
-      if (!elements.menu.hidden && state.started) closeMenu();
+    const crafting = !elements.craft.hidden;
+    if (press === 'menu' || press === 'back') {
+      // Esc backs out of one thing at a time (the craft panel, the menu, build mode) before it
+      // opens the menu. The ☰ button and P go straight to the menu.
+      if (crafting) closeCraft();
+      else if (!elements.menu.hidden && state.started) closeMenu();
+      else if (press === 'back' && state.building && playing) stopBuilding(state);
       else if (!state.dead) openMenu();
-    } else if (press === 'eat' && !state.paused && !state.dead) {
+    } else if (press === 'craft' && (playing || crafting)) {
+      if (crafting) closeCraft();
+      else if (state.building) stopBuilding(state);
+      else openCraft();
+    } else if (press.startsWith('recipe:') && crafting) {
+      craft(state, Object.keys(RECIPES)[Number(press.slice(7))]);
+    } else if (press === 'action' && playing && state.building) {
+      build(state);
+    } else if (press === 'eat' && playing) {
       eatBerry(state);
     }
+    playing = !state.paused && !state.dead && !portrait.matches;
   }
 
-  const playing = !state.paused && !state.dead && !portrait.matches;
   if (playing) update(dt);
   else state.player.moving = false;
 
@@ -336,6 +397,11 @@ function frame(now) {
       state.waterClock = 0;
       state.waterFrame++;
     }
+    state.flameClock += dt;
+    if (state.flameClock >= FLAME_FRAME_SECONDS) {
+      state.flameClock = 0;
+      state.flameFrame++;
+    }
   }
 
   followCamera(state.world, state.player, dt);
@@ -346,6 +412,7 @@ function frame(now) {
 
 setupView(elements.canvas);
 setupInput(elements);
+setupCrafting(elements);
 newGame(DEFAULT_SEED);
 resizeView();
 snapCamera(state.world, state.player);

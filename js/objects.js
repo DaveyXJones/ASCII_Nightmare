@@ -11,6 +11,9 @@
 //   regrow   { after: seconds, into: key } to turn back into something later (berries growing back)
 //   drink    true if the action drinks from it, as many times as you like (the well)
 //   empty    message when you try to use it and there's nothing to take
+//   burst    what flies off when you work on it: a style in BURSTS (survival.js), like 'leaf' or 'stone'
+//   frames   a list of sprites to flicker between instead of one still picture (a campfire's flames)
+//   warmth   how close, in tiles, you need to stand to feel its heat; beside it you heal faster
 
 const OBJECTS = {
   oak: {
@@ -22,6 +25,7 @@ const OBJECTS = {
     hits: 4,
     gives: { wood: 3 },
     becomes: 'stump',
+    burst: 'leaf',
   },
   pine: {
     name: 'Pine tree',
@@ -32,6 +36,7 @@ const OBJECTS = {
     hits: 3,
     gives: { wood: 2 },
     becomes: 'stump',
+    burst: 'leaf',
   },
   boulder: {
     name: 'Boulder',
@@ -42,6 +47,7 @@ const OBJECTS = {
     hits: 5,
     gives: { stone: 3 },
     becomes: null,
+    burst: 'stone',
   },
   bush: {
     name: 'Berry bush',
@@ -52,6 +58,7 @@ const OBJECTS = {
     hits: 1,
     gives: { berries: 3 },
     becomes: 'bushBare',
+    burst: 'leaf',
   },
   bushBare: {
     name: 'Picked bush',
@@ -92,5 +99,31 @@ const OBJECTS = {
     sprite: 'table',
     solid: true,
     blocked: 'A rough wooden table with a candle on it.',
+  },
+
+  // Things you build (see RECIPES in crafting.js). Taking them down gives some of the cost back.
+  campfire: {
+    name: 'Campfire',
+    sprite: 'campfire',
+    frames: ['campfire', 'campfire2', 'campfire', 'campfire3'],
+    solid: true,
+    blocked: 'The fire crackles. Too hot to walk through.',
+    action: 'Put out',
+    hits: 2,
+    gives: { stone: 3 },
+    becomes: null,
+    burst: 'spark',
+    warmth: 2.5,
+  },
+  woodWall: {
+    name: 'Wooden wall',
+    sprite: 'woodWall',
+    solid: true,
+    blocked: 'Your wall. Break it to get through.',
+    action: 'Break',
+    hits: 2,
+    gives: { wood: 2 },
+    becomes: null,
+    burst: 'wood',
   },
 };

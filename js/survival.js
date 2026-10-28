@@ -10,6 +10,7 @@ const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
 const WATER_PER_SECOND = 100 / 300; // thirst comes faster: five minutes
 const STARVING_DAMAGE = 2; // health lost each second with no food, and again with no water
 const HEAL_PER_SECOND = 0.5; // health regained each second while fed and watered
+const FIRE_HEAL_PER_SECOND = 2; // the same, resting beside a campfire
 const BERRY_FOOD = 12;
 const SIP_WATER = 20;
 const SWING_SECONDS = 0.42; // time between swings while the action button is held
@@ -26,6 +27,8 @@ function newSurvivor() {
   return {
     vitals: { health: 100, food: 100, water: 100 },
     pack: Object.fromEntries(Object.keys(ITEMS).map((item) => [item, 0])),
+    tools: {}, // tools you've made, by their key in TOOLS (crafting.js): { axe: true }
+    warm: false, // standing beside a campfire
     warned: { food: false, water: false, health: false },
     nextSwingAt: 0,
   };
@@ -37,7 +40,10 @@ function updateVitals(game, dt) {
   vitals.water = Math.max(0, vitals.water - WATER_PER_SECOND * dt);
   if (vitals.food === 0) vitals.health -= STARVING_DAMAGE * dt;
   if (vitals.water === 0) vitals.health -= STARVING_DAMAGE * dt;
-  if (vitals.food > LOW && vitals.water > LOW) vitals.health += HEAL_PER_SECOND * dt;
+  game.survivor.warm = besideFire(game);
+  if (vitals.food > LOW && vitals.water > LOW) {
+    vitals.health += (game.survivor.warm ? FIRE_HEAL_PER_SECOND : HEAL_PER_SECOND) * dt;
+  }
   vitals.health = Math.max(0, Math.min(100, vitals.health));
 
   // Warn once as each one runs low, and again only after it's been topped back up.
@@ -50,6 +56,24 @@ function updateVitals(game, dt) {
       warned[name] = false;
     }
   }
+}
+
+// The furthest any object's warmth reaches, in tiles, so besideFire() knows how far to look.
+const WARMTH_REACH = Math.ceil(Math.max(0, ...Object.values(OBJECTS).map((object) => object.warmth || 0)));
+
+// True if the player is close enough to something warm, like a campfire, to feel its heat.
+function besideFire(game) {
+  const { world, player } = game;
+  const footX = Math.floor(player.x);
+  const footY = Math.floor(player.y);
+  for (let ty = footY - WARMTH_REACH; ty <= footY + WARMTH_REACH; ty++) {
+    for (let tx = footX - WARMTH_REACH; tx <= footX + WARMTH_REACH; tx++) {
+      const object = objectAt(world, tx, ty);
+      if (!object || !object.warmth) continue;
+      if (Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) <= object.warmth) return true;
+    }
+  }
+  return false;
 }
 
 // Picked bushes grow their berries back after a while.
@@ -119,9 +143,10 @@ function useTarget(game) {
     return;
   }
 
-  const swings = (world.damage.get(index) || 0) + 1;
+  // A good tool makes each swing count for more: with an axe, one chop counts as two.
+  const swings = (world.damage.get(index) || 0) + toolPower(survivor, object.action);
   game.fx.shake = { index, until: game.time + 0.18 };
-  burst(game.fx, target.x + 0.5, target.y + 0.5, object.action === 'Mine' ? 'stone' : 'leaf', 4);
+  burst(game.fx, target.x + 0.5, target.y + 0.5, object.burst, 4);
   buzz(12);
 
   if (swings < object.hits) {
@@ -142,7 +167,7 @@ function useTarget(game) {
   if (regrow) {
     world.regrowing.push({ index, at: game.time + regrow.after, from: object.becomes, into: regrow.into });
   }
-  burst(game.fx, target.x + 0.5, target.y + 0.5, object.action === 'Mine' ? 'stone' : 'leaf', 10);
+  burst(game.fx, target.x + 0.5, target.y + 0.5, object.burst, 10);
   buzz(30);
 }
 
@@ -178,6 +203,8 @@ const BURSTS = {
   leaf: { glyphs: ['*', ',', '\'', '`'], colors: ['#82c257', '#a6d86f', '#8b6239'] },
   stone: { glyphs: ['.', '·', '\'', ','], colors: ['#c9ccc4', '#8c8f88'] },
   water: { glyphs: ['°', '·', '\''], colors: ['#9fcff5', '#ffffff'] },
+  wood: { glyphs: ['\'', ',', '·', '`'], colors: ['#d0a46a', '#8b6239'] },
+  spark: { glyphs: ['*', '·', '\'', '°'], colors: ['#ffd75e', '#ff8a2a', '#a3a69e'] },
 };
 
 // Throws a handful of characters into the air, like chips flying off an axe.
