@@ -7,43 +7,28 @@ and overlap whatever is behind them. The owner is building toward a fuller survi
 (crafting, a day and night cycle with things that come out at night, saving, maybe multiplayer);
 see "What's next" in README.md.
 
-## Where things stand: getting the game online (last updated 2026-10-28)
+## Where things stand: the game is online (last updated 2026-10-28)
 
-The owner wants to play on their phone through GitHub Pages. That isn't set up yet:
+The game is live at **https://daveyxjones.github.io/ASCII_Nightmare/**. The repository
+(`DaveyXJones/ASCII_Nightmare`) is public, its default branch is `main`, and GitHub Pages deploys
+from `main`, `/ (root)`. **Every push to `main` updates the live game** within a couple of
+minutes, so `main` must always be playable.
 
-- `main` has the current game.
-- The repository (`DaveyXJones/ASCII_Nightmare`) is **private**, and Pages on a private repo needs a
-  paid GitHub plan. The owner has decided to make it public instead.
-- The repo's default branch is still `claude/ascii-game-character-movement-3rlu42`, the first
-  version. GitHub chose it only because it was pushed first. It's already contained in `main`.
-
-Claude can't change repository settings (visibility, Pages, default branch) with its tools, so the
-owner does these steps at a computer. GitHub's phone site and app don't show these settings.
-**The owner finds GitHub hard to navigate.** Walk them through one step at a time, using the direct
-links and exact button names below. If what they see doesn't match, ask them what's on the screen.
-Before starting, check which steps are already done: the GitHub `search_repositories` tool with
-`repo:DaveyXJones/ASCII_Nightmare` and `minimal_output: false` shows `private`, `has_pages` and
-`default_branch`. Skip finished steps, and update this section when things change.
-
-1. **Make the repo public.** Open https://github.com/DaveyXJones/ASCII_Nightmare/settings, scroll
-   to the bottom to the red **Danger Zone** box, and next to **Change repository visibility** click
-   **Change visibility** → **Change to public**. Confirm each prompt ("I want to make this
-   repository public", "I have read and understand these effects"). GitHub may ask for a password or
-   a two-factor code. Public means anyone can see the code; nobody can change it without access.
-2. **Turn on Pages.** Open https://github.com/DaveyXJones/ASCII_Nightmare/settings/pages. Under
-   **Build and deployment**, set **Source** to **Deploy from a branch**. In the **Branch** row pick
-   **main** and **/ (root)**, then **Save**. After a minute or two, refresh: a box at the top says
-   the site is live at https://daveyxjones.github.io/ASCII_Nightmare/
-3. **Make `main` the default branch.** On https://github.com/DaveyXJones/ASCII_Nightmare/settings,
-   under **Default branch**, click the two-arrows button, pick **main**, click **Update**, and
-   confirm.
-4. **Put it on the phone's home screen.** Open the link on the phone, then Safari: Share → **Add to
-   Home Screen**, or Chrome: ⋮ → **Add to Home screen**. Opened from the icon, it runs full screen.
-   Hold the phone sideways.
-5. Optional, and ask first: once `main` is the default, the old
-   `claude/ascii-game-character-movement-3rlu42` branch can be deleted.
-
-Once Pages is on, every push to `main` updates the live game within a couple of minutes.
+- **Checking a deploy.** Each push to `main` starts a "pages build and deployment" run; the GitHub
+  `actions_list` tool (`list_workflow_runs`) shows whether it succeeded. Claude's cloud container
+  can't open github.io itself (blocked by its network policy), so for what the page actually does,
+  serve the game from a subfolder the way Pages does (see "Checking a change").
+- **Settings live with the owner.** Claude can't change repository settings (visibility, Pages,
+  default branch). **The owner finds GitHub hard to navigate**: if a setting needs changing, walk
+  them through it one step at a time with direct links (e.g.
+  https://github.com/DaveyXJones/ASCII_Nightmare/settings/pages) and exact button names, and ask
+  what's on their screen if it doesn't match. GitHub's phone site and app don't show these
+  settings; they need a computer.
+- **Still to do, owner's side:** put it on the phone's home screen (Safari: Share → **Add to Home
+  Screen**; Chrome: ⋮ → **Add to Home screen**). Opened from the icon, it runs full screen.
+- **Optional, ask first:** old branches already contained in `main` (the first version,
+  `claude/ascii-game-character-movement-3rlu42`, and finished `ccr-…` session branches) can be
+  deleted.
 
 ## Hard rules
 
@@ -51,6 +36,9 @@ Once Pages is on, every push to `main` updates the live game within a couple of 
   `index.html`, sharing globals. The game must keep working when `index.html` is opened straight
   from disk (file://), where modules and font loading are blocked. Don't add a bundler, a
   framework, npm packages or `import`/`export`.
+- **Relative paths only.** The live game sits in a subfolder (`/ASCII_Nightmare/`), not at the site
+  root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
+  `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → render →
   input → survival → game`. A file may use globals from files before it at load time, and from any
   file inside functions that run later.
@@ -78,6 +66,7 @@ Once Pages is on, every push to `main` updates the live game within a couple of 
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
 | `fonts/` | DejaVu Sans Mono (regular and bold) as WOFF2, with its license. |
 | `manifest.webmanifest`, `icons/` | Home-screen install: full screen, landscape. |
+| `.nojekyll` | Empty. Tells GitHub Pages to publish files as they are instead of running Jekyll over them (which would drop anything named `_…`). |
 
 ## World model
 
@@ -150,6 +139,10 @@ There are no automated tests. Run it and look:
 ```sh
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
+
+To check it the way GitHub Pages serves it, run the server from the folder *above* the repo and
+open http://localhost:8000/ASCII_Nightmare/ — a missing file there (a 404 in the console) means a
+path isn't relative.
 
 To see it as a phone would, use the preinstalled Playwright (`require('playwright')`) with
 `viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true`,

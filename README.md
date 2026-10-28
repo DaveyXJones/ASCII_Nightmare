@@ -21,18 +21,14 @@ Step inside the cottage and its roof lifts off.
 
 ## Play on your phone
 
-The game is built to be played on a phone held sideways. It needs to be served from a web address
-for that, and GitHub Pages will do it for free:
+**https://daveyxjones.github.io/ASCII_Nightmare/**
 
-1. On GitHub, open the repository's **Settings → Pages**.
-2. Under **Build and deployment**, choose **Deploy from a branch**, pick the branch with the game on
-   it and the `/ (root)` folder, and save. (Pages needs a public repository, or a paid GitHub plan
-   for a private one.)
-3. After a minute the page shows the game's address, something like
-   `https://daveyxjones.github.io/ASCII_Nightmare/`. Open it on your phone.
-4. **Add it to your home screen** (Safari: Share → Add to Home Screen; Chrome: ⋮ → Add to Home
-   screen). Opened from there it fills the whole screen, with no browser bars. On Android, the
-   **Wake up** button also goes full screen and locks the screen sideways.
+Open that on your phone and hold it sideways. **Add it to your home screen** (Safari: Share → Add
+to Home Screen; Chrome: ⋮ → Add to Home screen) and it opens full screen, with no browser bars. On
+Android, the **Wake up** button also goes full screen and locks the screen sideways.
+
+GitHub Pages publishes the `main` branch there for free. Anything pushed to `main` shows up at that
+address within a couple of minutes (reload the page, or close and reopen the home-screen icon).
 
 **Testing on your phone before pushing:** run a small server on your computer (below), then on a
 phone on the same Wi-Fi open `http://<your computer's local IP>:8000`.
@@ -89,6 +85,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
+| `.nojekyll` | An empty file that tells GitHub Pages to publish everything exactly as it is. |
 
 The scripts are plain `<script>` files loaded in order (no modules), which is what lets the game
 run straight from the file.
