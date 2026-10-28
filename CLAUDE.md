@@ -7,6 +7,44 @@ and overlap whatever is behind them. The owner is building toward a fuller survi
 (crafting, a day and night cycle with things that come out at night, saving, maybe multiplayer);
 see "What's next" in README.md.
 
+## Where things stand: getting the game online (last updated 2026-10-28)
+
+The owner wants to play on their phone through GitHub Pages. That isn't set up yet:
+
+- `main` has the current game.
+- The repository (`DaveyXJones/ASCII_Nightmare`) is **private**, and Pages on a private repo needs a
+  paid GitHub plan. The owner has decided to make it public instead.
+- The repo's default branch is still `claude/ascii-game-character-movement-3rlu42`, the first
+  version. GitHub chose it only because it was pushed first. It's already contained in `main`.
+
+Claude can't change repository settings (visibility, Pages, default branch) with its tools, so the
+owner does these steps at a computer. GitHub's phone site and app don't show these settings.
+**The owner finds GitHub hard to navigate.** Walk them through one step at a time, using the direct
+links and exact button names below. If what they see doesn't match, ask them what's on the screen.
+Before starting, check which steps are already done: the GitHub `search_repositories` tool with
+`repo:DaveyXJones/ASCII_Nightmare` and `minimal_output: false` shows `private`, `has_pages` and
+`default_branch`. Skip finished steps, and update this section when things change.
+
+1. **Make the repo public.** Open https://github.com/DaveyXJones/ASCII_Nightmare/settings, scroll
+   to the bottom to the red **Danger Zone** box, and next to **Change repository visibility** click
+   **Change visibility** → **Change to public**. Confirm each prompt ("I want to make this
+   repository public", "I have read and understand these effects"). GitHub may ask for a password or
+   a two-factor code. Public means anyone can see the code; nobody can change it without access.
+2. **Turn on Pages.** Open https://github.com/DaveyXJones/ASCII_Nightmare/settings/pages. Under
+   **Build and deployment**, set **Source** to **Deploy from a branch**. In the **Branch** row pick
+   **main** and **/ (root)**, then **Save**. After a minute or two, refresh: a box at the top says
+   the site is live at https://daveyxjones.github.io/ASCII_Nightmare/
+3. **Make `main` the default branch.** On https://github.com/DaveyXJones/ASCII_Nightmare/settings,
+   under **Default branch**, click the two-arrows button, pick **main**, click **Update**, and
+   confirm.
+4. **Put it on the phone's home screen.** Open the link on the phone, then Safari: Share → **Add to
+   Home Screen**, or Chrome: ⋮ → **Add to Home screen**. Opened from the icon, it runs full screen.
+   Hold the phone sideways.
+5. Optional, and ask first: once `main` is the default, the old
+   `claude/ascii-game-character-movement-3rlu42` branch can be deleted.
+
+Once Pages is on, every push to `main` updates the live game within a couple of minutes.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
