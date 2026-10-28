@@ -3,7 +3,7 @@
 A survival game drawn entirely in text, seen from above and a little in front: a three-quarter
 view, like the old top-down adventure games. You wake up in a cottage on a randomly generated
 island. Keep yourself fed and watered: pick berries, drink from lakes and the well, chop trees and
-break rocks for wood and stone.
+break rocks for wood and stone, then turn them into an axe, a campfire and walls.
 
 ```
    ▄▄▄▄                         ▗█▖
@@ -51,6 +51,8 @@ font from a file, so some characters may look a little different.
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
 | Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat a berry | The small button | `F` |
+| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` `2` `3` |
+| Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
 | Menu | ☰ in the top right | `Esc` |
 
 Yellow brackets `[ ]` on the map show what the action button will use.
@@ -64,8 +66,27 @@ Yellow brackets `[ ]` on the map show what the action button will use.
 - **Berry bushes** give three berries each and grow back after a minute and a half. Each berry is
   a little food.
 - **Drink** at the edge of any lake or the sea, or from the well beside the cottage.
-- **Trees** give wood and leave a stump; **boulders** give stone. You can't build anything with them
-  yet. That's the next thing to add.
+- **Trees** give wood and leave a stump; **boulders** give stone. Craft with them (below).
+
+## Crafting and building
+
+Tap **Craft** to see what you can make. Each card shows what it costs; numbers in red are what
+you're short of. The game pauses while the panel is open. The Craft button lights up when there's
+something you can afford.
+
+| Make | Costs | What it does |
+| --- | --- | --- |
+| **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings. You lose it if you die. |
+| **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
+| **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
+
+Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
+front of you. Yellow brackets mean it can go there, red means it can't (the message says why).
+Tap **Build** to put it down. Walls stay in build mode so you can keep going: build, step
+sideways, build again. Tap **Done** when you've finished.
+
+Changed your mind? Face the wall and **Break** it, or **Put out** the campfire, and you get the
+wood or stone back. Things you build stay in the world when you die.
 
 ## How it's put together
 
@@ -83,6 +104,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
 | `js/input.js` | The thumbstick, the buttons, and the keyboard. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
+| `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
 | `.nojekyll` | An empty file that tells GitHub Pages to publish everything exactly as it is. |
@@ -103,6 +125,11 @@ run straight from the file.
   `js/survival.js` and the pack in `index.html`.
 - **The cottage.** It's drawn as text in `COTTAGE` at the top of `js/world.js`: move the bed, add
   furniture, or make it bigger.
+- **A new recipe.** Add it to `RECIPES` in `js/crafting.js` and it gets its own card. For a stone
+  pick that breaks rocks faster, add `pick: { name: 'Stone pick', glyph: '⚒', power: { Mine: 2 } }`
+  to `TOOLS`, a recipe with `tool: 'pick'`, and a slot in the pack in `index.html` like the axe's.
+  To make something you build, draw it in `SPRITES`, describe it in `OBJECTS`, and give the recipe
+  `builds:` its name.
 - **How hard survival is.** `FOOD_PER_SECOND`, `WATER_PER_SECOND` and friends at the top of
   `js/survival.js`.
 - **Walking speed.** `WALK_SPEED` at the top of `js/game.js`.
@@ -111,9 +138,9 @@ run straight from the file.
 
 Roughly in order:
 
-1. **Crafting.** Wood and stone into a campfire, an axe that chops faster, a wall to build.
-2. **Night.** A day and night cycle, a ring of light around the player and the campfire, and
-   things that come out of the dark. It's called Nightmare for a reason.
+1. **Night.** A day and night cycle, a ring of light around the player and the campfire, and
+   things that come out of the dark. It's called Nightmare for a reason. Walls will matter then.
+2. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.
 3. **Saving.** Keep the world and your pack between visits.
 4. **Sound.** Chops, footsteps, rain.
 5. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed

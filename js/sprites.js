@@ -14,6 +14,17 @@
 // The light comes from the top left: tops and left sides are lighter, fronts and right sides
 // darker. `shadow` is how many tiles wide the shadow on the ground is (0 for none).
 
+// The campfire's colors, shared by each of its flickering pictures.
+const FIRE_INK = {
+  y: ['#fff0a0'], // the tip of a flame
+  Y: ['#ffd75e'], // yellow flame
+  o: ['#ff8a2a'], // orange flame
+  O: ['#ffb347'],
+  r: ['#e8552a'], // a flame dying down
+  L: ['#c98a4a'], // crossed logs
+  s: ['#a3a69e'], // the ring of stones
+};
+
 const SPRITES = {
   oak: {
     art: [
@@ -195,6 +206,72 @@ const SPRITES = {
       L: ['#6e4a2a'],
     },
     shadow: 3,
+  },
+  // A ring of stones round two crossed logs, with a flame on top. The three pictures differ only in
+  // the flame; the campfire flickers between them (see `frames` in objects.js).
+  campfire: {
+    art: [
+      ' ▗▖ ',
+      ' ▟▙ ',
+      '◖╳╳◗',
+    ],
+    paint: [
+      ' yy ',
+      ' oO ',
+      'sLLs',
+    ],
+    ink: FIRE_INK,
+    shadow: 0,
+  },
+  campfire2: {
+    art: [
+      '  ▖·',
+      ' ▟▙ ',
+      '◖╳╳◗',
+    ],
+    paint: [
+      '  yY',
+      ' Oo ',
+      'sLLs',
+    ],
+    ink: FIRE_INK,
+    shadow: 0,
+  },
+  campfire3: {
+    art: [
+      ' ▗  ',
+      ' ▟▙ ',
+      '◖╳╳◗',
+    ],
+    paint: [
+      ' Y  ',
+      ' rO ',
+      'sLLs',
+    ],
+    ink: FIRE_INK,
+    shadow: 0,
+  },
+  // One stretch of wall: sharpened stakes, two to a tile, so a row of them joins up into a fence.
+  woodWall: {
+    art: [
+      '▲▲',
+      '▏▏',
+      '▏▏',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: {
+      t: ['#d8b07a'],
+      T: ['#b08458'],
+      L: ['#5e3d22', '#b08458'],
+      l: ['#5e3d22', '#9c7048'],
+      D: ['#4a2f1c', '#8b6239'],
+      d: ['#4a2f1c', '#7a5230'],
+    },
+    shadow: 2,
   },
 };
 

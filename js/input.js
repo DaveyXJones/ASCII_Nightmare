@@ -2,7 +2,8 @@
 //
 // Touch: put your left thumb down anywhere on the left half of the screen and a thumbstick
 // appears under it; the buttons on the right do things. Hold the action button to keep chopping.
-// Keyboard: WASD or the arrow keys to walk, Space or E for the action button, F to eat.
+// Keyboard: WASD or the arrow keys to walk, Space or E for the action button, F to eat, C to craft
+// (and 1, 2, 3… to pick from the craft panel).
 
 const STICK_RADIUS = 48; // CSS pixels the knob can travel from the middle of the stick
 const STICK_DEADZONE = 0.15; // ignore tiny thumb wobbles
@@ -19,7 +20,9 @@ const KEY_MOVES = {
 };
 const ACTION_KEYS = new Set(['Space', 'KeyE', 'Enter']);
 const EAT_KEYS = new Set(['KeyF']);
-const MENU_KEYS = new Set(['Escape', 'KeyP']);
+const CRAFT_KEYS = new Set(['KeyC']);
+const MENU_KEYS = new Set(['KeyP']);
+const BACK_KEYS = new Set(['Escape']); // closes whatever's open, or opens the menu if nothing is
 
 const input = {
   keys: new Set(), // movement keys held down
@@ -27,7 +30,9 @@ const input = {
   stickY: 0,
   actionKey: false,
   actionButton: false,
-  presses: [], // one-off presses for the game to handle: 'eat', 'menu'
+  // One-off presses for the game to handle: 'action' (the moment the action button goes down),
+  // 'eat', 'craft', 'menu', 'back' (Esc), and 'recipe:0', 'recipe:1'… for the number keys.
+  presses: [],
 };
 
 // Where the player wants to walk: a direction with a length from 0 (standing) to 1 (full speed).
@@ -60,17 +65,25 @@ function releaseAll() {
   input.stickY = 0;
 }
 
-function setupInput({ stickZone, stick, knob, actionButton, eatButton, menuButton }) {
+function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButton, menuButton }) {
   window.addEventListener('keydown', (event) => {
     // Leave browser shortcuts like Ctrl+W alone.
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const code = event.code;
     if (KEY_MOVES[code]) input.keys.add(code);
-    else if (ACTION_KEYS.has(code)) input.actionKey = true;
-    else if (EAT_KEYS.has(code)) {
+    else if (ACTION_KEYS.has(code)) {
+      input.actionKey = true;
+      if (!event.repeat) input.presses.push('action');
+    } else if (EAT_KEYS.has(code)) {
       if (!event.repeat) input.presses.push('eat');
+    } else if (CRAFT_KEYS.has(code)) {
+      if (!event.repeat) input.presses.push('craft');
     } else if (MENU_KEYS.has(code)) {
       if (!event.repeat) input.presses.push('menu');
+    } else if (BACK_KEYS.has(code)) {
+      if (!event.repeat) input.presses.push('back');
+    } else if (/^Digit[1-9]$/.test(code)) {
+      if (!event.repeat) input.presses.push(`recipe:${Number(code.slice(5)) - 1}`);
     } else return;
     event.preventDefault(); // stop the arrow keys and space bar from scrolling the page
   });
@@ -84,10 +97,14 @@ function setupInput({ stickZone, stick, knob, actionButton, eatButton, menuButto
   setupStick(stickZone, stick, knob);
   holdButton(actionButton, (down) => {
     input.actionButton = down;
+    if (down) input.presses.push('action');
   });
   holdButton(eatButton, (down) => {
     if (down) input.presses.push('eat');
   });
+  // These open a panel, so they wait for the finger to lift: otherwise the tap could land on the
+  // panel as it appears.
+  craftButton.addEventListener('click', () => input.presses.push('craft'));
   menuButton.addEventListener('click', () => input.presses.push('menu'));
 
   // Stop iOS from zooming on a pinch or a double tap while playing.

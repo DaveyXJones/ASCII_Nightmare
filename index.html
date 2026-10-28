@@ -33,6 +33,7 @@
             <div class="item wood"><dt aria-label="Wood">≡</dt><dd id="count-wood">0</dd></div>
             <div class="item stone"><dt aria-label="Stone">●</dt><dd id="count-stone">0</dd></div>
             <div class="item berries"><dt aria-label="Berries">•</dt><dd id="count-berries">0</dd></div>
+            <div class="item tool axe" id="tool-axe" hidden><dt aria-hidden="true">┮</dt><dd>axe</dd></div>
           </dl>
           <button type="button" id="menu-button" class="menu-button" aria-label="Menu">☰</button>
         </div>
@@ -44,6 +45,7 @@
         </div>
 
         <div class="buttons">
+          <button type="button" id="btn-craft" class="btn btn-craft"><span class="btn-label" id="craft-label">Craft</span><kbd>C</kbd></button>
           <button type="button" id="btn-eat" class="btn btn-eat"><span class="btn-label">Eat</span><kbd>F</kbd></button>
           <button type="button" id="btn-action" class="btn btn-action"><span class="btn-label" id="action-label">Use</span><kbd>Space</kbd></button>
         </div>
@@ -67,14 +69,27 @@
               <li><b>Walk:</b> put your left thumb down anywhere on the left side and drag.</li>
               <li><b>Act:</b> the big button chops trees, mines rocks, picks berries and drinks water. Hold it to keep going.</li>
               <li><b>Eat:</b> the small button eats a berry.</li>
+              <li><b>Craft:</b> the button above makes tools and things to build. Building puts a see-through copy in front of you: tap <b>Build</b> to place it, <b>Done</b> to stop.</li>
             </ul>
             <ul class="help key-help">
               <li><b>Walk:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrow keys.</li>
               <li><b>Act:</b> <kbd>Space</kbd> or <kbd>E</kbd> chops, mines, picks and drinks. Hold to keep going.</li>
               <li><b>Eat:</b> <kbd>F</kbd> eats a berry. <b>Menu:</b> <kbd>Esc</kbd></li>
+              <li><b>Craft:</b> <kbd>C</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> to pick. When building, <kbd>Space</kbd> places it and <kbd>C</kbd> stops.</li>
             </ul>
             <p class="help-note">Food and water run down as you go. Run out of either and you start to lose health.</p>
           </div>
+        </div>
+      </section>
+
+      <section id="craft" class="overlay craft" aria-labelledby="craft-title" hidden>
+        <div class="panel craft-panel">
+          <div class="craft-head">
+            <h2 id="craft-title" class="title">Craft</h2>
+            <button type="button" id="craft-close" class="button close" aria-label="Close">✕</button>
+          </div>
+          <!-- One card per recipe, made from RECIPES in js/crafting.js. -->
+          <div id="recipes" class="recipes"></div>
         </div>
       </section>
 
@@ -104,6 +119,7 @@
     <script src="js/render.js"></script>
     <script src="js/input.js"></script>
     <script src="js/survival.js"></script>
+    <script src="js/crafting.js"></script>
     <script src="js/game.js"></script>
   </body>
 </html>
