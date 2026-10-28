@@ -1,0 +1,251 @@
+/* Layout: one screen tall. Title bar, the map filling the middle, a status strip,
+   and an on-screen pad on touch devices. */
+:root {
+  --night: #080b0a; /* page background and the map's surroundings */
+  --panel: #0f1412; /* title and status bars */
+  --rule: #1f2a25; /* hairlines and borders */
+  --moss: #c5d1bf; /* main text */
+  --fog: #75857a; /* labels and secondary text */
+  --lantern: #ffd75e; /* the player, and the one accent color */
+
+  --font-display: "Major Mono Display", "IBM Plex Mono", "DejaVu Sans Mono", monospace;
+  --font-mono: "IBM Plex Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+
+  --text-small: 12px;
+  --text-body: 14px;
+  --text-title: 22px;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--night);
+  color: var(--moss);
+  font: var(--text-body) / 1.4 var(--font-mono);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---- Title bar ---- */
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 400;
+  color: var(--lantern);
+  letter-spacing: 0.02em;
+}
+
+.controls {
+  margin: 0;
+  color: var(--fog);
+  font-size: var(--text-small);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: 2px;
+  padding: 0 0.35em;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--moss);
+  font: inherit;
+  text-align: center;
+}
+
+.button {
+  margin-left: auto;
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--moss);
+  font: inherit;
+  font-size: var(--text-small);
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--fog);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--lantern);
+  outline-offset: 2px;
+}
+
+/* ---- Map ---- */
+
+.screen {
+  position: relative;
+  flex: 1;
+  min-height: 200px;
+  border: 1px solid var(--rule);
+  background: var(--night);
+}
+
+.screen canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.focus-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 6px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  color: var(--moss);
+  font-size: var(--text-small);
+  text-align: center;
+  pointer-events: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---- Status strip ---- */
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 24px;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  font-size: var(--text-small);
+}
+
+.readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0;
+}
+
+.readout div {
+  display: flex;
+  gap: 8px;
+}
+
+.readout dt {
+  color: var(--fog);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.readout dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--lantern);
+}
+
+/* ---- Touch pad (phones and tablets only) ---- */
+
+.dpad {
+  display: none;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 48px);
+  gap: 6px;
+  justify-content: center;
+}
+
+.dpad button {
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--moss);
+  font-size: 18px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dpad button:active {
+  border-color: var(--lantern);
+  color: var(--lantern);
+}
+
+.dpad [data-direction="up"] {
+  grid-column: 2;
+}
+
+.dpad [data-direction="left"] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.dpad [data-direction="down"] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.dpad [data-direction="right"] {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 17px;
+  }
+}
+
+@media (pointer: coarse) {
+  .dpad {
+    display: grid;
+  }
+
+  .controls,
+  .focus-hint {
+    display: none;
+  }
+}

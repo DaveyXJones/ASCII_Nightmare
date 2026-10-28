@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ASCII Nightmare</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Major+Mono+Display&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <h1 class="title">ASCII Nightmare</h1>
+        <p class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to walk. Hold to keep walking.</p>
+        <button type="button" id="new-world" class="button">New world</button>
+      </header>
+
+      <main class="screen">
+        <canvas id="map" role="img" aria-label="Map of the world. You are the @ sign."></canvas>
+        <p id="focus-hint" class="focus-hint" hidden>Click the map, then walk with WASD or the arrow keys</p>
+      </main>
+
+      <footer class="status">
+        <dl class="readout">
+          <div><dt>Ground</dt><dd id="status-ground"></dd></div>
+          <div><dt>Position</dt><dd id="status-position"></dd></div>
+          <div><dt>Seed</dt><dd id="status-seed"></dd></div>
+        </dl>
+        <p id="message" class="message" aria-live="polite"></p>
+      </footer>
+
+      <nav class="dpad" aria-label="Walk">
+        <button type="button" data-direction="up" aria-label="Walk up">▲</button>
+        <button type="button" data-direction="left" aria-label="Walk left">◀</button>
+        <button type="button" data-direction="down" aria-label="Walk down">▼</button>
+        <button type="button" data-direction="right" aria-label="Walk right">▶</button>
+      </nav>
+    </div>
+
+    <!-- Plain scripts (no modules) so the game runs by opening this file directly. Order matters. -->
+    <script src="js/random.js"></script>
+    <script src="js/tiles.js"></script>
+    <script src="js/world.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>
