@@ -28,7 +28,10 @@ minutes, so `main` must always be playable.
   Screen**; Chrome: ⋮ → **Add to Home screen**). Opened from the icon, it runs full screen.
 - **Optional, ask first:** old branches already contained in `main` (the first version,
   `claude/ascii-game-character-movement-3rlu42`, and finished `ccr-…` session branches) can be
-  deleted.
+  deleted. A Claude session can only push to its own branch (deleting another is cut off with
+  "unexpected disconnect"), so the owner does it: https://github.com/DaveyXJones/ASCII_Nightmare/branches,
+  trash-can icon at the right end of each branch's row. A merged PR's page also has a **Delete
+  branch** button.
 
 ## Hard rules
 
