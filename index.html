@@ -2,47 +2,108 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a1930">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nightmare">
     <title>ASCII Nightmare</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Major+Mono+Display&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap">
     <link rel="stylesheet" href="css/style.css">
   </head>
   <body>
-    <div class="app">
-      <header class="topbar">
-        <h1 class="title">ASCII Nightmare</h1>
-        <p class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to walk. Hold to keep walking.</p>
-        <button type="button" id="new-world" class="button">New world</button>
-      </header>
+    <div class="game" id="game">
+      <canvas id="map" role="img" aria-label="The island, seen from above. You are the small figure in the middle."></canvas>
 
-      <main class="screen">
-        <canvas id="map" role="img" aria-label="Map of the world. You are the @ sign."></canvas>
-        <p id="focus-hint" class="focus-hint" hidden>Click the map, then walk with WASD or the arrow keys</p>
-      </main>
+      <div class="hud">
+        <div class="vitals">
+          <div class="vital health" title="Health"><span class="vital-icon" aria-hidden="true">♥</span><span class="bar"><span class="fill" id="bar-health"></span></span></div>
+          <div class="vital food" title="Food"><span class="vital-icon" aria-hidden="true">✿</span><span class="bar"><span class="fill" id="bar-food"></span></span></div>
+          <div class="vital water" title="Water"><span class="vital-icon" aria-hidden="true">≈</span><span class="bar"><span class="fill" id="bar-water"></span></span></div>
+        </div>
 
-      <footer class="status">
-        <dl class="readout">
-          <div><dt>Ground</dt><dd id="status-ground"></dd></div>
-          <div><dt>Position</dt><dd id="status-position"></dd></div>
-          <div><dt>Seed</dt><dd id="status-seed"></dd></div>
-        </dl>
-        <p id="message" class="message" aria-live="polite"></p>
-      </footer>
+        <div class="top-right">
+          <dl class="pack" aria-label="Your pack">
+            <div class="item wood"><dt aria-label="Wood">≡</dt><dd id="count-wood">0</dd></div>
+            <div class="item stone"><dt aria-label="Stone">●</dt><dd id="count-stone">0</dd></div>
+            <div class="item berries"><dt aria-label="Berries">•</dt><dd id="count-berries">0</dd></div>
+          </dl>
+          <button type="button" id="menu-button" class="menu-button" aria-label="Menu">☰</button>
+        </div>
 
-      <nav class="dpad" aria-label="Walk">
-        <button type="button" data-direction="up" aria-label="Walk up">▲</button>
-        <button type="button" data-direction="left" aria-label="Walk left">◀</button>
-        <button type="button" data-direction="down" aria-label="Walk down">▼</button>
-        <button type="button" data-direction="right" aria-label="Walk right">▶</button>
-      </nav>
+        <p id="toast" class="toast" aria-live="polite"></p>
+
+        <div id="stick-zone" class="stick-zone" aria-hidden="true">
+          <div id="stick" class="stick"><div id="knob" class="knob"></div></div>
+        </div>
+
+        <div class="buttons">
+          <button type="button" id="btn-eat" class="btn btn-eat"><span class="btn-label">Eat</span><kbd>F</kbd></button>
+          <button type="button" id="btn-action" class="btn btn-action"><span class="btn-label" id="action-label">Use</span><kbd>Space</kbd></button>
+        </div>
+      </div>
+
+      <section id="menu" class="overlay" aria-labelledby="menu-title">
+        <div class="panel">
+          <div class="panel-main">
+            <h1 id="menu-title" class="title">ASCII Nightmare</h1>
+            <p class="tagline">You wake alone on an island. Keep yourself fed and watered.</p>
+            <div class="menu-buttons">
+              <button type="button" id="start" class="button primary">Wake up</button>
+              <button type="button" id="new-world" class="button">New world</button>
+              <button type="button" id="fullscreen" class="button">Full screen</button>
+            </div>
+            <p class="seed">World <span id="seed"></span></p>
+          </div>
+          <div class="panel-help">
+            <h2>How to play</h2>
+            <ul class="help touch-help">
+              <li><b>Walk:</b> put your left thumb down anywhere on the left side and drag.</li>
+              <li><b>Act:</b> the big button chops trees, mines rocks, picks berries and drinks water. Hold it to keep going.</li>
+              <li><b>Eat:</b> the small button eats a berry.</li>
+            </ul>
+            <ul class="help key-help">
+              <li><b>Walk:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrow keys.</li>
+              <li><b>Act:</b> <kbd>Space</kbd> or <kbd>E</kbd> chops, mines, picks and drinks. Hold to keep going.</li>
+              <li><b>Eat:</b> <kbd>F</kbd> eats a berry. <b>Menu:</b> <kbd>Esc</kbd></li>
+            </ul>
+            <p class="help-note">Food and water run down as you go. Run out of either and you start to lose health.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="death" class="overlay" aria-labelledby="death-title" hidden>
+        <div class="panel panel-small">
+          <h1 id="death-title" class="title">You collapse.</h1>
+          <p class="tagline">You lasted <span id="death-time"></span>.</p>
+          <div class="menu-buttons">
+            <button type="button" id="again" class="button primary">Wake up again</button>
+            <button type="button" id="death-new-world" class="button">New world</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="rotate" aria-live="polite">
+        <div class="rotate-phone" aria-hidden="true"></div>
+        <p>Turn your phone sideways to play.</p>
+      </div>
     </div>
 
     <!-- Plain scripts (no modules) so the game runs by opening this file directly. Order matters. -->
     <script src="js/random.js"></script>
     <script src="js/tiles.js"></script>
+    <script src="js/sprites.js"></script>
+    <script src="js/objects.js"></script>
     <script src="js/world.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/survival.js"></script>
     <script src="js/game.js"></script>
   </body>
 </html>

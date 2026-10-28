@@ -1,118 +1,122 @@
-// Every kind of ground the world can be made of.
+// Every kind of ground the world is made of. Ground is flat and drawn first. Anything that
+// stands up off it (trees, rocks, walls, the player) is a sprite drawn on top, see sprites.js.
 //
-//   name     what the status bar calls it
-//   glyphs   characters to draw; each spot in the world picks one, so a field isn't a flat pattern
+// Each tile is two characters wide and one row tall on screen.
+//
+//   name     what the game calls it
+//   glyphs   characters to draw; each half of a tile picks one, so a field isn't a flat pattern
 //   colors   glyph colors, picked the same way
-//   bg       the cell's background color
+//   bgs      background colors; patches of the world pick different ones (lighter and darker grass)
 //   solid    true if the player can't walk onto it
 //   blocked  message shown when the player bumps into it
-//   animated true to cycle through the glyphs over time (used for water)
+//   animated true to cycle through the glyphs over time (water)
+//   drink    true if the player can drink from it
+//   tall     the glyphs stand up and are drawn over the player's feet (grass you wade through)
+//   raised   drawn as a raised block with a cliff face (mountains), see drawMountain() in render.js
 
 const TILES = {
   deepWater: {
     name: 'Deep water',
-    glyphs: ['≈', '≈', '~', '≈'],
-    colors: ['#2f5f9e', '#28548e'],
-    bg: '#07101d',
+    glyphs: ['≈', '~', '≈', '∼'],
+    colors: ['#3a6fb0', '#2f5f9e'],
+    bgs: ['#0b1b33', '#0a1930'],
     solid: true,
     blocked: 'The water is too deep to cross.',
     animated: true,
+    drink: true,
   },
   water: {
     name: 'Shallow water',
-    glyphs: ['~', '~', '≈', '~'],
-    colors: ['#4f8fd0', '#5a9ad8'],
-    bg: '#0a1828',
+    glyphs: ['~', '∼', '~', '≈'],
+    colors: ['#7ab4e8', '#62a2dc'],
+    bgs: ['#163a5e', '#143758'],
     solid: true,
     blocked: "You stop at the water's edge.",
     animated: true,
+    drink: true,
   },
   sand: {
     name: 'Sand',
-    glyphs: ['.', '.', ':', '·'],
-    colors: ['#c8b07a', '#b9a06a', '#d4bd88'],
-    bg: '#16130c',
+    glyphs: ['.', '·', ' ', ':', ' ', '.'],
+    colors: ['#a8915c', '#b59e68', '#968150'],
+    bgs: ['#5e5132', '#655736', '#584c2f'],
   },
   grass: {
     name: 'Grass',
-    glyphs: ['.', ',', '.', '\'', '`', '.'],
-    colors: ['#4c8a3c', '#5a9946', '#3f7533', '#67a650'],
-    bg: '#0b120c',
+    glyphs: ['.', ',', ' ', '\'', '`', ' ', '.', ' '],
+    colors: ['#5d9a45', '#6aa84f', '#4f8a3b'],
+    bgs: ['#23461b', '#284f1f', '#2c5622', '#1f3f18'],
   },
   tallGrass: {
     name: 'Tall grass',
-    glyphs: ['"', ';', '"', '\''],
-    colors: ['#6aab4f', '#5c9c44', '#79b85c'],
-    bg: '#0c150d',
+    glyphs: ['"', 'ʷ', '"', ';', '\''],
+    colors: ['#86c460', '#79b85a', '#93cf6b'],
+    bgs: ['#23461b', '#284f1f', '#2c5622', '#1f3f18'],
+    tall: true,
   },
   flowers: {
     name: 'Wildflowers',
-    glyphs: ['*', '❀', '*'],
-    colors: ['#e07aa5', '#e8c94a', '#b48be3', '#f0f0e0'],
-    bg: '#0b120c',
-  },
-  tree: {
-    name: 'Tree',
-    glyphs: ['♣', '♠', '♣'],
-    colors: ['#2f7a35', '#3a8a3c', '#266a2c'],
-    bg: '#09100a',
-    solid: true,
-    blocked: 'A tree blocks your way.',
-  },
-  rock: {
-    name: 'Boulder',
-    glyphs: ['o', 'O', '0'],
-    colors: ['#8b8f88', '#7a7e77'],
-    bg: '#0f110f',
-    solid: true,
-    blocked: 'A boulder is in the way.',
+    glyphs: ['✿', '*', ',', '❀', '.'],
+    colors: ['#e889b0', '#efd25a', '#c3a0f0', '#f4f1e4'],
+    bgs: ['#23461b', '#284f1f', '#2c5622'],
   },
   hills: {
     name: 'Rocky hills',
-    glyphs: ['^', 'n', '^', '.'],
-    colors: ['#8f8a78', '#7d7867', '#a09a86'],
-    bg: '#12120e',
+    glyphs: ['.', ' ', '\'', ' ', '^', ' ', ',', '.'],
+    colors: ['#a49f8a', '#8f8a76'],
+    bgs: ['#4f4a3a', '#55503f', '#4a4536'],
   },
   mountain: {
     name: 'Mountain',
-    glyphs: ['▲', '^', '▲'],
-    colors: ['#b4b0a4', '#9a9689', '#d8d6cf'],
-    bg: '#151513',
+    glyphs: ['.', ' ', '\'', ' ', '`', ' ', ',', ' '],
+    colors: ['#c4c0b2', '#aeaa9c'],
+    bgs: ['#7c786d', '#8b877b', '#9a968a'], // tops of the lowest, middle and highest steps
     solid: true,
-    blocked: 'The mountain is too steep to climb.',
+    blocked: 'The cliff is too steep to climb.',
+    raised: true,
+    // The cliff below each top: its upper row, the middle, and the shaded foot.
+    face: {
+      glyphs: ['│', '╎', ' ', '|', '┆', ' ', '│'],
+      colors: ['#7a7468', '#55504a'],
+      bgs: ['#575249', '#4a463e', '#37342e'],
+    },
+    // The highest step is capped with snow.
+    peak: {
+      glyphs: ['.', ' ', '\'', ' ', '*', ' '],
+      colors: ['#ffffff', '#e3e9f0'],
+      bgs: ['#d2d7dd', '#c8ced5'],
+    },
   },
   path: {
     name: 'Dirt path',
-    glyphs: ['.', ':', '.'],
-    colors: ['#9a7a50', '#8a6c45'],
-    bg: '#17110a',
-  },
-  wall: {
-    name: 'Wall',
-    glyphs: ['#'],
-    colors: ['#a08d76'],
-    bg: '#2a221a',
-    solid: true,
-    blocked: 'A sturdy wooden wall.',
+    glyphs: ['.', ':', '·', ' '],
+    colors: ['#b08e60', '#9c7d52'],
+    bgs: ['#5a4329', '#604730'],
   },
   floor: {
     name: 'Wooden floor',
-    glyphs: ['.', '_', '.'],
-    colors: ['#8a6a46', '#7a5d3d'],
-    bg: '#1d150d',
+    glyphs: ['═', '─', '═', '═'],
+    colors: ['#6f5133', '#7a5a39'],
+    bgs: ['#9a7448', '#93703f'],
+  },
+  rug: {
+    name: 'Rug',
+    glyphs: ['░', '▒', '░'],
+    colors: ['#a3424a', '#8f3a41'],
+    bgs: ['#5e2228'],
+  },
+  wall: {
+    name: 'Wall',
+    glyphs: ['═'],
+    colors: ['#8b6239'],
+    bgs: ['#a87f4e'],
+    solid: true,
+    blocked: 'A sturdy log wall.',
   },
   door: {
     name: 'Doorway',
-    glyphs: ['+'],
-    colors: ['#d79a52'],
-    bg: '#1d150d',
-  },
-  well: {
-    name: 'Well',
-    glyphs: ['O'],
-    colors: ['#7fb3e0'],
-    bg: '#1a1a1a',
-    solid: true,
-    blocked: 'An old stone well. You hear water far below.',
+    glyphs: ['▁'],
+    colors: ['#c49a62'],
+    bgs: ['#7a5a39'],
   },
 };

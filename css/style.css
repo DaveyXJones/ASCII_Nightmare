@@ -1,19 +1,39 @@
-/* Layout: one screen tall. Title bar, the map filling the middle, a status strip,
-   and an on-screen pad on touch devices. */
+/* The map fills the whole screen. Everything else floats over it: health bars top left, the pack
+   and menu top right, the thumbstick bottom left, the action buttons bottom right. Built for a
+   phone held sideways; works with a keyboard and mouse too. */
+
+@font-face {
+  font-family: "Nightmare Mono";
+  src: url("../fonts/DejaVuSansMono.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Nightmare Mono";
+  src: url("../fonts/DejaVuSansMono-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: block;
+}
+
 :root {
-  --night: #080b0a; /* page background and the map's surroundings */
-  --panel: #0f1412; /* title and status bars */
-  --rule: #1f2a25; /* hairlines and borders */
-  --moss: #c5d1bf; /* main text */
-  --fog: #75857a; /* labels and secondary text */
-  --lantern: #ffd75e; /* the player, and the one accent color */
+  --night: #070a10; /* behind menus */
+  --panel: rgba(9, 14, 20, 0.82); /* floating panels and buttons */
+  --rule: rgba(197, 209, 191, 0.22); /* hairlines and borders */
+  --moss: #dde6d6; /* main text */
+  --fog: #9aa89d; /* secondary text */
+  --lantern: #ffd75e; /* the one accent color */
+  --health: #e5534b;
+  --food: #e8a33d;
+  --water: #4fa3e8;
 
-  --font-display: "Major Mono Display", "IBM Plex Mono", "DejaVu Sans Mono", monospace;
-  --font-mono: "IBM Plex Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  --font-display: "Major Mono Display", "Nightmare Mono", monospace;
+  --font-mono: "Nightmare Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
 
-  --text-small: 12px;
-  --text-body: 14px;
-  --text-title: 22px;
+  --edge-left: max(12px, env(safe-area-inset-left, 0px));
+  --edge-right: max(12px, env(safe-area-inset-right, 0px));
+  --edge-top: max(10px, env(safe-area-inset-top, 0px));
+  --edge-bottom: max(12px, env(safe-area-inset-bottom, 0px));
 
   color-scheme: dark;
 }
@@ -28,115 +48,42 @@ html,
 body {
   height: 100%;
   margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
   background: var(--night);
   color: var(--moss);
-  font: var(--text-body) / 1.4 var(--font-mono);
+  font: 14px / 1.4 var(--font-mono);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  height: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding-block: 12px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
+.game {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
-/* ---- Title bar ---- */
-
-.topbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 20px;
-}
-
-.title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-title);
-  font-weight: 400;
-  color: var(--lantern);
-  letter-spacing: 0.02em;
-}
-
-.controls {
-  margin: 0;
-  color: var(--fog);
-  font-size: var(--text-small);
-}
-
-kbd {
-  display: inline-block;
-  min-width: 1.6em;
-  margin-right: 2px;
-  padding: 0 0.35em;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  background: var(--panel);
-  color: var(--moss);
-  font: inherit;
-  text-align: center;
-}
-
-.button {
-  margin-left: auto;
-  padding: 6px 12px;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  background: var(--panel);
-  color: var(--moss);
-  font: inherit;
-  font-size: var(--text-small);
-  cursor: pointer;
-}
-
-.button:hover {
-  border-color: var(--fog);
-}
-
-button:focus-visible {
-  outline: 2px solid var(--lantern);
-  outline-offset: 2px;
-}
-
-/* ---- Map ---- */
-
-.screen {
-  position: relative;
-  flex: 1;
-  min-height: 200px;
-  border: 1px solid var(--rule);
-  background: var(--night);
-}
-
-.screen canvas {
+.game canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  cursor: pointer;
+  display: block;
 }
 
-.focus-hint {
+/* Darkens the corners of the map a little, like an old lantern-lit picture. */
+.hud::before {
+  content: "";
   position: absolute;
-  left: 50%;
-  bottom: 16px;
-  max-width: calc(100% - 32px);
-  margin: 0;
-  padding: 6px 12px;
-  transform: translateX(-50%);
-  border: 1px solid var(--rule);
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
-  color: var(--moss);
-  font-size: var(--text-small);
-  text-align: center;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
   pointer-events: none;
 }
 
@@ -144,108 +91,491 @@ button:focus-visible {
   display: none !important;
 }
 
-/* ---- Status strip ---- */
-
-.status {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 24px;
-  padding: 8px 12px;
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.35em;
   border: 1px solid var(--rule);
-  background: var(--panel);
-  font-size: var(--text-small);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--moss);
+  font: inherit;
+  font-size: 0.85em;
+  text-align: center;
 }
 
-.readout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 20px;
-  margin: 0;
+button {
+  font: inherit;
+  color: inherit;
 }
 
-.readout div {
-  display: flex;
-  gap: 8px;
+button:focus-visible {
+  outline: 2px solid var(--lantern);
+  outline-offset: 2px;
 }
 
-.readout dt {
-  color: var(--fog);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+/* ---- Health, food, water ---- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-.readout dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
+.hud button,
+.stick-zone {
+  pointer-events: auto;
 }
 
-.message {
-  flex: 1;
-  min-width: 0;
-  min-height: 1.4em;
-  margin: 0;
-  color: var(--lantern);
-}
-
-/* ---- Touch pad (phones and tablets only) ---- */
-
-.dpad {
-  display: none;
-  grid-template-columns: repeat(3, 56px);
-  grid-template-rows: repeat(2, 48px);
-  gap: 6px;
-  justify-content: center;
-}
-
-.dpad button {
+.vitals {
+  position: absolute;
+  top: var(--edge-top);
+  left: var(--edge-left);
+  display: grid;
+  gap: 5px;
+  padding: 7px 10px;
   border: 1px solid var(--rule);
   border-radius: 6px;
   background: var(--panel);
-  color: var(--moss);
-  font-size: 18px;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
-.dpad button:active {
+.vital {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vital-icon {
+  width: 1em;
+  font-size: 13px;
+  line-height: 1;
+  text-align: center;
+}
+
+.bar {
+  position: relative;
+  width: clamp(80px, 16vw, 150px);
+  height: 8px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  border-radius: 2px;
+  transition: width 0.25s linear;
+}
+
+.health .vital-icon { color: var(--health); }
+.health .fill { background: var(--health); }
+.food .vital-icon { color: var(--food); }
+.food .fill { background: var(--food); }
+.water .vital-icon { color: var(--water); }
+.water .fill { background: var(--water); }
+
+.bar.low {
+  animation: pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from { box-shadow: 0 0 0 1px rgba(255, 90, 80, 0.2); }
+  to { box-shadow: 0 0 0 1px rgba(255, 90, 80, 0.9); }
+}
+
+/* ---- Pack and menu button ---- */
+
+.top-right {
+  position: absolute;
+  top: var(--edge-top);
+  right: var(--edge-right);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.pack {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 7px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.item dt {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.item dd {
+  margin: 0;
+  min-width: 1.4em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wood dt { color: #d0a46a; }
+.stone dt { color: #b4b8b0; }
+.berries dt { color: #ff5a6e; }
+
+.menu-button {
+  width: 40px;
+  height: 34px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ---- Messages ---- */
+
+.toast {
+  position: absolute;
+  top: calc(var(--edge-top) + 62px); /* just below the bars and the pack */
+  left: 50%;
+  width: max-content;
+  max-width: min(70vw, 460px);
+  margin: 0;
+  padding: 7px 14px;
+  transform: translate(-50%, -8px);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--lantern);
+  font-size: 13px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---- Thumbstick ---- */
+
+.stick-zone {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 50%;
+  height: 72%;
+}
+
+.stick {
+  --size: 112px;
+  position: absolute;
+  left: calc(var(--edge-left) + 70px);
+  top: calc(100% - var(--edge-bottom) - 66px);
+  width: var(--size);
+  height: var(--size);
+  margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+  border: 2px solid rgba(221, 230, 214, 0.25);
+  border-radius: 50%;
+  background: rgba(9, 14, 20, 0.35);
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+.stick.active {
+  opacity: 1;
+  transition: none;
+}
+
+.knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 50px;
+  height: 50px;
+  margin: -25px 0 0 -25px;
+  border: 2px solid rgba(255, 215, 94, 0.7);
+  border-radius: 50%;
+  background: rgba(255, 215, 94, 0.25);
+}
+
+/* ---- Action buttons ---- */
+
+.buttons {
+  position: absolute;
+  right: var(--edge-right);
+  bottom: var(--edge-bottom);
+  width: 170px;
+  height: 150px;
+}
+
+.btn {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 2px solid rgba(221, 230, 214, 0.35);
+  border-radius: 50%;
+  background: var(--panel);
+  cursor: pointer;
+  touch-action: none;
+  transition: transform 0.06s, border-color 0.1s, opacity 0.2s;
+}
+
+.btn-action {
+  right: 8px;
+  bottom: 8px;
+  width: 88px;
+  height: 88px;
+  border-color: rgba(255, 215, 94, 0.8);
+  color: var(--lantern);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.btn-eat {
+  right: 106px;
+  bottom: 70px;
+  width: 60px;
+  height: 60px;
+  color: #ff8a98;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.btn.pressed {
+  transform: scale(0.92);
   border-color: var(--lantern);
+}
+
+.btn.idle {
+  opacity: 0.45;
+}
+
+.btn kbd {
+  display: none;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--fog);
+}
+
+/* ---- Menus ---- */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--edge-top) var(--edge-right) var(--edge-bottom) var(--edge-left);
+  background: rgba(4, 7, 10, 0.72);
+  overflow: auto;
+  touch-action: pan-y;
+}
+
+.panel {
+  display: flex;
+  gap: 28px;
+  width: min(760px, 100%);
+  padding: 22px 26px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: rgba(9, 14, 20, 0.94);
+}
+
+.panel-small {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  text-align: center;
+}
+
+.panel-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel-help {
+  flex: 1.1;
+  padding-left: 26px;
+  border-left: 1px solid var(--rule);
+  color: var(--fog);
+  font-size: 13px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.15;
   color: var(--lantern);
 }
 
-.dpad [data-direction="up"] {
-  grid-column: 2;
+.tagline {
+  margin: 0;
+  color: var(--moss);
 }
 
-.dpad [data-direction="left"] {
-  grid-column: 1;
-  grid-row: 2;
+.menu-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
 }
 
-.dpad [data-direction="down"] {
-  grid-column: 2;
-  grid-row: 2;
+.button {
+  padding: 10px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
 }
 
-.dpad [data-direction="right"] {
-  grid-column: 3;
-  grid-row: 2;
+.button:hover {
+  border-color: var(--fog);
 }
 
-@media (max-width: 480px) {
-  .title {
-    font-size: 17px;
-  }
+.button.primary {
+  border-color: var(--lantern);
+  background: var(--lantern);
+  color: #1b1606;
+  font-weight: 700;
 }
+
+.seed {
+  margin: 0;
+  color: var(--fog);
+  font-size: 12px;
+}
+
+.panel-help h2 {
+  margin: 0 0 8px;
+  color: var(--moss);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.help {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help b {
+  color: var(--moss);
+}
+
+.help-note {
+  margin: 10px 0 0;
+}
+
+.touch-help {
+  display: none;
+}
+
+/* ---- Turn sideways ---- */
+
+.rotate {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px;
+  background: var(--night);
+  color: var(--moss);
+  text-align: center;
+}
+
+.rotate-phone {
+  width: 44px;
+  height: 76px;
+  border: 3px solid var(--lantern);
+  border-radius: 8px;
+  animation: turn 2.4s ease-in-out infinite;
+}
+
+@keyframes turn {
+  0%, 30% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(-90deg); }
+}
+
+/* ---- Touch screens and keyboards ---- */
 
 @media (pointer: coarse) {
-  .dpad {
+  .touch-help {
     display: grid;
   }
 
-  .controls,
-  .focus-hint {
+  .key-help {
     display: none;
+  }
+}
+
+@media (pointer: fine) {
+  .stick-zone {
+    display: none;
+  }
+
+  .btn kbd {
+    display: block;
+  }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate {
+    display: flex;
+  }
+}
+
+/* Short screens: phones held sideways. */
+@media (max-height: 460px) {
+  .panel {
+    gap: 20px;
+    padding: 16px 20px;
+  }
+
+  .panel-help {
+    padding-left: 20px;
+    font-size: 12px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 560px) {
+  .panel {
+    flex-direction: column;
+  }
+
+  .panel-help {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-phone,
+  .bar.low {
+    animation: none;
   }
 }
