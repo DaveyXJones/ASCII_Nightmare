@@ -37,10 +37,11 @@ minutes, so `main` must always be playable.
 
 ## Night and the torch (built 2026-10-29)
 
-Crafting (PR #2) and the redrawn, animated player (PR #3) are merged and live. Night and the torch
-were built next, to the owner's spec: **a torch costs 2 wood and 1 cloth (a new item) and must be
-lit at a campfire; night lasts 10 minutes, with varying darkness and moonlight.** Choices Claude
-made that the owner hadn't specified, any of which they may want changed:
+Crafting (PR #2), the redrawn, animated player (PR #3) and night and the torch (PR #5) are merged
+and live. Night and the torch were built to the owner's spec: **a torch costs 2 wood and 1 cloth
+(a new item) and must be lit at a campfire; night lasts 10 minutes, with varying darkness and
+moonlight.** Choices Claude made that the owner hadn't specified, any of which they may want
+changed:
 
 - **Cloth comes from cotton plants** (`cotton` in `OBJECTS`): picked like berry bushes, regrow in
   two minutes. Two stand beside the cottage (`c` in `COTTAGE`) so a new player finds them, and
@@ -52,8 +53,24 @@ made that the owner hadn't specified, any of which they may want changed:
 - **The torch** burns 5 minutes, then goes out but stays in the pack; light it again at any fire.
   Once it's burnt halfway down a fire offers **Light** instead of **Put out**, to top it up.
 
-Next, the owner's plan: **things that come out of the dark** (walls from crafting are meant to
-matter then). Character ideas the owner liked, for after that (none started):
+## Things in the dark (built 2026-10-29)
+
+The owner asked for "things that come out of the dark" with no further spec. Claude's design, all
+of it tunable in `CREATURES`, the constants in `js/creatures.js` and `creatures` in `MOONS`:
+
+- **Shades**: dark eared silhouettes with red eyes. Their eyes are drawn above the darkness, so on
+  a black night pairs of red eyes are all you see.
+- **Light keeps them back**: they never come within `FEAR_SHARE` (80%) of a light's reach, so a lit
+  torch or a campfire means safety, and they pace at the edge. Without light they creep in, lunge,
+  bite (8 health) and back off. **They never enter the cottage**, and walls stop them: they path
+  round obstacles but can't get through a closed ring.
+- **You can hit them**: the action button says **Hit** when one's in reach; 3 hits (2 with the
+  axe, `power: { Hit: 2 }`) and it dissolves. Each hit knocks it back and sends it running.
+- **The moon sets the number** out at once: 2 (half), 3 (thin), 4 (none), 1 (full).
+- Dying to them shows "The dark takes you." instead of "You collapse."
+
+Next, the owner hasn't picked. Ideas noted in README's "What's next": more creature kinds, shades
+that break walls. Character ideas the owner liked (none started):
 1. **Choose your look:** hat, shirt and trouser colors picked from the menu. All of the player's
    colors are in `PLAYER_INK`; after changing them, clear the player sprites' cached `image` so
    `spriteImage` redraws them.
@@ -72,8 +89,8 @@ matter then). Character ideas the owner liked, for after that (none started):
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  render → input → survival → crafting → game`. A file may use globals from files before it at load time,
-  and from any file inside functions that run later.
+  render → input → survival → crafting → creatures → game`. A file may use globals from files
+  before it at load time, and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
   Keyboard controls are the desktop equivalent, not the primary design.
@@ -91,11 +108,12 @@ matter then). Character ideas the owner liked, for after that (none started):
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, and `ACTION_POSES`. Validated at load by `prepareSprite`. |
 | `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles) and `flame` (a torch can be lit at it). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
-| `js/night.js` | The day and night cycle: phase lengths, `MOONS`, `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
+| `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
 | `js/survival.js` | `ITEMS`, vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eatBerry`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
+| `js/creatures.js` | `CREATURES`, the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/game.js` | `state`, player movement and collision, menus, death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
 | `fonts/` | DejaVu Sans Mono (regular and bold) as WOFF2, with its license. |
@@ -146,6 +164,28 @@ matter then). Character ideas the owner liked, for after that (none started):
 - The HUD's fourth vital (`.vital.sky`) shows ☼ and the daylight left, or the moon and the night
   left.
 
+## Creatures (js/creatures.js)
+
+- `state.creatures` is a list of free-moving things (`{ kind, x, y, hp, state, timer, fade, … }`,
+  feet position in tiles like the player), cleared on waking. `state.hunt` remembers when the
+  next one comes out and which once-a-night messages have shown. `updateCreatures` runs every
+  update after the vitals; it does nothing by day once they've all gone.
+- States: `creep` (follow the map of steps; lunge when within `LUNGE_RANGE` and ≤ 3 steps),
+  `lunge` (dart straight at you; bite within `BITE_REACH`, then `run`), `run` (away from you or the
+  light that caught it, for a time), `fade` (dawn: back away while fading, then removed).
+- **The map of steps** (`field`) is a breadth-first flood from the player's tile over a square of
+  `FIELD_RADIUS`, through tiles where `creatureCanStand` (not solid, not inside the house), no
+  diagonal squeezing between corners. Recomputed every `FIELD_SECONDS`; ~0.3 ms. If a creature's
+  tile isn't on it (you're walled in or indoors), it heads straight for you and presses against
+  whatever stops it, and never lunges. That's what makes walls and the cottage safe.
+- **Fear of light**: `lightsToFear` is the objects with `light` found by `mapSteps` plus the torch
+  (`torchReach`). A creature never steps to within `FEAR_SHARE` of any light's reach; at that edge
+  it `prowl`s sideways. If a light appears on top of it, it runs.
+- **Hitting**: `findTarget` (survival.js) puts any creature within `HIT_REACH` ahead of the player
+  before other targets, as `{ x, y, w: 2, label: 'Hit', creature }` (brackets round its face);
+  `useTarget` hands it to `hitCreature`, which uses `toolPower(survivor, 'Hit')`.
+- `survivor.hurtBy` (`'dark'` from a bite, `'hunger'` from starving) picks the death screen's words.
+
 ## Rendering (js/render.js)
 
 - One tile is **two character cells wide and one row tall**. All drawing is in device pixels; cell
@@ -173,6 +213,11 @@ matter then). Character ideas the owner liked, for after that (none started):
   the counter stops under reduced motion, like `waterFrame`.
 - The build-mode ghost (`drawBuildSpot`) is drawn translucent after the standing pass, on top of
   everything, so it's visible even behind a tree.
+- **Creatures** are drawn in the standing pass like the player: sorted by `y`, each placed as soon
+  as its feet are behind the row's line (`placeCreatures`), with `noteDrawn`. `drawCreature`
+  records where its eyes are in `view.shades`; anything drawn over them later in the pass (a tree,
+  the roof) marks them hidden in `noteDrawn`. After the night layer, `drawEyes` redraws visible,
+  unblinking eyes (`eyesOpen`) on top of the dark.
 - **Night** (`drawNight`): after the standing pass, the player's ghost and particles, and before
   the target brackets, the build ghost and floating text. The dark is drawn on a small canvas
   (`NIGHT_SCALE` times smaller than the screen): one fill in `sky.color` at `sky.darkness`, then a

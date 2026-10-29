@@ -52,6 +52,7 @@ const elements = {
   fullscreenButton: document.getElementById('fullscreen'),
   seedLabel: document.getElementById('seed'),
   death: document.getElementById('death'),
+  deathTitle: document.getElementById('death-title'),
   deathTime: document.getElementById('death-time'),
   againButton: document.getElementById('again'),
   deathNewWorldButton: document.getElementById('death-new-world'),
@@ -68,6 +69,8 @@ const state = {
   player: null,
   survivor: null,
   fx: { particles: [], floaters: [], shake: null },
+  creatures: [], // things out in the dark (creatures.js)
+  hunt: newHunt(), // tonight's hunt: when the next one comes out, and which warnings have shown
   target: null,
   building: null, // in build mode: the key in RECIPES being built, otherwise null
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
@@ -113,6 +116,8 @@ function wakeUp() {
   state.dayClock = nextMorning(state.dayClock);
   state.sky = skyAt(state.dayClock, state.world.seed);
   state.fx = { particles: [], floaters: [], shake: null };
+  state.creatures = [];
+  state.hunt = newHunt();
   stopBuilding(state);
   state.dead = false;
   state.lifeStarted = state.time;
@@ -154,6 +159,7 @@ function update(dt) {
 
   updateVitals(state, dt);
   updateTorch(state, dt);
+  updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
   if (survivor.vitals.health <= 0) die();
 }
@@ -257,6 +263,8 @@ function faceToward(player, x, y) {
 function die() {
   state.dead = true;
   releaseAll();
+  const takenByTheDark = state.survivor.hurtBy === 'dark';
+  elements.deathTitle.textContent = takenByTheDark ? 'The dark takes you.' : 'You collapse.';
   const seconds = Math.floor(state.time - state.lifeStarted);
   const minutes = Math.floor(seconds / 60);
   elements.deathTime.textContent =
