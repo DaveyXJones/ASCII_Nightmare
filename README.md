@@ -118,6 +118,10 @@ run straight from the file.
   characters) and `paint` (a letter for each character saying which `ink` color to use). Change the
   oak tree's leaves, give the player a different hat, or recolor the berries. If the two pictures
   don't line up, the browser console tells you which row.
+- **Restyle the player.** `PLAYER_INK` holds their colors (hat, hair, shirt, trousers): change a
+  few and every picture of them changes. `PLAYER_SPRITES` has a picture for each pose in each
+  direction: standing, blinking, four steps of walking, the tool raised, the swing, kneeling.
+  `ACTION_POSES` says which pose and which tool goes with each action, like kneeling to drink.
 - **A new kind of ground.** Add an entry to `TILES` in `js/tiles.js`, then return its name from
   `pickTerrain()` in `js/world.js`.
 - **A new thing to gather.** Draw it in `SPRITES`, describe it in `OBJECTS` (what the button says,

@@ -41,8 +41,8 @@ minutes, so `main` must always be playable.
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → render →
-  input → survival → crafting → game`. A file may use globals from files before it at load time, and from any
-  file inside functions that run later.
+  input → survival → crafting → game`. A file may use globals from files before it at load time,
+  and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
   Keyboard controls are the desktop equivalent, not the primary design.
@@ -56,8 +56,8 @@ minutes, so `main` must always be playable.
 | File | Holds |
 | --- | --- |
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
-| `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`). |
-| `js/sprites.js` | `SPRITES` (ASCII art for standing things) and `PLAYER_SPRITES`/`PLAYER_INK`. Validated at load by `prepareSprite`. |
+| `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
+| `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, and `ACTION_POSES`. Validated at load by `prepareSprite`. |
 | `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites) and `warmth` (heal faster nearby). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
@@ -140,6 +140,16 @@ minutes, so `main` must always be playable.
   (`pip install fonttools brotli` first).
 - Reload and check the browser console: `prepareSprite` warns if `art` and `paint` don't line up or
   a paint letter has no ink.
+- **The player** has a picture per pose per facing: `stand`, `blink` (not for `up`), `walk` (four:
+  stride, legs passing, other stride, legs passing; arms shorten on the swinging side), `windup`,
+  `strike`, `crouch` (top row empty, so it's the same height). `held` gives the cell, from the
+  picture's top-left, where the tool glyph is drawn for each pose. `playerPose()` in render.js
+  picks one: a recent `player.act` (`{ action, at }`, set by `useTarget`, `eatBerry` and `build`)
+  for its `ACTION_POSES` seconds, then `windup` while `player.working` (the button held on a
+  target), then walking (lifted `WALK_BOB` on passing steps), then blinking or standing. A crafted
+  tool with `held` glyphs and power for the action replaces the default `⚒`.
+- Footsteps (`footstep()` in survival.js) kick up one particle in the ground's `step` style every
+  other walk picture.
 
 ## Code style
 

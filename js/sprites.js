@@ -275,52 +275,101 @@ const SPRITES = {
   },
 };
 
-// The player: a survivor in a wide-brimmed hat with a pack on their back. Three characters wide,
-// four rows tall, with a set of frames for each way they can face. Frame 0 is standing still;
-// walking alternates frames 1 and 2. `swing` is shown mid-action, tool raised.
+// The player: a survivor in a wide-brimmed straw hat with a pack on their back. Three characters
+// wide and four rows tall, with a set of pictures for each way they can face:
+//   stand    standing still          blink   the same, eyes shut for a moment
+//   walk     four steps: a stride, legs passing (lifted a little, see WALK_BOB in render.js), the
+//            other stride, legs passing; the arms swing against the legs
+//   windup   tool raised, between swings      strike   the swing landing, or a hand reaching out
+//   crouch   kneeling, to drink or put out a fire
+// `held` says where the tool in their hand is drawn in each pose, in characters from the picture's
+// top-left corner (see ACTION_POSES for which tool).
 const PLAYER_INK = {
-  h: ['#e2bd5f'], // straw hat
-  H: ['#4a2f1c'], // hair, from behind
-  s: ['#f0c290'], // skin
-  c: ['#d9603b'], // shirt
-  k: ['#7a5a32'], // pack
+  T: ['#f0d27a'], // straw hat: the crown, in the light
+  B: ['#d4a540'], // the brim
+  b: ['#b8892e'], // the brim's shaded side
+  r: ['#5a3a22'], // hair
+  R: ['#2a1a10', '#5a3a22'], // the back of the head
+  F: ['#3a2414', '#f0c290'], // face: eyes and mouth on skin
+  f: ['#f0c290'], // skin: arms and hands, and the nose from the side
+  g: ['#d9a878'], // skin on the shaded side
+  C: ['#b84a2c', '#d9603b'], // shirt
+  P: ['#5e4630', '#d9603b'], // pack straps over the shirt
+  K: ['#5e4630', '#8a6a3c'], // the pack, from behind
+  k: ['#8a6a3c'], // the pack, from the side
   p: ['#41557f'], // trousers
-  x: ['#cfd4d8'], // tool
 };
 
 const PLAYER_SPRITES = {
   down: {
-    frames: [
-      { art: ['▗█▖', ' ☻ ', '▐█▌', ' Π '], paint: ['hhh', ' s ', 'scs', ' p '] },
-      { art: ['▗█▖', ' ☻ ', '▐█▌', ' Λ '], paint: ['hhh', ' s ', 'scs', ' p '] },
-      { art: ['▗█▖', ' ☻ ', '▐█▌', ' Π '], paint: ['hhh', ' s ', 'scs', ' p '] },
+    stand: { art: ['▄█▄', '▐ü▌', '▐‖▌', ' Π '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
+    blink: { art: ['▄█▄', '▐ū▌', '▐‖▌', ' Π '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
+    walk: [
+      { art: ['▄█▄', '▐ü▌', '▝‖▌', ' Λ '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
+      { art: ['▄█▄', '▐ü▌', '▐‖▌', ' Π '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
+      { art: ['▄█▄', '▐ü▌', '▐‖▘', ' Λ '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
+      { art: ['▄█▄', '▐ü▌', '▐‖▌', ' Π '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
     ],
-    swing: { art: ['▗█▖', ' ☻⚒', '▐█▌', ' Π '], paint: ['hhh', ' sx', 'scs', ' p '] },
+    windup: { art: ['▄█▄', '▐ü▌', '▐‖ ', ' Π '], paint: ['BTb', 'rFr', 'fP ', ' p '] },
+    strike: { art: ['▄█▄', '▐ü▌', '▐‖▖', ' Π '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
+    crouch: { art: ['   ', '▄█▄', '▐ü▌', '▐‖▌'], paint: ['   ', 'BTb', 'rFr', 'fPg'] },
+    held: { windup: [2, 1], strike: [2, 3], crouch: [2, 3] },
   },
   up: {
-    frames: [
-      { art: ['▗█▖', ' ● ', '▐█▌', ' Π '], paint: ['hhh', ' H ', 'sks', ' p '] },
-      { art: ['▗█▖', ' ● ', '▐█▌', ' Λ '], paint: ['hhh', ' H ', 'sks', ' p '] },
-      { art: ['▗█▖', ' ● ', '▐█▌', ' Π '], paint: ['hhh', ' H ', 'sks', ' p '] },
+    stand: { art: ['▄█▄', '▐▓▌', '▐▣▌', ' Π '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
+    walk: [
+      { art: ['▄█▄', '▐▓▌', '▝▣▌', ' Λ '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
+      { art: ['▄█▄', '▐▓▌', '▐▣▌', ' Π '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
+      { art: ['▄█▄', '▐▓▌', '▐▣▘', ' Λ '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
+      { art: ['▄█▄', '▐▓▌', '▐▣▌', ' Π '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
     ],
-    swing: { art: ['▗█▖', '⚒● ', '▐█▌', ' Π '], paint: ['hhh', 'xH ', 'sks', ' p '] },
+    windup: { art: ['▄█▄', '▐▓▌', ' ▣▌', ' Π '], paint: ['BTb', 'rRr', ' Kg', ' p '] },
+    strike: { art: ['▄█▄', '▐▓▌', '▝▣▌', ' Π '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
+    crouch: { art: ['   ', '▄█▄', '▐▓▌', '▐▣▌'], paint: ['   ', 'BTb', 'rRr', 'fKg'] },
+    held: { windup: [0, 1], strike: [0, 0], crouch: [0, 1] },
   },
   left: {
-    frames: [
-      { art: ['▄█▖', ' ☻ ', '▐█▌', ' Π '], paint: ['hhh', ' s ', 'sck', ' p '] },
-      { art: ['▄█▖', ' ☻ ', '▐█▌', ' Λ '], paint: ['hhh', ' s ', 'sck', ' p '] },
-      { art: ['▄█▖', ' ☻ ', '▐█▌', ' Π '], paint: ['hhh', ' s ', 'sck', ' p '] },
+    stand: { art: ['▄█▖', '▐·▌', '▐█▌', ' Π '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
+    blink: { art: ['▄█▖', '▐-▌', '▐█▌', ' Π '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
+    walk: [
+      { art: ['▄█▖', '▐·▌', '▘█▌', ' Λ '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
+      { art: ['▄█▖', '▐·▌', '▐█▌', ' ║ '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
+      { art: ['▄█▖', '▐·▌', '▗█▌', ' Λ '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
+      { art: ['▄█▖', '▐·▌', '▐█▌', ' ║ '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
     ],
-    swing: { art: ['▄█▖', '⚒☻ ', '▐█▌', ' Π '], paint: ['hhh', 'xs ', 'sck', ' p '] },
+    windup: { art: ['▄█▖', '▐·▌', ' █▌', ' Π '], paint: ['BTb', 'fFr', ' Ck', ' p '] },
+    strike: { art: ['▄█▖', '▐·▌', '▀█▌', ' Π '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
+    crouch: { art: ['   ', '▄█▖', '▐·▌', '▐█▌'], paint: ['   ', 'BTb', 'fFr', 'fCk'] },
+    held: { windup: [2, 0], strike: [-1, 2], crouch: [-1, 3] },
   },
   right: {
-    frames: [
-      { art: ['▗█▄', ' ☻ ', '▐█▌', ' Π '], paint: ['hhh', ' s ', 'kcs', ' p '] },
-      { art: ['▗█▄', ' ☻ ', '▐█▌', ' Λ '], paint: ['hhh', ' s ', 'kcs', ' p '] },
-      { art: ['▗█▄', ' ☻ ', '▐█▌', ' Π '], paint: ['hhh', ' s ', 'kcs', ' p '] },
+    stand: { art: ['▗█▄', '▐·▌', '▐█▌', ' Π '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
+    blink: { art: ['▗█▄', '▐-▌', '▐█▌', ' Π '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
+    walk: [
+      { art: ['▗█▄', '▐·▌', '▐█▝', ' Λ '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
+      { art: ['▗█▄', '▐·▌', '▐█▌', ' ║ '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
+      { art: ['▗█▄', '▐·▌', '▐█▖', ' Λ '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
+      { art: ['▗█▄', '▐·▌', '▐█▌', ' ║ '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
     ],
-    swing: { art: ['▗█▄', ' ☻⚒', '▐█▌', ' Π '], paint: ['hhh', ' sx', 'kcs', ' p '] },
+    windup: { art: ['▗█▄', '▐·▌', '▐█ ', ' Π '], paint: ['BTb', 'rFg', 'kC ', ' p '] },
+    strike: { art: ['▗█▄', '▐·▌', '▐█▀', ' Π '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
+    crouch: { art: ['   ', '▗█▄', '▐·▌', '▐█▌'], paint: ['   ', 'BTb', 'rFg', 'kCg'] },
+    held: { windup: [0, 0], strike: [3, 2], crouch: [3, 3] },
   },
+};
+
+// How the player looks doing each thing, by the word on the action button (and Eat and Build).
+//   pose     which picture: 'strike', 'windup' or 'crouch' (see PLAYER_SPRITES)
+//   held     the character drawn in their hand, or null for an empty hand
+//   seconds  how long the pose is held
+// Anything not listed uses `default`: a swing of the rough tool. A crafted tool with power for the
+// word (TOOLS in crafting.js) is drawn in place of `held`, so the axe shows when you chop.
+const ACTION_POSES = {
+  default: { pose: 'strike', held: '⚒', seconds: 0.2 },
+  Pick: { held: null },
+  Drink: { pose: 'crouch', held: null, seconds: 0.4 },
+  'Put out': { pose: 'crouch', held: null, seconds: 0.4 },
+  Eat: { pose: 'windup', held: null, seconds: 0.4 },
 };
 
 // Splits each drawing into rows of single characters, and checks that the art and paint line up so
@@ -343,8 +392,12 @@ function prepareSprite(label, sprite, ink) {
 
 for (const [name, sprite] of Object.entries(SPRITES)) prepareSprite(name, sprite);
 for (const [facing, set] of Object.entries(PLAYER_SPRITES)) {
-  for (const [i, frame] of [...set.frames, set.swing].entries()) {
-    prepareSprite(`player ${facing} ${i < set.frames.length ? i : 'swing'}`, frame, PLAYER_INK);
-    frame.bold = true; // so the player stands out from the world around them
+  for (const [pose, pictures] of Object.entries(set)) {
+    if (pose === 'held') continue;
+    [].concat(pictures).forEach((picture, n) => {
+      const label = Array.isArray(pictures) ? `${pose} ${n + 1}` : pose;
+      prepareSprite(`player ${facing} ${label}`, picture, PLAYER_INK);
+      picture.bold = true; // so the player stands out from the world around them
+    });
   }
 }

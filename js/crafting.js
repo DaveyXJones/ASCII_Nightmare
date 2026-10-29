@@ -5,8 +5,10 @@
 // front of you, the action button says Build, and the Craft button says Done.
 
 // Tools you carry. `power` says, for each action word, how many swings one swing counts as.
+// `glyph` is its picture in the pack and the craft panel; `held` is how it looks in the player's
+// hand facing left, and facing any other way.
 const TOOLS = {
-  axe: { name: 'Stone axe', glyph: '┮', power: { Chop: 2 } },
+  axe: { name: 'Stone axe', glyph: '┮', held: ['┭', '┮'], power: { Chop: 2 } },
 };
 
 // Everything you can make, in the order the craft panel shows them.
@@ -131,7 +133,7 @@ function build(game) {
   const object = OBJECTS[recipe.builds];
   spend(survivor.pack, recipe.cost);
   setObject(game.world, spot.x, spot.y, recipe.builds);
-  player.swingUntil = player.clock + 0.2;
+  player.act = { action: 'Build', at: player.clock };
   burst(game.fx, spot.x + 0.5, spot.y + 0.5, object.burst, 10);
   buzz(30);
   if (recipe.done) showMessage(game, recipe.done);
