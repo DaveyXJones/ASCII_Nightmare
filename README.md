@@ -142,10 +142,13 @@ run straight from the file.
 
 Roughly in order:
 
-1. **Night.** A day and night cycle, a ring of light around the player and the campfire, and
-   things that come out of the dark. It's called Nightmare for a reason. Walls will matter then.
-2. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.
-3. **Saving.** Keep the world and your pack between visits.
-4. **Sound.** Chops, footsteps, rain.
-5. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
+1. **Night, and a torch.** A day and night cycle, a torch to carry and light around the
+   campfire, and things that come out of the dark. It's called Nightmare for a reason. Walls will
+   matter then. *(Next session starts here.)*
+2. **The character.** Pick your own hat and clothes colors, flash when you're hurt and fall over
+   when you die, and maybe a dark outline so you stand out on busy ground.
+3. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.
+4. **Saving.** Keep the world and your pack between visits.
+5. **Sound.** Chops, footsteps, rain.
+6. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
    and what's changed, not the whole map.
