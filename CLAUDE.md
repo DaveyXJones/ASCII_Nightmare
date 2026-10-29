@@ -7,7 +7,7 @@ and overlap whatever is behind them. The owner is building toward a fuller survi
 (crafting, a day and night cycle with things that come out at night, saving, maybe multiplayer);
 see "What's next" in README.md.
 
-## Where things stand: the game is online (last updated 2026-10-28)
+## Where things stand: the game is online (last updated 2026-10-29)
 
 The game is live at **https://daveyxjones.github.io/ASCII_Nightmare/**. The repository
 (`DaveyXJones/ASCII_Nightmare`) is public, its default branch is `main`, and GitHub Pages deploys
@@ -18,6 +18,10 @@ minutes, so `main` must always be playable.
   `actions_list` tool (`list_workflow_runs`) shows whether it succeeded. Claude's cloud container
   can't open github.io itself (blocked by its network policy), so for what the page actually does,
   serve the game from a subfolder the way Pages does (see "Checking a change").
+- **Browser cache.** Pages lets browsers keep files for up to 10 minutes, so right after a merge
+  the owner may still see the old game, or briefly a mix of old and new files that misbehaves.
+  If they report something broken just after an update, have them wait a few minutes and reload
+  before hunting for a bug.
 - **Settings live with the owner.** Claude can't change repository settings (visibility, Pages,
   default branch). **The owner finds GitHub hard to navigate**: if a setting needs changing, walk
   them through it one step at a time with direct links (e.g.
@@ -30,6 +34,30 @@ minutes, so `main` must always be playable.
   Claude session can only push to its own branch (deleting another is cut off with "unexpected
   disconnect"), so the owner does it: https://github.com/DaveyXJones/ASCII_Nightmare/branches,
   trash-can icon at the right end of each branch's row, or **Delete branch** on a merged PR's page.
+
+## Next session: night and a torch (agreed 2026-10-29)
+
+Crafting (PR #2) and the redrawn, animated player (PR #3) are merged and live. The owner chose
+where to start next: **night time and a torch**, then decide from there.
+
+- **Night:** a day and night cycle. The world darkens at dusk (dimming is allowed drawing, see Hard
+  rules), with light around the player's torch and around campfires (objects with `warmth`).
+  Things that come out of the dark can follow; walls from crafting are meant to matter then.
+- **Torch:** something to craft and carry that lights the area around you. It fits what's there:
+  a recipe in `RECIPES`, a tool in `TOOLS` with `held` glyphs, drawn in the hand by `drawPlayer`
+  (today a tool only shows while working; a torch would show all the time, maybe flickering like
+  the campfire's `frames`).
+- Keep the darkness cheap on phones: a few fills or one cached image per frame, never per tile.
+
+Character ideas the owner liked, for after that (none started):
+1. **Choose your look:** hat, shirt and trouser colors picked from the menu. All of the player's
+   colors are in `PLAYER_INK`; after changing them, clear the player sprites' cached `image` so
+   `spriteImage` redraws them.
+2. **Hurt and collapse:** a flash while hunger or thirst is hurting, and a fall before the death
+   screen.
+3. **Torch:** above.
+4. **Outline:** a thin dark edge so the player stands out on busy ground. It bends "Draw only
+   characters on the map", so ask the owner before building it.
 
 ## Hard rules
 
