@@ -34,6 +34,7 @@
   --edge-right: max(12px, env(safe-area-inset-right, 0px));
   --edge-top: max(10px, env(safe-area-inset-top, 0px));
   --edge-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  --vitals-bar: clamp(80px, 16vw, 150px); /* how long the health, food, water and daylight bars are */
 
   color-scheme: dark;
 }
@@ -154,7 +155,7 @@ button:focus-visible {
 
 .bar {
   position: relative;
-  width: clamp(80px, 16vw, 150px);
+  width: var(--vitals-bar);
   height: 8px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.1);
@@ -185,6 +186,12 @@ button:focus-visible {
   color: #ffb347;
   text-shadow: 0 0 6px #ff8a2a;
 }
+
+/* The time of day: the sun and the daylight left, or tonight's moon and the night left. */
+.sky .vital-icon { color: #ffd75e; }
+.sky .fill { background: #d9b44a; }
+.sky.night .vital-icon { color: #dfe6f0; }
+.sky.night .fill { background: #7f93b5; }
 
 @keyframes pulse {
   from { box-shadow: 0 0 0 1px rgba(255, 90, 80, 0.2); }
@@ -233,7 +240,20 @@ button:focus-visible {
 .wood dt { color: #d0a46a; }
 .stone dt { color: #b4b8b0; }
 .berries dt { color: #ff5a6e; }
+.cloth dt { color: #e6dcc4; }
 .axe dt { color: #c9ccc4; }
+.torch dt { color: #c49a62; }
+
+/* A lit torch glows in the pack, and turns red as it burns low. */
+.torch.lit dt {
+  color: #ffb347;
+  text-shadow: 0 0 6px #ff8a2a;
+}
+
+.torch.low dt {
+  color: #e8552a;
+  text-shadow: 0 0 4px #e8552a;
+}
 
 .tool dd {
   min-width: 0;
@@ -259,7 +279,9 @@ button:focus-visible {
   top: calc(var(--edge-top) + 62px); /* just below the bars and the pack */
   left: 50%;
   width: max-content;
-  max-width: min(70vw, 460px);
+  /* Narrow enough to stay clear of the bars on the left (and as far in from the right). */
+  --clear: calc(max(var(--edge-left), var(--edge-right)) + 56px + var(--vitals-bar));
+  max-width: min(460px, calc(100vw - 2 * var(--clear)));
   margin: 0;
   padding: 7px 14px;
   transform: translate(-50%, -8px);
@@ -536,7 +558,7 @@ button:focus-visible {
 
 .recipes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 10px;
 }
 
@@ -573,6 +595,10 @@ button:focus-visible {
   line-height: 1;
 }
 
+[data-recipe="torch"] .recipe-picture {
+  color: #c49a62;
+}
+
 .recipe-name {
   color: var(--moss);
   font-weight: 700;
@@ -596,6 +622,7 @@ button:focus-visible {
 .cost.wood { color: #d0a46a; }
 .cost.stone { color: #b4b8b0; }
 .cost.berries { color: #ff5a6e; }
+.cost.cloth { color: #e6dcc4; }
 .cost.short { color: var(--health); }
 
 /* A tool you already carry: no cost to show, just a note. */

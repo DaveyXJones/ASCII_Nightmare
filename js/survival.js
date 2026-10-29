@@ -4,6 +4,7 @@ const ITEMS = {
   wood: { name: 'wood', glyph: '≡', color: '#d0a46a' },
   stone: { name: 'stone', glyph: '●', color: '#b4b8b0' },
   berries: { name: 'berries', glyph: '•', color: '#ff5a6e' },
+  cloth: { name: 'cloth', glyph: '▦', color: '#e6dcc4' },
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -16,11 +17,14 @@ const SIP_WATER = 20;
 const SWING_SECONDS = 0.42; // time between swings while the action button is held
 const REACH = 0.95; // how far the player can reach, in tiles, from their feet to the edge of a tile
 const LOW = 25; // below this, a vital is running low and the game warns you
+const TORCH_LOW = 0.2; // share of its burn left when a torch starts to dim and the game warns you
+const TORCH_RELIGHT = 0.5; // a fire offers to light your torch again once this share of it is left
 
 const WARNINGS = {
   food: 'Your stomach growls. Find something to eat.',
   water: 'Your throat is dry. Find water to drink.',
   health: 'You feel weak.',
+  torch: 'Your torch is burning low.',
 };
 
 function newSurvivor() {
@@ -28,8 +32,9 @@ function newSurvivor() {
     vitals: { health: 100, food: 100, water: 100 },
     pack: Object.fromEntries(Object.keys(ITEMS).map((item) => [item, 0])),
     tools: {}, // tools you've made, by their key in TOOLS (crafting.js): { axe: true }
+    torchLeft: 0, // seconds the torch will keep burning, or 0 when it isn't lit
     warm: false, // standing beside a campfire
-    warned: { food: false, water: false, health: false },
+    warned: { food: false, water: false, health: false, torch: false },
     nextSwingAt: 0,
   };
 }
@@ -76,6 +81,47 @@ function besideFire(game) {
   return false;
 }
 
+// ---- The torch ----
+
+// True if you carry a torch that isn't lit, or has burnt down far enough to want lighting again.
+function torchWantsFire(survivor) {
+  return Boolean(survivor.tools.torch) && survivor.torchLeft < TOOLS.torch.burns * TORCH_RELIGHT;
+}
+
+// Holding the torch to a fire: it burns for its full time from now.
+function lightTorch(game, target) {
+  const survivor = game.survivor;
+  const relit = survivor.torchLeft > 0;
+  survivor.torchLeft = TOOLS.torch.burns;
+  survivor.warned.torch = false;
+  burst(game.fx, target.x + 0.5, target.y + 0.5, 'spark', 8);
+  floatText(game.fx, game.player.x, game.player.y - 3, relit ? 'torch relit' : 'torch lit', '#ffb347');
+  const minutes = Math.round(TOOLS.torch.burns / 60);
+  showMessage(game, `Your torch catches. It will burn for about ${minutes} minutes.`);
+  buzz(30);
+}
+
+// A lit torch burns down, warns you when it's getting low, and goes out.
+function updateTorch(game, dt) {
+  const survivor = game.survivor;
+  if (survivor.torchLeft <= 0) return;
+  survivor.torchLeft = Math.max(0, survivor.torchLeft - dt);
+  if (survivor.torchLeft === 0) {
+    showMessage(game, 'Your torch gutters out. Light it again at a campfire.');
+  } else if (!survivor.warned.torch && survivor.torchLeft < TOOLS.torch.burns * TORCH_LOW) {
+    survivor.warned.torch = true;
+    showMessage(game, WARNINGS.torch);
+  }
+}
+
+// How far the torch lights the dark around you, in tiles: nothing unless it's lit, and less and
+// less once it's burning low, down to half.
+function torchReach(survivor) {
+  if (survivor.torchLeft <= 0) return 0;
+  const torch = TOOLS.torch;
+  return torch.light * (0.5 + 0.5 * Math.min(1, survivor.torchLeft / (torch.burns * TORCH_LOW)));
+}
+
 // Picked bushes grow their berries back after a while.
 function updateRegrowth(world, time) {
   for (let n = world.regrowing.length - 1; n >= 0; n--) {
@@ -87,9 +133,10 @@ function updateRegrowth(world, time) {
 }
 
 // Finds what the action button would use right now: the nearest thing within reach, preferring
-// whatever the player is facing. Returns { x, y, label, object?, drink? } or null.
+// whatever the player is facing. Returns { x, y, label, object?, drink?, light? } or null.
 function findTarget(game) {
-  const { world, player } = game;
+  const { world, player, survivor } = game;
+  const wantsFire = torchWantsFire(survivor);
   const facing = FACINGS[player.facing];
   const footX = Math.floor(player.x);
   const footY = Math.floor(player.y);
@@ -101,8 +148,14 @@ function findTarget(game) {
       const object = objectAt(world, tx, ty);
       const ground = groundAt(world, tx, ty);
       let candidate = null;
-      if (object && object.action) candidate = { x: tx, y: ty, label: object.action, object };
-      else if (!object && ground && ground.drink) candidate = { x: tx, y: ty, label: 'Drink', drink: true };
+      if (object && object.flame && wantsFire) {
+        // Facing a fire with a torch that needs lighting, the button lights it instead of putting it out.
+        candidate = { x: tx, y: ty, label: 'Light', object, light: true };
+      } else if (object && object.action) {
+        candidate = { x: tx, y: ty, label: object.action, object };
+      } else if (!object && ground && ground.drink) {
+        candidate = { x: tx, y: ty, label: 'Drink', drink: true };
+      }
       if (!candidate) continue;
 
       // How far the feet are from the nearest edge of the tile, and how squarely it's in front.
@@ -133,6 +186,10 @@ function useTarget(game) {
 
   if (target.drink || (target.object && target.object.drink)) {
     drink(game, target);
+    return;
+  }
+  if (target.light) {
+    lightTorch(game, target);
     return;
   }
 
@@ -206,6 +263,7 @@ const BURSTS = {
   water: { glyphs: ['°', '·', '\''], colors: ['#9fcff5', '#ffffff'] },
   wood: { glyphs: ['\'', ',', '·', '`'], colors: ['#d0a46a', '#8b6239'] },
   spark: { glyphs: ['*', '·', '\'', '°'], colors: ['#ffd75e', '#ff8a2a', '#a3a69e'] },
+  fluff: { glyphs: ['°', '·', '\'', '˚'], colors: ['#f6f2e6', '#cdc6b6'] },
   // Footsteps (see `step` in tiles.js).
   dust: { glyphs: ['.', '·', ','], colors: ['#b08e60', '#8f7552'] },
   sand: { glyphs: ['.', '·', ','], colors: ['#c9b27a', '#a8915c'] },

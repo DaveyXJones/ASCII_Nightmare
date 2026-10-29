@@ -35,28 +35,31 @@ minutes, so `main` must always be playable.
   disconnect"), so the owner does it: https://github.com/DaveyXJones/ASCII_Nightmare/branches,
   trash-can icon at the right end of each branch's row, or **Delete branch** on a merged PR's page.
 
-## Next session: night and a torch (agreed 2026-10-29)
+## Night and the torch (built 2026-10-29)
 
-Crafting (PR #2) and the redrawn, animated player (PR #3) are merged and live. The owner chose
-where to start next: **night time and a torch**, then decide from there.
+Crafting (PR #2) and the redrawn, animated player (PR #3) are merged and live. Night and the torch
+were built next, to the owner's spec: **a torch costs 2 wood and 1 cloth (a new item) and must be
+lit at a campfire; night lasts 10 minutes, with varying darkness and moonlight.** Choices Claude
+made that the owner hadn't specified, any of which they may want changed:
 
-- **Night:** a day and night cycle. The world darkens at dusk (dimming is allowed drawing, see Hard
-  rules), with light around the player's torch and around campfires (objects with `warmth`).
-  Things that come out of the dark can follow; walls from crafting are meant to matter then.
-- **Torch:** something to craft and carry that lights the area around you. It fits what's there:
-  a recipe in `RECIPES`, a tool in `TOOLS` with `held` glyphs, drawn in the hand by `drawPlayer`
-  (today a tool only shows while working; a torch would show all the time, maybe flickering like
-  the campfire's `frames`).
-- Keep the darkness cheap on phones: a few fills or one cached image per frame, never per tile.
+- **Cloth comes from cotton plants** (`cotton` in `OBJECTS`): picked like berry bushes, regrow in
+  two minutes. Two stand beside the cottage (`c` in `COTTAGE`) so a new player finds them, and
+  more grow in open fields (`pickTerrain`).
+- **The cycle:** 8 min day, 1 min dusk, 10 min night, 1 min dawn. Dying wakes you at the next
+  morning (`nextMorning`); a new world starts on the first morning.
+- **"Varying darkness":** the moon's shape changes nightly through `MOONS` (half, thin, none,
+  thin, half, bright, full, bright); it rises and sets over the night, and clouds (noise) cross it.
+- **The torch** burns 5 minutes, then goes out but stays in the pack; light it again at any fire.
+  Once it's burnt halfway down a fire offers **Light** instead of **Put out**, to top it up.
 
-Character ideas the owner liked, for after that (none started):
+Next, the owner's plan: **things that come out of the dark** (walls from crafting are meant to
+matter then). Character ideas the owner liked, for after that (none started):
 1. **Choose your look:** hat, shirt and trouser colors picked from the menu. All of the player's
    colors are in `PLAYER_INK`; after changing them, clear the player sprites' cached `image` so
    `spriteImage` redraws them.
 2. **Hurt and collapse:** a flash while hunger or thirst is hurting, and a fall before the death
    screen.
-3. **Torch:** above.
-4. **Outline:** a thin dark edge so the player stands out on busy ground. It bends "Draw only
+3. **Outline:** a thin dark edge so the player stands out on busy ground. It bends "Draw only
    characters on the map", so ask the owner before building it.
 
 ## Hard rules
@@ -68,8 +71,8 @@ Character ideas the owner liked, for after that (none started):
 - **Relative paths only.** The live game sits in a subfolder (`/ASCII_Nightmare/`), not at the site
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
-- **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → render →
-  input → survival → crafting → game`. A file may use globals from files before it at load time,
+- **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
+  render → input → survival → crafting → game`. A file may use globals from files before it at load time,
   and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
@@ -86,11 +89,12 @@ Character ideas the owner liked, for after that (none started):
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, and `ACTION_POSES`. Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites) and `warmth` (heal faster nearby). |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles) and `flame` (a torch can be lit at it). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
+| `js/night.js` | The day and night cycle: phase lengths, `MOONS`, `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
-| `js/survival.js` | `ITEMS`, vitals and drain rates, `besideFire`, `findTarget`, `useTarget`, `eatBerry`, `BURSTS`, particles and floating text. |
+| `js/survival.js` | `ITEMS`, vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eatBerry`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
 | `js/game.js` | `state`, player movement and collision, menus, death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
@@ -125,6 +129,22 @@ Character ideas the owner liked, for after that (none started):
   per press (the `'action'` press from `input.js`), not on hold. Anything built is an ordinary
   object with an `action` that takes it down again, so a misplaced wall is never a trap.
 - `.game > canvas` is the map; the panel's previews are canvases too, copied from `spriteImage`.
+- **The torch** is a tool with no `power`: `TOOLS.torch` has `burns` (seconds) and `light` (tiles).
+  `survivor.torchLeft` counts down while it's lit (0 = unlit). Facing an object with `flame` while
+  `torchWantsFire`, `findTarget` returns a `Light` target instead of the object's own action.
+- **Holding the action button keeps doing one thing** (`player.holding`): if the target's label
+  changes under the thumb (Light becoming Put out), working stops until the button is released.
+
+## Day and night (js/night.js)
+
+- `state.dayClock` is seconds since the world's first morning; it only runs while playing.
+  `update()` recomputes `state.sky = skyAt(...)` every frame and shows `skyMessage` when the phase
+  changes. Night `n` (counting from 0) has `MOONS[n % MOONS.length]`.
+- Moonlight is the moon's `light` × its height (a sine over the night, never below `MOON_LOW`) ×
+  clouds (`fractalNoise` along the night). Darkness runs from `MOONLIT` (full moon) to `DARKEST`.
+  Dusk and dawn fade between day and the night's first or last darkness, so it never jumps.
+- The HUD's fourth vital (`.vital.sky`) shows ☼ and the daylight left, or the moon and the night
+  left.
 
 ## Rendering (js/render.js)
 
@@ -153,6 +173,17 @@ Character ideas the owner liked, for after that (none started):
   the counter stops under reduced motion, like `waterFrame`.
 - The build-mode ghost (`drawBuildSpot`) is drawn translucent after the standing pass, on top of
   everything, so it's visible even behind a tree.
+- **Night** (`drawNight`): after the standing pass, the player's ghost and particles, and before
+  the target brackets, the build ghost and floating text. The dark is drawn on a small canvas
+  (`NIGHT_SCALE` times smaller than the screen): one fill in `sky.color` at `sky.darkness`, then a
+  pre-drawn soft brush per light with `destination-out`, then an orange `glow` brush over
+  firelight, then one `drawImage` to stretch it over the screen **with smoothing off** (with
+  smoothing, headless Chromium spent ~11 ms more per frame on the stretch; off, it costs about the
+  same as one plain fill, and the steps don't show). Lights come from `findLights`: the torch (or
+  dim `EYES_REACH` without one), objects with `light` within `LIGHT_REACH` of the screen (indoor
+  ones only when you're inside), and the cottage's front windows from outside. Their reach
+  flickers with `state.flameFrame`, so it holds still under reduced motion. Sun shadows fade with
+  the darkness (`drawShadows`).
 
 ## Sprites (js/sprites.js)
 
@@ -178,6 +209,10 @@ Character ideas the owner liked, for after that (none started):
   tool with `held` glyphs and power for the action replaces the default `⚒`.
 - Footsteps (`footstep()` in survival.js) kick up one particle in the ground's `step` style every
   other walk picture.
+- **The torch in the hand:** once made, it's drawn in every pose by `drawTorch`, at the facing's
+  `torch` spot (`stand`, or `crouch` a row lower), on the side away from the tool so they never
+  overlap. `TORCH_LOOK` gives the stick, the unlit rag, and the `flames` it flickers through by
+  `state.flameFrame`; the head is drawn one row above the stick.
 
 ## Code style
 

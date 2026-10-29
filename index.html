@@ -26,6 +26,7 @@
           <div class="vital health" title="Health"><span class="vital-icon" aria-hidden="true">♥</span><span class="bar"><span class="fill" id="bar-health"></span></span></div>
           <div class="vital food" title="Food"><span class="vital-icon" aria-hidden="true">✿</span><span class="bar"><span class="fill" id="bar-food"></span></span></div>
           <div class="vital water" title="Water"><span class="vital-icon" aria-hidden="true">≈</span><span class="bar"><span class="fill" id="bar-water"></span></span></div>
+          <div class="vital sky" title="Daylight left"><span class="vital-icon" id="sky-icon" aria-hidden="true">☼</span><span class="bar"><span class="fill" id="bar-sky"></span></span></div>
         </div>
 
         <div class="top-right">
@@ -33,7 +34,9 @@
             <div class="item wood"><dt aria-label="Wood">≡</dt><dd id="count-wood">0</dd></div>
             <div class="item stone"><dt aria-label="Stone">●</dt><dd id="count-stone">0</dd></div>
             <div class="item berries"><dt aria-label="Berries">•</dt><dd id="count-berries">0</dd></div>
+            <div class="item cloth"><dt aria-label="Cloth">▦</dt><dd id="count-cloth">0</dd></div>
             <div class="item tool axe" id="tool-axe" hidden><dt aria-hidden="true">┮</dt><dd>axe</dd></div>
+            <div class="item tool torch" id="tool-torch" hidden><dt aria-hidden="true">¡</dt><dd>torch</dd></div>
           </dl>
           <button type="button" id="menu-button" class="menu-button" aria-label="Menu">☰</button>
         </div>
@@ -67,17 +70,17 @@
             <h2>How to play</h2>
             <ul class="help touch-help">
               <li><b>Walk:</b> put your left thumb down anywhere on the left side and drag.</li>
-              <li><b>Act:</b> the big button chops trees, mines rocks, picks berries and drinks water. Hold it to keep going.</li>
+              <li><b>Act:</b> the big button chops trees, mines rocks, picks berries and cotton, and drinks water. Hold it to keep going.</li>
               <li><b>Eat:</b> the small button eats a berry.</li>
               <li><b>Craft:</b> the button above makes tools and things to build. Building puts a see-through copy in front of you: tap <b>Build</b> to place it, <b>Done</b> to stop.</li>
             </ul>
             <ul class="help key-help">
               <li><b>Walk:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrow keys.</li>
-              <li><b>Act:</b> <kbd>Space</kbd> or <kbd>E</kbd> chops, mines, picks and drinks. Hold to keep going.</li>
+              <li><b>Act:</b> <kbd>Space</kbd> or <kbd>E</kbd> chops, mines, picks, drinks and lights your torch. Hold to keep going.</li>
               <li><b>Eat:</b> <kbd>F</kbd> eats a berry. <b>Menu:</b> <kbd>Esc</kbd></li>
-              <li><b>Craft:</b> <kbd>C</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> to pick. When building, <kbd>Space</kbd> places it and <kbd>C</kbd> stops.</li>
+              <li><b>Craft:</b> <kbd>C</kbd>, then <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> to pick. When building, <kbd>Space</kbd> places it and <kbd>C</kbd> stops.</li>
             </ul>
-            <p class="help-note">Food and water run down as you go. Run out of either and you start to lose health.</p>
+            <p class="help-note">Food and water run down as you go. Run out of either and you start to lose health. Nights are dark: make a torch and light it at a campfire.</p>
           </div>
         </div>
       </section>
@@ -116,6 +119,7 @@
     <script src="js/sprites.js"></script>
     <script src="js/objects.js"></script>
     <script src="js/world.js"></script>
+    <script src="js/night.js"></script>
     <script src="js/render.js"></script>
     <script src="js/input.js"></script>
     <script src="js/survival.js"></script>
