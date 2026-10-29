@@ -13,6 +13,7 @@
 //   drink    true if the player can drink from it
 //   tall     the glyphs stand up and are drawn over the player's feet (grass you wade through)
 //   raised   drawn as a raised block with a cliff face (mountains), see drawMountain() in render.js
+//   step     what a footstep kicks up: a style in BURSTS (survival.js), like 'dust' or 'grass'
 
 const TILES = {
   deepWater: {
@@ -40,12 +41,14 @@ const TILES = {
     glyphs: ['.', '·', ' ', ':', ' ', '.'],
     colors: ['#a8915c', '#b59e68', '#968150'],
     bgs: ['#5e5132', '#655736', '#584c2f'],
+    step: 'sand',
   },
   grass: {
     name: 'Grass',
     glyphs: ['.', ',', ' ', '\'', '`', ' ', '.', ' '],
     colors: ['#5d9a45', '#6aa84f', '#4f8a3b'],
     bgs: ['#23461b', '#284f1f', '#2c5622', '#1f3f18'],
+    step: 'grass',
   },
   tallGrass: {
     name: 'Tall grass',
@@ -53,18 +56,21 @@ const TILES = {
     colors: ['#86c460', '#79b85a', '#93cf6b'],
     bgs: ['#23461b', '#284f1f', '#2c5622', '#1f3f18'],
     tall: true,
+    step: 'grass',
   },
   flowers: {
     name: 'Wildflowers',
     glyphs: ['✿', '*', ',', '❀', '.'],
     colors: ['#e889b0', '#efd25a', '#c3a0f0', '#f4f1e4'],
     bgs: ['#23461b', '#284f1f', '#2c5622'],
+    step: 'grass',
   },
   hills: {
     name: 'Rocky hills',
     glyphs: ['.', ' ', '\'', ' ', '^', ' ', ',', '.'],
     colors: ['#a49f8a', '#8f8a76'],
     bgs: ['#4f4a3a', '#55503f', '#4a4536'],
+    step: 'dust',
   },
   mountain: {
     name: 'Mountain',
@@ -92,6 +98,7 @@ const TILES = {
     glyphs: ['.', ':', '·', ' '],
     colors: ['#b08e60', '#9c7d52'],
     bgs: ['#5a4329', '#604730'],
+    step: 'dust',
   },
   floor: {
     name: 'Wooden floor',

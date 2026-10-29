@@ -28,6 +28,10 @@ const SHADOW_COLOR = 'rgba(0, 0, 0, 0.3)';
 const BANK_COLOR = '#2a2214'; // the earth bank where land drops into water
 const TARGET_COLOR = '#ffd75e';
 const BLOCKED_COLOR = '#ff6b5e'; // brackets round a spot you can't build on
+const TOOL_COLOR = '#cfd4d8'; // the tool in the player's hand
+const WALK_FRAME_TILES = 0.45; // how far the player walks on each picture of the walking animation
+const WALK_BOB = 0.08; // how far the player rises as their legs pass, in rows
+const BLINK_SECONDS = 0.12;
 const GHOST_ALPHA = 0.55; // how solid the see-through copy in build mode looks
 
 const view = {
@@ -685,20 +689,69 @@ function dimOutside(house) {
 
 // ---- The player ----
 
-function playerSprite(player) {
+// The look for an action word: its entry in ACTION_POSES (sprites.js) on top of the default.
+function actionPose(action) {
+  return { ...ACTION_POSES.default, ...ACTION_POSES[action] };
+}
+
+// What the player holds for an action: a crafted tool made for it (the axe, for Chop), or else
+// whatever ACTION_POSES says. Tools have a picture for facing left and one for every other way.
+function heldGlyph(action, facing, survivor) {
+  for (const key of Object.keys(survivor.tools)) {
+    const tool = TOOLS[key];
+    if (tool.held && tool.power[action]) return facing === 'left' ? tool.held[0] : tool.held[1];
+  }
+  return actionPose(action).held;
+}
+
+// Which picture to draw the player with right now, what's in their hand, and how far they're
+// lifted mid-stride.
+function playerPose(game) {
+  const { player, survivor } = game;
   const set = PLAYER_SPRITES[player.facing];
-  if (player.swingUntil > player.clock) return set.swing;
-  if (!player.moving) return set.frames[0];
-  return set.frames[1 + (Math.floor(player.stride / 0.45) % 2)];
+  const pose = (name, action) => ({
+    sprite: set[name],
+    held: action ? heldGlyph(action, player.facing, survivor) : null,
+    spot: set.held[name],
+    lift: 0,
+  });
+
+  // Just did something: swinging, reaching, kneeling to drink.
+  if (player.act) {
+    const look = actionPose(player.act.action);
+    if (player.clock - player.act.at < look.seconds) return pose(look.pose, player.act.action);
+  }
+  // Holding the button between swings: tool raised (or still kneeling, for a drink).
+  if (player.working) {
+    const look = actionPose(player.working);
+    return pose(look.pose === 'strike' ? 'windup' : look.pose, player.working);
+  }
+  if (player.moving) {
+    const step = Math.floor(player.stride / WALK_FRAME_TILES) % set.walk.length;
+    return { sprite: set.walk[step], held: null, lift: step % 2 ? Math.round(view.th * WALK_BOB) : 0 };
+  }
+  if (set.blink && blinking(player.clock)) return pose('blink');
+  return pose('stand');
+}
+
+// Blinks every few seconds. Two different rhythms laid over each other, so it doesn't look like
+// clockwork.
+function blinking(clock) {
+  return clock % 4.3 < BLINK_SECONDS || (clock + 1.9) % 6.7 < BLINK_SECONDS;
 }
 
 function drawPlayer(game, alpha) {
   const { world, player } = game;
-  const image = spriteImage(playerSprite(player));
+  const look = playerPose(game);
+  const image = spriteImage(look.sprite);
   const left = Math.round(screenX(player.x) - image.width / 2);
-  const top = Math.round(screenY(player.y) + view.th * 0.25) - image.height;
+  const top = Math.round(screenY(player.y) + view.th * 0.25) - image.height - look.lift;
   view.ctx.globalAlpha = alpha;
   view.ctx.drawImage(image, left, top);
+  if (look.held) {
+    const [col, row] = look.spot;
+    drawGlyph(view.ctx, look.held, TOOL_COLOR, left + col * view.cw, top + row * view.th, true);
+  }
   view.ctx.globalAlpha = 1;
   if (alpha < 1) return;
 

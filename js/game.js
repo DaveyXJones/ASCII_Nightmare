@@ -97,8 +97,10 @@ function wakeUp() {
     facing: 'down',
     moving: false,
     stride: 0, // distance walked, for the walking animation
+    steps: 0, // footsteps taken, to kick up a puff of dust at each one
     clock: 0,
-    swingUntil: 0,
+    act: null, // the last thing they did, { action, at }, for the swing or kneel it shows
+    working: null, // the action word while the action button is held on something
   };
   state.survivor = newSurvivor();
   state.fx = { particles: [], floaters: [], shake: null };
@@ -121,9 +123,11 @@ function update(dt) {
     // In build mode the action button builds (see the 'action' press in frame()) instead.
     state.target = null;
     state.buildSpot = findBuildSpot(state);
+    player.working = null;
   } else {
     state.target = findTarget(state);
-    if (actionHeld() && state.target && player.clock >= survivor.nextSwingAt) {
+    player.working = actionHeld() && state.target ? state.target.label : null;
+    if (player.working && player.clock >= survivor.nextSwingAt) {
       useTarget(state);
       survivor.nextSwingAt = player.clock + SWING_SECONDS;
     }
@@ -152,6 +156,12 @@ function movePlayer(dt) {
   const blocker = blockedX || blockedY;
   const moved = Math.hypot(player.x - startX, player.y - startY);
   player.stride += moved;
+  // A foot comes down every other picture of the walk (see WALK_FRAME_TILES in render.js).
+  const steps = Math.floor(player.stride / (WALK_FRAME_TILES * 2));
+  if (steps !== player.steps) {
+    player.steps = steps;
+    footstep(state);
+  }
 
   // Only say what's in the way when it actually stops the player, and only once per thing.
   if (moved > step * 0.25) {

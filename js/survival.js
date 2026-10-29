@@ -128,7 +128,7 @@ function useTarget(game) {
   const { world, player, survivor } = game;
   const target = game.target;
   if (!target) return;
-  player.swingUntil = player.clock + 0.2;
+  player.act = { action: target.label, at: player.clock };
   faceToward(player, target.x + 0.5, target.y + 0.5);
 
   if (target.drink || (target.object && target.object.drink)) {
@@ -194,6 +194,7 @@ function eatBerry(game) {
   }
   pack.berries--;
   vitals.food = Math.min(100, vitals.food + BERRY_FOOD);
+  game.player.act = { action: 'Eat', at: game.player.clock };
   floatText(game.fx, game.player.x, game.player.y - 3, '+food', ITEMS.berries.color);
 }
 
@@ -205,6 +206,10 @@ const BURSTS = {
   water: { glyphs: ['°', '·', '\''], colors: ['#9fcff5', '#ffffff'] },
   wood: { glyphs: ['\'', ',', '·', '`'], colors: ['#d0a46a', '#8b6239'] },
   spark: { glyphs: ['*', '·', '\'', '°'], colors: ['#ffd75e', '#ff8a2a', '#a3a69e'] },
+  // Footsteps (see `step` in tiles.js).
+  dust: { glyphs: ['.', '·', ','], colors: ['#b08e60', '#8f7552'] },
+  sand: { glyphs: ['.', '·', ','], colors: ['#c9b27a', '#a8915c'] },
+  grass: { glyphs: ['\'', ',', '`'], colors: ['#86c460', '#5d9a45'] },
 };
 
 // Throws a handful of characters into the air, like chips flying off an axe.
@@ -223,6 +228,26 @@ function burst(fx, x, y, kind, count) {
       life: 0.5 + Math.random() * 0.4,
     });
   }
+}
+
+// One speck kicked up from the ground where the player's foot lands, if the ground has a `step`.
+function footstep(game) {
+  const { world, player, fx } = game;
+  const ground = groundAt(world, Math.floor(player.x), Math.floor(player.y));
+  if (!ground || !ground.step) return;
+  const style = BURSTS[ground.step];
+  const n = Math.floor(Math.random() * 6);
+  fx.particles.push({
+    x: player.x + (Math.random() - 0.5) * 0.4,
+    y: player.y + 0.1,
+    z: 0.05,
+    vx: (Math.random() - 0.5) * 0.8,
+    vy: (Math.random() - 0.5) * 0.3,
+    vz: 1 + Math.random(),
+    glyph: style.glyphs[n % style.glyphs.length],
+    color: style.colors[n % style.colors.length],
+    life: 0.3,
+  });
 }
 
 function floatText(fx, x, y, text, color) {
