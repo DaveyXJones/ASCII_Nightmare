@@ -65,6 +65,7 @@ const view = {
   atlas: null,
   playerBox: null, // where the player was drawn this frame, to tell if anything covered them
   playerCovered: false,
+  shades: [], // the creatures drawn this frame and where, for their eyes: { creature, left, top, hidden }
 };
 
 function setupView(canvas) {
@@ -284,6 +285,7 @@ function drawFrame(game) {
   if (view.playerCovered) drawPlayer(game, 0.4);
   drawParticles(game.fx);
   drawNight(game, range, inside);
+  drawEyes(game);
   // Above the dark, so you can always see what the button will use and where you're building.
   if (game.target) drawTarget(game.target, game.time);
   if (game.buildSpot) drawBuildSpot(game);
@@ -560,11 +562,23 @@ function drawStanding(game, range, inside) {
   let playerDrawn = false;
   view.playerBox = null;
   view.playerCovered = false;
+  view.shades.length = 0;
   resetCover(left, top - SPRITE_REACH_ROWS, right, bottom);
 
   const placePlayer = () => {
     drawPlayer(game, 1);
     playerDrawn = true;
+  };
+  // Creatures roam freely like the player, so they're drawn the same way: from the back of the
+  // screen to the front, each as soon as its feet are behind the line its row is drawn at.
+  const creatures = game.creatures
+    .filter((c) => c.x > left - 1 && c.x < right + 2 && c.y > top - 1 && c.y < bottom + 2)
+    .sort((a, b) => a.y - b.y);
+  let nextCreature = 0;
+  const placeCreatures = (line) => {
+    while (nextCreature < creatures.length && creatures[nextCreature].y < line) {
+      drawCreature(game, creatures[nextCreature++]);
+    }
   };
 
   for (let ty = top; ty <= bottom; ty++) {
@@ -580,6 +594,7 @@ function drawStanding(game, range, inside) {
     // Things standing in a row are drawn at the middle of the tile; the player is drawn as soon as
     // their feet are behind that line, so they pass behind a tree's trunk and in front of it.
     if (!playerDrawn && player.y < ty + 0.5) placePlayer();
+    placeCreatures(ty + 0.5);
     for (let tx = left; tx <= right; tx++) {
       const i = ty * world.width + tx;
       const key = world.objects[i];
@@ -593,8 +608,10 @@ function drawStanding(game, range, inside) {
       drawHouseImage(houseImage(house), house.left - 0.5, house.top - WALL_ROWS);
     }
     if (!playerDrawn && player.y < ty + 1) placePlayer();
+    placeCreatures(ty + 1);
   }
   if (!playerDrawn) placePlayer();
+  placeCreatures(Infinity);
 }
 
 // The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
@@ -804,11 +821,60 @@ function drawTorch(game, x, y) {
 // tree or the cottage shouldn't make you vanish).
 function noteDrawn(x0, y0, x1, y1) {
   markCover(x0, y0, x1, y1);
+  // Anything drawn over a creature's eyes hides them, so they don't shine through a tree or a roof.
+  for (const shade of view.shades) {
+    const eyes = shade.eyes;
+    if (x0 < eyes.x1 && x1 > eyes.x0 && y0 < eyes.y1 && y1 > eyes.y0) shade.hidden = true;
+  }
   const box = view.playerBox;
   if (!box || view.playerCovered) return;
   if (x0 < box.x1 - view.cw / 2 && x1 > box.x0 + view.cw / 2 && y0 < box.y1 && y1 > box.y0 + view.th / 2) {
     view.playerCovered = true;
   }
+}
+
+// ---- Creatures ----
+
+// A creature (see creatures.js) standing at its feet, like the player: faded in or out as it comes
+// out of the dark, and shaken for a moment when it's hit.
+function drawCreature(game, creature) {
+  const kind = CREATURES[creature.kind];
+  const frame = Math.floor(creature.stride / CREATURE_FRAME_TILES) % kind.frames.length;
+  const image = spriteImage(SPRITES[kind.frames[frame]]);
+  const hit = game.time - creature.hurtAt < 0.18;
+  const shake = hit ? Math.round(Math.sin(game.time * 70) * view.cw * 0.2) : 0;
+  const left = Math.round(screenX(creature.x) - image.width / 2) + shake;
+  const top = Math.round(screenY(creature.y) + view.th * 0.25) - image.height;
+  view.ctx.globalAlpha = creature.fade;
+  view.ctx.drawImage(image, left, top);
+  view.ctx.globalAlpha = 1;
+  noteDrawn(left, top, left + image.width, top + image.height);
+
+  // Where its eyes are, to draw them again above the dark (see drawEyes()).
+  const cells = kind.eyes.cells;
+  const cols = cells.map(([col]) => col);
+  const rows = cells.map(([, row]) => row);
+  const eyes = {
+    x0: left + Math.min(...cols) * view.cw,
+    y0: top + Math.min(...rows) * view.th,
+    x1: left + (Math.max(...cols) + 1) * view.cw,
+    y1: top + (Math.max(...rows) + 1) * view.th,
+  };
+  view.shades.push({ creature, left, top, eyes, hidden: false });
+}
+
+// Creatures' eyes, drawn over the dark: on a black night they're all you see of them. Not where
+// something stands in front of them, and not while they blink.
+function drawEyes(game) {
+  for (const { creature, left, top, hidden } of view.shades) {
+    if (hidden || !eyesOpen(game, creature)) continue;
+    const eyes = CREATURES[creature.kind].eyes;
+    view.ctx.globalAlpha = creature.fade;
+    for (const [col, row] of eyes.cells) {
+      drawGlyph(view.ctx, eyes.glyph, eyes.color, left + col * view.cw, top + row * view.th, true);
+    }
+  }
+  view.ctx.globalAlpha = 1;
 }
 
 // ---- Night ----
@@ -937,11 +1003,11 @@ function flicker(game, seed) {
 // Brackets around whatever the action button will use.
 function drawTarget(target, time, color = TARGET_COLOR) {
   const ctx = view.ctx;
-  const x = screenX(target.x);
-  const y = screenY(target.y);
+  const x = Math.round(screenX(target.x));
+  const y = Math.round(screenY(target.y));
   ctx.globalAlpha = 0.65 + Math.sin(time * 5) * 0.3;
   drawGlyph(ctx, '[', color, x - view.cw, y);
-  drawGlyph(ctx, ']', color, x + view.tw, y);
+  drawGlyph(ctx, ']', color, x + Math.round((target.w || 1) * view.tw), y);
   ctx.globalAlpha = 1;
 }
 

@@ -12,7 +12,7 @@
 // campfire and it lights up the dark `light` tiles around you for `burns` seconds; then it goes
 // out, and you light it again.
 const TOOLS = {
-  axe: { name: 'Stone axe', glyph: '┮', held: ['┭', '┮'], power: { Chop: 2 } },
+  axe: { name: 'Stone axe', glyph: '┮', held: ['┭', '┮'], power: { Chop: 2, Hit: 2 } },
   torch: { name: 'Torch', glyph: '¡', burns: 300, light: 5 },
 };
 
@@ -28,7 +28,7 @@ const TOOLS = {
 const RECIPES = {
   axe: {
     name: 'Stone axe',
-    about: 'Trees fall in half the swings.',
+    about: 'Trees fall in half the swings, and shades too.',
     cost: { wood: 3, stone: 2 },
     tool: 'axe',
     done: 'You lash a sharp stone to a stick. Trees fall twice as fast now.',

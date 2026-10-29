@@ -34,6 +34,7 @@ function newSurvivor() {
     tools: {}, // tools you've made, by their key in TOOLS (crafting.js): { axe: true }
     torchLeft: 0, // seconds the torch will keep burning, or 0 when it isn't lit
     warm: false, // standing beside a campfire
+    hurtBy: null, // what last hurt you: 'hunger' or 'dark', for the words when you die
     warned: { food: false, water: false, health: false, torch: false },
     nextSwingAt: 0,
   };
@@ -45,6 +46,7 @@ function updateVitals(game, dt) {
   vitals.water = Math.max(0, vitals.water - WATER_PER_SECOND * dt);
   if (vitals.food === 0) vitals.health -= STARVING_DAMAGE * dt;
   if (vitals.water === 0) vitals.health -= STARVING_DAMAGE * dt;
+  if (vitals.food === 0 || vitals.water === 0) game.survivor.hurtBy = 'hunger';
   game.survivor.warm = besideFire(game);
   if (vitals.food > LOW && vitals.water > LOW) {
     vitals.health += (game.survivor.warm ? FIRE_HEAL_PER_SECOND : HEAL_PER_SECOND) * dt;
@@ -133,7 +135,9 @@ function updateRegrowth(world, time) {
 }
 
 // Finds what the action button would use right now: the nearest thing within reach, preferring
-// whatever the player is facing. Returns { x, y, label, object?, drink?, light? } or null.
+// whatever the player is facing. A shade in reach comes before anything else. Returns
+// { x, y, w?, label, object?, drink?, light?, creature? } or null, where x, y (and w, the width
+// in tiles, if it isn't 1) say where to draw the brackets.
 function findTarget(game) {
   const { world, player, survivor } = game;
   const wantsFire = torchWantsFire(survivor);
@@ -173,6 +177,21 @@ function findTarget(game) {
       }
     }
   }
+
+  for (const creature of game.creatures) {
+    if (creature.state === 'fade') continue;
+    const toX = creature.x - player.x;
+    const toY = creature.y - player.y;
+    const distance = Math.hypot(toX, toY);
+    const ahead = (toX * facing.x + toY * facing.y) / (distance || 1);
+    if (distance > HIT_REACH || ahead < -0.2) continue;
+    const score = distance - ahead * 0.6 - 1;
+    if (score < bestScore) {
+      // Brackets round its face: its picture is two tiles wide, and its eyes a row and a bit up.
+      best = { x: creature.x - 1, y: creature.y - 1.75, w: 2, label: 'Hit', creature };
+      bestScore = score;
+    }
+  }
   return best;
 }
 
@@ -181,6 +200,10 @@ function useTarget(game) {
   const { world, player, survivor } = game;
   const target = game.target;
   if (!target) return;
+  if (target.creature) {
+    hitCreature(game, target.creature);
+    return;
+  }
   player.act = { action: target.label, at: player.clock };
   faceToward(player, target.x + 0.5, target.y + 0.5);
 
@@ -264,6 +287,7 @@ const BURSTS = {
   wood: { glyphs: ['\'', ',', '·', '`'], colors: ['#d0a46a', '#8b6239'] },
   spark: { glyphs: ['*', '·', '\'', '°'], colors: ['#ffd75e', '#ff8a2a', '#a3a69e'] },
   fluff: { glyphs: ['°', '·', '\'', '˚'], colors: ['#f6f2e6', '#cdc6b6'] },
+  shadow: { glyphs: ['░', '▒', '·', '°'], colors: ['#5a4870', '#3b2d4a', '#2a1d36'] },
   // Footsteps (see `step` in tiles.js).
   dust: { glyphs: ['.', '·', ','], colors: ['#b08e60', '#8f7552'] },
   sand: { glyphs: ['.', '·', ','], colors: ['#c9b27a', '#a8915c'] },

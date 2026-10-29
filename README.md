@@ -4,7 +4,7 @@ A survival game drawn entirely in text, seen from above and a little in front: a
 view, like the old top-down adventure games. You wake up in a cottage on a randomly generated
 island. Keep yourself fed and watered: pick berries, drink from lakes and the well, chop trees and
 break rocks for wood and stone, then turn them into an axe, a campfire and walls. After eight
-minutes the sun goes down, and you'll want a torch.
+minutes the sun goes down, and things with red eyes come out of the dark. You'll want a torch.
 
 ```
    ▄▄▄▄                         ▗█▖
@@ -50,7 +50,7 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**. Hold it to keep going | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat a berry | The small button | `F` |
 | Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` `2` `3` `4` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
@@ -79,7 +79,7 @@ something you can afford.
 
 | Make | Costs | What it does |
 | --- | --- | --- |
-| **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings. You lose it if you die. |
+| **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings, and shades too. You lose it if you die. |
 | **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
@@ -114,6 +114,26 @@ runs low (the game warns you, and the torch in your pack turns red), and goes ou
 at any campfire. Once it's burnt halfway down a fire offers to top it up, so you can set out with a
 fresh one.
 
+## Things in the dark
+
+A little while after nightfall, **shades** come out: hunched shadows with pointed ears and red
+eyes. In the dark, their eyes are all you'll see of them. They come out somewhere off in the dark,
+find their way to you round trees and rocks, and when they're close they dart in, bite (a chunk of
+health) and back off to come again.
+
+- **Light keeps them back.** They won't come into the light of a campfire or your torch. They pace
+  round its edge, where you can see them, and as your torch burns low they come closer.
+- **They won't come indoors.** The cottage is safe, but the well is outside.
+- **Walls stop them.** Build a ring of walls and they gather round it, pressing to get in. Leave
+  a gap and they'll find it.
+- **Hit back.** When one's in reach the big button says **Hit**. Each hit knocks it back and sends
+  it running; three hits (two with the axe) and it comes apart into smoke.
+- **The moon decides how many** can be out at once: two on the first night's half moon, three on
+  a thin moon, four with no moon, one under a full moon.
+- **At dawn** they back away and melt into what's left of the dark.
+
+If they get you, the screen says **The dark takes you.**
+
 ## How it's put together
 
 Plain HTML, CSS and JavaScript, with nothing to install or build.
@@ -132,6 +152,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/input.js` | The thumbstick, the buttons, and the keyboard. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
+| `js/creatures.js` | The shades: when they come out, how they find you, what scares them off. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
 | `.nojekyll` | An empty file that tells GitHub Pages to publish everything exactly as it is. |
@@ -169,17 +190,21 @@ run straight from the file.
 - **The torch.** `burns` (seconds) and `light` (how far it reaches, in tiles) on the torch in
   `TOOLS` in `js/crafting.js`. A campfire's reach is `light` in `OBJECTS`; give anything a `light`
   and it glows at night.
+- **The shades.** `CREATURES` at the top of `js/creatures.js`: how many hits one takes, how hard it
+  bites, how fast it creeps and darts. The numbers under it say when they come out, how far off,
+  and how close to a light they dare go (`FEAR_SHARE`). How many come out each night is
+  `creatures` on each moon in `MOONS` (`js/night.js`). Redraw them as `shade` and `shade2` in
+  `js/sprites.js`.
 - **Walking speed.** `WALK_SPEED` at the top of `js/game.js`.
 
 ## What's next
 
 Roughly in order:
 
-1. **Things that come out of the dark.** Night and the torch are in; next is what prowls in the
-   dark. It's called Nightmare for a reason. Walls will matter then.
-2. **The character.** Pick your own hat and clothes colors, flash when you're hurt and fall over
+1. **The character.** Pick your own hat and clothes colors, flash when you're hurt and fall over
    when you die, and maybe a dark outline so you stand out on busy ground.
-3. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.
+2. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.
+3. **More in the dark.** Other kinds of creature, shades that claw at walls until they break.
 4. **Saving.** Keep the world and your pack between visits.
 5. **Sound.** Chops, footsteps, rain.
 6. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed

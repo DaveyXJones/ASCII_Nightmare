@@ -25,6 +25,16 @@ const FIRE_INK = {
   s: ['#a3a69e'], // the ring of stones
 };
 
+// A shade's colors (see CREATURES in creatures.js), shared by both its pictures.
+const SHADE_INK = {
+  w: ['#4a3a5a'], // ears
+  t: ['#2c2038'], // the top of its head, catching a little light
+  b: ['#2a1d36', '#0d0812'], // its body
+  d: ['#1a1222', '#0d0812'], // its shaded side
+  E: ['#ff4a3d', '#0d0812'], // eyes
+  l: ['#22172c'], // legs
+};
+
 const SPRITES = {
   oak: {
     art: [
@@ -317,6 +327,36 @@ const SPRITES = {
     },
     shadow: 2,
   },
+  // A shade: a hunched thing of shadow with pointed ears and red eyes. Its legs shift between the two
+  // pictures as it walks.
+  shade: {
+    art: [
+      '▚▄▄▞',
+      '▐••▌',
+      '▞▘▝▚',
+    ],
+    paint: [
+      'wttw',
+      'bEEd',
+      'llll',
+    ],
+    ink: SHADE_INK,
+    shadow: 0,
+  },
+  shade2: {
+    art: [
+      '▚▄▄▞',
+      '▐••▌',
+      '▝▚▞▘',
+    ],
+    paint: [
+      'wttw',
+      'bEEd',
+      'llll',
+    ],
+    ink: SHADE_INK,
+    shadow: 0,
+  },
 };
 
 // The player: a survivor in a wide-brimmed straw hat with a pack on their back. Three characters
@@ -420,6 +460,7 @@ const ACTION_POSES = {
   Drink: { pose: 'crouch', held: null, seconds: 0.4 },
   'Put out': { pose: 'crouch', held: null, seconds: 0.4 },
   Light: { pose: 'crouch', held: null, seconds: 0.5 },
+  Hit: { held: null },
   Eat: { pose: 'windup', held: null, seconds: 0.4 },
 };
 
