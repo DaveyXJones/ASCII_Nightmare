@@ -14,6 +14,8 @@
 //   burst    what flies off when you work on it: a style in BURSTS (survival.js), like 'leaf' or 'stone'
 //   frames   a list of sprites to flicker between instead of one still picture (a campfire's flames)
 //   warmth   how close, in tiles, you need to stand to feel its heat; beside it you heal faster
+//   light    how far, in tiles, it lights up the dark at night (see night.js)
+//   flame    true for an open fire: facing it with a torch that needs lighting, the button lights it
 
 const OBJECTS = {
   oak: {
@@ -69,6 +71,26 @@ const OBJECTS = {
     empty: 'No berries left. They will grow back.',
     regrow: { after: 90, into: 'bush' },
   },
+  cotton: {
+    name: 'Cotton plant',
+    sprite: 'cotton',
+    solid: true,
+    blocked: 'A cotton plant, heavy with soft white bolls.',
+    action: 'Pick',
+    hits: 1,
+    gives: { cloth: 1 },
+    becomes: 'cottonBare',
+    burst: 'fluff',
+  },
+  cottonBare: {
+    name: 'Picked cotton',
+    sprite: 'cottonBare',
+    solid: true,
+    blocked: 'A cotton plant, picked bare.',
+    action: 'Pick',
+    empty: 'Nothing left to pick. The cotton will grow back.',
+    regrow: { after: 120, into: 'cotton' },
+  },
   stump: {
     name: 'Tree stump',
     sprite: 'stump',
@@ -99,6 +121,7 @@ const OBJECTS = {
     sprite: 'table',
     solid: true,
     blocked: 'A rough wooden table with a candle on it.',
+    light: 5,
   },
 
   // Things you build (see RECIPES in crafting.js). Taking them down gives some of the cost back.
@@ -114,6 +137,8 @@ const OBJECTS = {
     becomes: null,
     burst: 'spark',
     warmth: 2.5,
+    light: 6.5,
+    flame: true,
   },
   woodWall: {
     name: 'Wooden wall',

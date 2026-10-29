@@ -7,8 +7,13 @@
 // Tools you carry. `power` says, for each action word, how many swings one swing counts as.
 // `glyph` is its picture in the pack and the craft panel; `held` is how it looks in the player's
 // hand facing left, and facing any other way.
+//
+// The torch is carried in the other hand all the time (TORCH_LOOK in sprites.js). Light it at a
+// campfire and it lights up the dark `light` tiles around you for `burns` seconds; then it goes
+// out, and you light it again.
 const TOOLS = {
   axe: { name: 'Stone axe', glyph: '┮', held: ['┭', '┮'], power: { Chop: 2 } },
+  torch: { name: 'Torch', glyph: '¡', burns: 300, light: 5 },
 };
 
 // Everything you can make, in the order the craft panel shows them.
@@ -27,6 +32,13 @@ const RECIPES = {
     cost: { wood: 3, stone: 2 },
     tool: 'axe',
     done: 'You lash a sharp stone to a stick. Trees fall twice as fast now.',
+  },
+  torch: {
+    name: 'Torch',
+    about: 'Light it at a campfire to see in the dark.',
+    cost: { wood: 2, cloth: 1 },
+    tool: 'torch',
+    done: 'You wrap a rag round a stick. Light it at a campfire.',
   },
   campfire: {
     name: 'Campfire',
@@ -72,7 +84,10 @@ function canMake(survivor, recipe) {
 // How many swings one swing counts as, with the best tool you have for the job.
 function toolPower(survivor, action) {
   let power = 1;
-  for (const tool of Object.keys(survivor.tools)) power = Math.max(power, TOOLS[tool].power[action] || 1);
+  for (const key of Object.keys(survivor.tools)) {
+    const tool = TOOLS[key];
+    if (tool.power && tool.power[action]) power = Math.max(power, tool.power[action]);
+  }
   return power;
 }
 

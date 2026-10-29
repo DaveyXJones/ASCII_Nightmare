@@ -3,7 +3,8 @@
 A survival game drawn entirely in text, seen from above and a little in front: a three-quarter
 view, like the old top-down adventure games. You wake up in a cottage on a randomly generated
 island. Keep yourself fed and watered: pick berries, drink from lakes and the well, chop trees and
-break rocks for wood and stone, then turn them into an axe, a campfire and walls.
+break rocks for wood and stone, then turn them into an axe, a campfire and walls. After eight
+minutes the sun goes down, and you'll want a torch.
 
 ```
    ▄▄▄▄                         ▗█▖
@@ -49,9 +50,9 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**. Hold it to keep going | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat a berry | The small button | `F` |
-| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` `2` `3` |
+| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` `2` `3` `4` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
 | Menu | ☰ in the top right | `Esc` |
 
@@ -67,6 +68,8 @@ Yellow brackets `[ ]` on the map show what the action button will use.
   a little food.
 - **Drink** at the edge of any lake or the sea, or from the well beside the cottage.
 - **Trees** give wood and leave a stump; **boulders** give stone. Craft with them (below).
+- **Cotton plants** (white bolls on green stems) give cloth, for a torch. Two grow beside the
+  cottage and more in the open fields. They grow back after two minutes.
 
 ## Crafting and building
 
@@ -77,6 +80,7 @@ something you can afford.
 | Make | Costs | What it does |
 | --- | --- | --- |
 | **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings. You lose it if you die. |
+| **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
 
@@ -87,6 +91,28 @@ sideways, build again. Tap **Done** when you've finished.
 
 Changed your mind? Face the wall and **Break** it, or **Put out** the campfire, and you get the
 wood or stone back. Things you build stay in the world when you die.
+
+## Night
+
+The sun is up for eight minutes. Then it goes down over a minute (the world turns orange, then
+dark), **night lasts ten minutes**, and dawn takes another minute. The fourth bar, under water,
+shows the sun ☼ and how much daylight is left; at night it shows the moon and how long until
+morning.
+
+How dark it gets depends on the moon. Its shape changes every night: the first night has a half
+moon, then it thins to nothing (the third night is pitch black), then grows to a full moon that
+lights up the whole island, and round again. Through each night the moon rises, is brightest at
+midnight and sets, so the darkest hour is just before dawn. Clouds drift across it now and then.
+
+Light pushes the dark back: your **torch**, **campfires**, and the cottage. Its windows glow at
+night, and inside, the candle on the table lights the room. With no light at all you can just make
+out your own feet.
+
+**The torch.** Once you've made it you carry it all the time, in the hand you don't chop with.
+Face a campfire and the big button says **Light**; it then burns for **five minutes**, dims as it
+runs low (the game warns you, and the torch in your pack turns red), and goes out. Light it again
+at any campfire. Once it's burnt halfway down a fire offers to top it up, so you can set out with a
+fresh one.
 
 ## How it's put together
 
@@ -101,6 +127,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/sprites.js` | The ASCII art for everything that stands up: trees, rocks, the well, the player. |
 | `js/objects.js` | The things standing on the map, and what the action button does to each one. |
 | `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage. |
+| `js/night.js` | Day and night: how long each lasts, the moon, and how dark it gets. |
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
 | `js/input.js` | The thumbstick, the buttons, and the keyboard. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
@@ -136,15 +163,20 @@ run straight from the file.
   `builds:` its name.
 - **How hard survival is.** `FOOD_PER_SECOND`, `WATER_PER_SECOND` and friends at the top of
   `js/survival.js`.
+- **Day and night.** `DAY_SECONDS` and `NIGHT_SECONDS` at the top of `js/night.js` (set
+  `DAY_SECONDS` to 30 to see the night straight away). `DARKEST` is how black a moonless night
+  gets, and `MOONS` is the moon's shape for each night, in order: add, remove or reorder them.
+- **The torch.** `burns` (seconds) and `light` (how far it reaches, in tiles) on the torch in
+  `TOOLS` in `js/crafting.js`. A campfire's reach is `light` in `OBJECTS`; give anything a `light`
+  and it glows at night.
 - **Walking speed.** `WALK_SPEED` at the top of `js/game.js`.
 
 ## What's next
 
 Roughly in order:
 
-1. **Night, and a torch.** A day and night cycle, a torch to carry and light around the
-   campfire, and things that come out of the dark. It's called Nightmare for a reason. Walls will
-   matter then. *(Next session starts here.)*
+1. **Things that come out of the dark.** Night and the torch are in; next is what prowls in the
+   dark. It's called Nightmare for a reason. Walls will matter then.
 2. **The character.** Pick your own hat and clothes colors, flash when you're hurt and fall over
    when you die, and maybe a dark outline so you stand out on busy ground.
 3. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.

@@ -25,6 +25,9 @@ const elements = {
     food: document.getElementById('bar-food'),
     water: document.getElementById('bar-water'),
   },
+  sky: document.querySelector('.vital.sky'), // the sun or tonight's moon, and how long it has left
+  skyIcon: document.getElementById('sky-icon'),
+  skyBar: document.getElementById('bar-sky'),
   // One counter in the pack for each item, with the id count-<item>.
   counts: Object.fromEntries(
     Object.keys(ITEMS).map((item) => [item, document.getElementById(`count-${item}`)]),
@@ -69,6 +72,8 @@ const state = {
   building: null, // in build mode: the key in RECIPES being built, otherwise null
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
   time: 0, // seconds of play, paused while a menu is open
+  dayClock: 0, // seconds since this world's first morning: the time of day and the moon come from it
+  sky: null, // what the sky is doing right now, from skyAt() in night.js
   lifeStarted: 0,
   waterFrame: 0,
   waterClock: 0,
@@ -84,11 +89,12 @@ const state = {
 
 function newGame(seed) {
   state.world = generateWorld(seed);
+  state.dayClock = 0;
   elements.seedLabel.textContent = String(seed);
   wakeUp();
 }
 
-// Starts a life: in the cottage, beside the bed, with an empty pack.
+// Starts a life: in the cottage, beside the bed, with an empty pack, at the start of a new day.
 function wakeUp() {
   const spawn = state.world.spawn;
   state.player = {
@@ -101,8 +107,11 @@ function wakeUp() {
     clock: 0,
     act: null, // the last thing they did, { action, at }, for the swing or kneel it shows
     working: null, // the action word while the action button is held on something
+    holding: null, // the action word the button was held down for, while it's held
   };
   state.survivor = newSurvivor();
+  state.dayClock = nextMorning(state.dayClock);
+  state.sky = skyAt(state.dayClock, state.world.seed);
   state.fx = { particles: [], floaters: [], shake: null };
   stopBuilding(state);
   state.dead = false;
@@ -116,7 +125,12 @@ function wakeUp() {
 function update(dt) {
   const { player, survivor } = state;
   state.time += dt;
+  state.dayClock += dt;
   player.clock += dt;
+
+  const sky = skyAt(state.dayClock, state.world.seed);
+  if (sky.phase !== state.sky.phase) showMessage(state, skyMessage(state, sky));
+  state.sky = sky;
 
   movePlayer(dt);
   if (state.building) {
@@ -126,7 +140,12 @@ function update(dt) {
     player.working = null;
   } else {
     state.target = findTarget(state);
-    player.working = actionHeld() && state.target ? state.target.label : null;
+    const label = state.target ? state.target.label : null;
+    // Holding the button keeps doing one thing. If the thing changes under your thumb (lighting a
+    // torch turns the fire's button into Put out), it waits until you let go.
+    if (!actionHeld()) player.holding = null;
+    else if (!player.holding) player.holding = label;
+    player.working = label && label === player.holding ? label : null;
     if (player.working && player.clock >= survivor.nextSwingAt) {
       useTarget(state);
       survivor.nextSwingAt = player.clock + SWING_SECONDS;
@@ -134,6 +153,7 @@ function update(dt) {
   }
 
   updateVitals(state, dt);
+  updateTorch(state, dt);
   updateRegrowth(state.world, state.time);
   if (survivor.vitals.health <= 0) die();
 }
@@ -326,6 +346,30 @@ function updateHud() {
   if (hud.warm !== warm) {
     hud.warm = warm;
     elements.healthVital.classList.toggle('warm', warm);
+  }
+  // The torch in the pack glows while it's lit, and turns red as it burns low.
+  const { torchLeft } = state.survivor;
+  const torch = torchLeft <= 0 ? 'out' : torchLeft < TOOLS.torch.burns * TORCH_LOW ? 'low' : 'lit';
+  if (hud.torch !== torch) {
+    hud.torch = torch;
+    elements.tools.torch.classList.toggle('lit', torch !== 'out');
+    elements.tools.torch.classList.toggle('low', torch === 'low');
+  }
+
+  // By day: the sun, and how much daylight is left. By night: tonight's moon, and how long until dawn.
+  const sky = state.sky;
+  const daylight = sky.phase === 'day' || sky.phase === 'dusk';
+  const skyName = daylight ? 'Daylight left' : `${sky.moon.name}: night left`;
+  if (hud.skyName !== skyName) {
+    hud.skyName = skyName;
+    elements.skyIcon.textContent = daylight ? '☼' : sky.moon.glyph;
+    elements.sky.title = skyName;
+    elements.sky.classList.toggle('night', !daylight);
+  }
+  const skyLeft = Math.ceil(sky.left * 100);
+  if (hud.skyLeft !== skyLeft) {
+    hud.skyLeft = skyLeft;
+    elements.skyBar.style.width = `${skyLeft}%`;
   }
 
   let label = state.target ? state.target.label : 'Use';

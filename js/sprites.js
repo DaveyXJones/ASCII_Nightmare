@@ -137,6 +137,50 @@ const SPRITES = {
     },
     shadow: 3,
   },
+  // Cotton: a little shrub of thin stems with fluffy white bolls on them, picked for cloth.
+  cotton: {
+    art: [
+      ' ●● ',
+      '●╲╱●',
+      '♣▐▌♣',
+    ],
+    paint: [
+      ' Ww ',
+      'Wbcw',
+      'lttd',
+    ],
+    ink: {
+      W: ['#f6f2e6'],
+      w: ['#cdc6b6'],
+      b: ['#9cb866'],
+      c: ['#6f8c45'],
+      l: ['#6fae4a'],
+      d: ['#4f8a38'],
+      t: ['#5d7a3a'],
+    },
+    shadow: 2,
+  },
+  cottonBare: {
+    art: [
+      ' ,, ',
+      '·╲╱·',
+      '♣▐▌♣',
+    ],
+    paint: [
+      ' bc ',
+      'wbcw',
+      'lttd',
+    ],
+    ink: {
+      w: ['#9a9486'],
+      b: ['#9cb866'],
+      c: ['#6f8c45'],
+      l: ['#6fae4a'],
+      d: ['#4f8a38'],
+      t: ['#5d7a3a'],
+    },
+    shadow: 2,
+  },
   stump: {
     art: [
       '▗▄▄▖',
@@ -283,7 +327,9 @@ const SPRITES = {
 //   windup   tool raised, between swings      strike   the swing landing, or a hand reaching out
 //   crouch   kneeling, to drink or put out a fire
 // `held` says where the tool in their hand is drawn in each pose, in characters from the picture's
-// top-left corner (see ACTION_POSES for which tool).
+// top-left corner (see ACTION_POSES for which tool). `torch` says the same for the torch, carried in
+// the other hand all the time once you've made one: where the hand holding its stick is, standing
+// (and walking and swinging) and kneeling. Its rag, or its flame, is drawn on the row above.
 const PLAYER_INK = {
   T: ['#f0d27a'], // straw hat: the crown, in the light
   B: ['#d4a540'], // the brim
@@ -314,6 +360,7 @@ const PLAYER_SPRITES = {
     strike: { art: ['▄█▄', '▐ü▌', '▐‖▖', ' Π '], paint: ['BTb', 'rFr', 'fPg', ' p '] },
     crouch: { art: ['   ', '▄█▄', '▐ü▌', '▐‖▌'], paint: ['   ', 'BTb', 'rFr', 'fPg'] },
     held: { windup: [2, 1], strike: [2, 3], crouch: [2, 3] },
+    torch: { stand: [-1, 2], crouch: [-1, 3] },
   },
   up: {
     stand: { art: ['▄█▄', '▐▓▌', '▐▣▌', ' Π '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
@@ -327,6 +374,7 @@ const PLAYER_SPRITES = {
     strike: { art: ['▄█▄', '▐▓▌', '▝▣▌', ' Π '], paint: ['BTb', 'rRr', 'fKg', ' p '] },
     crouch: { art: ['   ', '▄█▄', '▐▓▌', '▐▣▌'], paint: ['   ', 'BTb', 'rRr', 'fKg'] },
     held: { windup: [0, 1], strike: [0, 0], crouch: [0, 1] },
+    torch: { stand: [3, 2], crouch: [3, 3] },
   },
   left: {
     stand: { art: ['▄█▖', '▐·▌', '▐█▌', ' Π '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
@@ -341,6 +389,7 @@ const PLAYER_SPRITES = {
     strike: { art: ['▄█▖', '▐·▌', '▀█▌', ' Π '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
     crouch: { art: ['   ', '▄█▖', '▐·▌', '▐█▌'], paint: ['   ', 'BTb', 'fFr', 'fCk'] },
     held: { windup: [2, 0], strike: [-1, 2], crouch: [-1, 3] },
+    torch: { stand: [3, 2], crouch: [3, 3] },
   },
   right: {
     stand: { art: ['▗█▄', '▐·▌', '▐█▌', ' Π '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
@@ -355,6 +404,7 @@ const PLAYER_SPRITES = {
     strike: { art: ['▗█▄', '▐·▌', '▐█▀', ' Π '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
     crouch: { art: ['   ', '▗█▄', '▐·▌', '▐█▌'], paint: ['   ', 'BTb', 'rFg', 'kCg'] },
     held: { windup: [0, 0], strike: [3, 2], crouch: [3, 3] },
+    torch: { stand: [-1, 2], crouch: [-1, 3] },
   },
 };
 
@@ -369,7 +419,16 @@ const ACTION_POSES = {
   Pick: { held: null },
   Drink: { pose: 'crouch', held: null, seconds: 0.4 },
   'Put out': { pose: 'crouch', held: null, seconds: 0.4 },
+  Light: { pose: 'crouch', held: null, seconds: 0.5 },
   Eat: { pose: 'windup', held: null, seconds: 0.4 },
+};
+
+// The torch in the player's hand: a stick with a rag wrapped round the top, which becomes a flame
+// once it's lit, flickering through `flames` like the campfire. Each is [character, color].
+const TORCH_LOOK = {
+  stick: ['┃', '#a8763e'],
+  rag: ['●', '#d8cdb4'],
+  flames: [['♦', '#ffd75e'], ['▲', '#ff9a3a'], ['♦', '#ffb347'], ['▴', '#fff0a0']],
 };
 
 // Splits each drawing into rows of single characters, and checks that the art and paint line up so
@@ -393,7 +452,7 @@ function prepareSprite(label, sprite, ink) {
 for (const [name, sprite] of Object.entries(SPRITES)) prepareSprite(name, sprite);
 for (const [facing, set] of Object.entries(PLAYER_SPRITES)) {
   for (const [pose, pictures] of Object.entries(set)) {
-    if (pose === 'held') continue;
+    if (pose === 'held' || pose === 'torch') continue;
     [].concat(pictures).forEach((picture, n) => {
       const label = Array.isArray(pictures) ? `${pose} ${n + 1}` : pose;
       prepareSprite(`player ${facing} ${label}`, picture, PLAYER_INK);

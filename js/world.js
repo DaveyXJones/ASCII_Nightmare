@@ -20,8 +20,8 @@ const COTTAGE = [
   '#.........#    ',
   '#####+#####    ',
   '     :      W  ',
-  '     :         ',
-  '     :         ',
+  ' c   :         ',
+  '     :    c    ',
 ];
 
 const COTTAGE_LEGEND = {
@@ -34,6 +34,7 @@ const COTTAGE_LEGEND = {
   'b': { ground: 'floor', object: 'bedFoot' },
   'T': { ground: 'floor', object: 'table' },
   'W': { ground: 'grass', object: 'well' },
+  'c': { ground: 'grass', object: 'cotton' },
 };
 
 // Where the player wakes up, counted from the cottage's top-left corner: right beside the bed.
@@ -124,6 +125,7 @@ function pickTerrain(x, y, width, height, seed) {
   if (roll < 0.05) return cell('grass', 'oak');
   if (roll < 0.058) return cell('grass', 'boulder');
   if (roll < 0.07) return cell('grass', 'bush');
+  if (roll < 0.078) return cell('grass', 'cotton');
   return cell(roll < 0.17 ? 'tallGrass' : 'grass');
 }
 

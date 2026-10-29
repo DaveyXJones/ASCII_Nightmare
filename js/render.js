@@ -10,6 +10,9 @@
 //   the ground cache  the ground and the cliffs around the screen; as the camera moves only the
 //                     strip coming into view is drawn, and the water is redrawn when it ripples
 //
+// At night the darkness goes over all of it in one more draw: a small picture of the dark,
+// rubbed out around each light, stretched to fit the screen.
+//
 // All drawing is in device pixels so the characters stay crisp on high-density phone screens.
 
 const VIEW_ROWS = 25; // about how many rows of tiles fit the height of the screen
@@ -33,6 +36,14 @@ const WALK_FRAME_TILES = 0.45; // how far the player walks on each picture of th
 const WALK_BOB = 0.08; // how far the player rises as their legs pass, in rows
 const BLINK_SECONDS = 0.12;
 const GHOST_ALPHA = 0.55; // how solid the see-through copy in build mode looks
+const NIGHT_SCALE = 4; // the dark is drawn this many times smaller than the screen, then stretched
+const EYES_REACH = 2; // with no light at all you can still make out this far around you, in tiles
+const EYES_STRENGTH = 0.5; // ...but only dimly: how much of the dark your eyes see through
+const FLICKER = 0.06; // how much a flame's light wavers, as a share of how far it reaches
+const WINDOW_INSET = 3; // the cottage's front windows start this many characters in from each corner
+const WINDOW_REACH = 1.6; // how far the lamplight from each window spills at night, in tiles
+// The furthest any object's light reaches, in tiles, so lights just off the screen still shine in.
+const LIGHT_REACH = Math.ceil(Math.max(0, ...Object.values(OBJECTS).map((object) => object.light || 0)));
 
 const view = {
   canvas: null,
@@ -95,6 +106,7 @@ function resizeView() {
   // Everything drawn at the old size is stale now.
   view.atlas = makeAtlas();
   makeGroundCache();
+  makeNightLayer();
 }
 
 // ---- Glyphs ----
@@ -270,9 +282,11 @@ function drawFrame(game) {
 
   if (inside) dimOutside(world.house);
   if (view.playerCovered) drawPlayer(game, 0.4);
+  drawParticles(game.fx);
+  drawNight(game, range, inside);
+  // Above the dark, so you can always see what the button will use and where you're building.
   if (game.target) drawTarget(game.target, game.time);
   if (game.buildSpot) drawBuildSpot(game);
-  drawParticles(game.fx);
   drawFloaters(game.fx);
 }
 
@@ -464,6 +478,8 @@ function cliffShows(world, i) {
 function drawShadows(game, range, inside) {
   const { world, player } = game;
   const ctx = view.ctx;
+  // With the sun gone, so are the shadows it casts.
+  ctx.globalAlpha = 1 - game.sky.darkness;
   ctx.fillStyle = SHADOW_COLOR;
   ctx.beginPath();
   const bottom = Math.min(world.height - 1, range.bottom);
@@ -487,6 +503,7 @@ function drawShadows(game, range, inside) {
   }
   addShadow(player.x + 0.1, player.y + 0.1, 0.4, 0.3);
   ctx.fill();
+  ctx.globalAlpha = 1;
 }
 
 // Adds an oval to the shadow path. Overlapping shadows merge rather than doubling up.
@@ -605,7 +622,8 @@ function houseImage(house) {
   const roofRows = house.height;
   const { canvas, ctx } = makeCanvas(roofCols * view.cw, (roofRows + WALL_ROWS) * view.th);
   const doorCol = (house.doorX - house.left) * 2;
-  const windowCols = [3, 4, wallCols - 5, wallCols - 4];
+  const rightWindow = wallCols - WINDOW_INSET - 2;
+  const windowCols = [WINDOW_INSET, WINDOW_INSET + 1, rightWindow, rightWindow + 1];
 
   for (let r = 0; r < roofRows; r++) {
     const y = r * view.th;
@@ -713,6 +731,8 @@ function playerPose(game) {
     sprite: set[name],
     held: action ? heldGlyph(action, player.facing, survivor) : null,
     spot: set.held[name],
+    // Once you've made a torch, it's in your other hand whatever you're doing.
+    torch: survivor.tools.torch ? set.torch[name] || set.torch.stand : null,
     lift: 0,
   });
 
@@ -728,7 +748,7 @@ function playerPose(game) {
   }
   if (player.moving) {
     const step = Math.floor(player.stride / WALK_FRAME_TILES) % set.walk.length;
-    return { sprite: set.walk[step], held: null, lift: step % 2 ? Math.round(view.th * WALK_BOB) : 0 };
+    return { ...pose('stand'), sprite: set.walk[step], lift: step % 2 ? Math.round(view.th * WALK_BOB) : 0 };
   }
   if (set.blink && blinking(player.clock)) return pose('blink');
   return pose('stand');
@@ -752,6 +772,7 @@ function drawPlayer(game, alpha) {
     const [col, row] = look.spot;
     drawGlyph(view.ctx, look.held, TOOL_COLOR, left + col * view.cw, top + row * view.th, true);
   }
+  if (look.torch) drawTorch(game, left + look.torch[0] * view.cw, top + look.torch[1] * view.th);
   view.ctx.globalAlpha = 1;
   if (alpha < 1) return;
 
@@ -769,6 +790,15 @@ function drawPlayer(game, alpha) {
   }
 }
 
+// The torch in the player's hand at (x, y): its stick, and above that the rag wrapped round its
+// top, or a flickering flame once it's lit.
+function drawTorch(game, x, y) {
+  const flames = TORCH_LOOK.flames;
+  const head = game.survivor.torchLeft > 0 ? flames[game.flameFrame % flames.length] : TORCH_LOOK.rag;
+  drawGlyph(view.ctx, TORCH_LOOK.stick[0], TORCH_LOOK.stick[1], x, y, true);
+  drawGlyph(view.ctx, head[0], head[1], x, y - view.th, true);
+}
+
 // Remembers what's been drawn over, so cliffs in front of it can be drawn again, and whether
 // anything was drawn over the player, so they can be shown through it as a ghost (walking behind a
 // tree or the cottage shouldn't make you vanish).
@@ -779,6 +809,127 @@ function noteDrawn(x0, y0, x1, y1) {
   if (x0 < box.x1 - view.cw / 2 && x1 > box.x0 + view.cw / 2 && y0 < box.y1 && y1 > box.y0 + view.th / 2) {
     view.playerCovered = true;
   }
+}
+
+// ---- Night ----
+
+// The dark is drawn onto its own small canvas each frame: filled with the color of the night, then
+// rubbed out with a soft round brush wherever there's light, then stretched over the screen in one
+// draw. That's a handful of draws however many tiles are showing, which keeps phones fast.
+const night = {
+  canvas: null,
+  ctx: null,
+  cut: null, // the soft round brush that rubs the dark away
+  glow: null, // the same shape in firelight orange, laid back over the light from flames
+  lights: [], // the lights this frame, from findLights()
+};
+
+function makeNightLayer() {
+  Object.assign(night, makeCanvas(Math.ceil(view.width / NIGHT_SCALE), Math.ceil(view.height / NIGHT_SCALE)));
+  if (night.cut) return;
+  // Fully clear in the middle, fading out to nothing at the edge.
+  night.cut = makeBrush([[0, 'rgba(0, 0, 0, 1)'], [0.5, 'rgba(0, 0, 0, 0.94)'], [0.8, 'rgba(0, 0, 0, 0.5)'],
+    [1, 'rgba(0, 0, 0, 0)']]);
+  night.glow = makeBrush([[0, 'rgba(255, 170, 80, 0.45)'], [0.5, 'rgba(255, 130, 50, 0.2)'],
+    [1, 'rgba(255, 110, 40, 0)']]);
+}
+
+// A round blob, from the middle out: `stops` are [distance from 0 to 1, color].
+function makeBrush(stops) {
+  const size = 128;
+  const { canvas, ctx } = makeCanvas(size, size);
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  for (const [at, color] of stops) gradient.addColorStop(at, color);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return canvas;
+}
+
+function drawNight(game, range, inside) {
+  const sky = game.sky;
+  if (sky.darkness <= 0) return;
+  const { canvas, ctx } = night;
+  const lights = findLights(game, range, inside);
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = sky.darkness;
+  ctx.fillStyle = sky.color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.globalCompositeOperation = 'destination-out';
+  for (const light of lights) paintLight(night.cut, light, light.strength);
+  // Firelight is warm: tint what it lights orange, more so the darker the night around it.
+  ctx.globalCompositeOperation = 'source-over';
+  for (const light of lights) if (light.warm) paintLight(night.glow, light, sky.darkness);
+  ctx.globalAlpha = 1;
+
+  // Stretched without smoothing: each pixel of the dark becomes a little square, too small to see
+  // since the dark only changes gently from one to the next, and far quicker for a phone to draw.
+  view.ctx.imageSmoothingEnabled = false;
+  view.ctx.drawImage(canvas, 0, 0, canvas.width * NIGHT_SCALE, canvas.height * NIGHT_SCALE);
+  view.ctx.imageSmoothingEnabled = true;
+}
+
+// Lays a brush over the dark around a light. Tiles are wider than they are tall, so the light is
+// an oval on screen, round on the ground.
+function paintLight(brush, light, alpha) {
+  const rx = (light.reach * view.tw) / NIGHT_SCALE;
+  const ry = (light.reach * view.th) / NIGHT_SCALE;
+  const x = screenX(light.x) / NIGHT_SCALE;
+  const y = screenY(light.y) / NIGHT_SCALE;
+  night.ctx.globalAlpha = alpha;
+  night.ctx.drawImage(brush, x - rx, y - ry, rx * 2, ry * 2);
+}
+
+// Every light on the screen or near enough to shine onto it, as { x, y, reach, strength, warm }:
+// where it is in tiles, how far it reaches in tiles, how much of the dark it clears (1 for all of
+// it), and whether it's firelight.
+function findLights(game, range, inside) {
+  const { world, player, survivor } = game;
+  const lights = night.lights;
+  lights.length = 0;
+
+  // Your torch, held up at about chest height. Without one, your eyes still pick out a little.
+  const torch = torchReach(survivor);
+  if (torch > 0) {
+    lights.push({ x: player.x, y: player.y - 1, reach: torch * flicker(game, 0), strength: 1, warm: true });
+  } else {
+    lights.push({ x: player.x, y: player.y - 1, reach: EYES_REACH, strength: EYES_STRENGTH, warm: false });
+  }
+
+  const left = Math.max(0, range.left - LIGHT_REACH);
+  const right = Math.min(world.width - 1, range.right + LIGHT_REACH);
+  const bottom = Math.min(world.height - 1, range.bottom + LIGHT_REACH);
+  for (let ty = Math.max(0, range.top - LIGHT_REACH); ty <= bottom; ty++) {
+    for (let tx = left; tx <= right; tx++) {
+      const i = ty * world.width + tx;
+      const key = world.objects[i];
+      const light = key && OBJECTS[key].light;
+      if (!light) continue;
+      // Lights indoors, like the candle, are hidden under the roof until you go in.
+      if (!inside && insideHouse(world, tx, ty)) continue;
+      lights.push({ x: tx + 0.5, y: ty, reach: light * flicker(game, i), strength: 1, warm: true });
+    }
+  }
+
+  // From outside, lamplight spills from the cottage's two front windows (see houseImage()).
+  if (!inside) {
+    const house = world.house;
+    const y = house.top + house.height - 1.5;
+    const inset = (WINDOW_INSET + 1) / 2;
+    for (const x of [house.left + inset, house.left + house.width - inset]) {
+      lights.push({ x, y, reach: WINDOW_REACH, strength: 0.85, warm: true });
+    }
+  }
+  return lights;
+}
+
+// Flames waver: each light's reach jumps a little whenever the campfire flames flicker, and holds
+// still when motion is turned down (the flame counter stops then).
+function flicker(game, seed) {
+  return 1 + FLICKER * (hash2(game.flameFrame, seed, 99) * 2 - 1);
 }
 
 // ---- Effects ----
