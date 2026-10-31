@@ -28,6 +28,13 @@ Open that on your phone and hold it sideways. **Add it to your home screen** (Sa
 to Home Screen; Chrome: ⋮ → Add to Home screen) and it opens full screen, with no browser bars. On
 Android, the **Wake up** button also goes full screen and locks the screen sideways.
 
+**It saves as you go**, every few seconds and whenever you open the menu or switch to another app.
+Next time, **Carry on** picks up where you left off: the same island, everything you've chopped and
+built, your pack, and the time of day. It's saved in that browser on that phone only, and private
+browsing or clearing the browser's data forgets it. **New world** asks for a second tap before it
+throws your island away. If you die, the island stays as you left it and you wake up the next
+morning with an empty pack.
+
 GitHub Pages publishes the `main` branch there for free. Anything pushed to `main` shows up at that
 address within a couple of minutes (reload the page, or close and reopen the home-screen icon).
 
@@ -170,7 +177,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/creatures.js` | The shades and brutes: when they come out, how they find you, what scares them off. |
-| `js/save.js` | What the game remembers between visits: your look. |
+| `js/save.js` | What the game remembers between visits: your island, your pack, your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
 | `.nojekyll` | An empty file that tells GitHub Pages to publish everything exactly as it is. |
@@ -230,7 +237,7 @@ Roughly in order:
 3. **More in the dark.** ~~Another kind of creature, shades that claw at walls~~ (done: brutes and
    claws). Maybe next: lurkers that sit still in the tall grass, eyes open, and spring when you
    walk too close.
-4. **Saving.** Keep the world and your pack between visits.
+4. ~~**Saving.** Keep the world and your pack between visits.~~ (done)
 5. **Sound.** Chops, footsteps, rain.
 6. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
    and what's changed, not the whole map.

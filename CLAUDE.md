@@ -94,6 +94,14 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
   and `scarred` in OBJECTS); marks live in `world.clawed` and clear by day. `HIT_REACH` became 1.6
   so you can hit back through a wall.
+- **Saving** (js/save.js): `saveGame` keeps the seed, the clock, the player, the survivor, and only
+  the objects that differ from `world.original` (the island as generated), plus `damage`,
+  `clawed` and `regrowing`, in localStorage under `SAVE_KEY`. It runs every `SAVE_EVERY` seconds
+  of play, on opening the menu, on hiding the page, on waking and on dying (a save made while dead
+  or dying loads as a fresh morning). `loadGame` runs at startup instead of `newGame` when there's
+  a save. `worldPrint` fingerprints the generated island: if the world code has changed so the
+  seed builds a different island, the pack is kept but map changes are dropped. Creatures aren't
+  saved; the night's hunt restarts. Bump `SAVE_VERSION` if the saved shape changes.
 - **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
   "Draw only characters on the map", so it waits for the owner's say.
 
@@ -132,7 +140,7 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
 | `js/creatures.js` | `CREATURES` (shade, brute), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
-| `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`. |
+| `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
 | `fonts/` | DejaVu Sans Mono (regular and bold) as WOFF2, with its license. |
@@ -148,6 +156,9 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   small foot box (`FOOT_HALF_WIDTH`, `FOOT_HALF_DEPTH`), moving one axis at a time with corner
   slipping so thumbstick movement slides through doorways.
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
+- `world.original` is `objects` as generated (saving keeps only the differences); `damage` and
+  `clawed` are Maps of tile index to swings or scratches taken. **Anything new that should survive
+  a reload** (a survivor field, a world Map) needs adding to `saveGame` and `loadGame`.
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
 

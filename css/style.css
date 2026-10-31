@@ -529,6 +529,12 @@ button:focus-visible {
   border-color: var(--fog);
 }
 
+/* New world, waiting for a second tap before it throws this world away. */
+.button.asking {
+  border-color: var(--health);
+  color: #ffb0a8;
+}
+
 .button.primary {
   border-color: var(--lantern);
   background: var(--lantern);

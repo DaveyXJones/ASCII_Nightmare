@@ -80,6 +80,8 @@ function generateWorld(seed) {
   }
 
   placeCottage(world);
+  // What stood where before anyone touched it: saving only needs to keep what's changed since.
+  world.original = world.objects.slice();
   return world;
 }
 

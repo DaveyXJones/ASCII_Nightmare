@@ -9,6 +9,7 @@ const WATER_FRAME_SECONDS = 0.45; // how often the water ripples
 const FLAME_FRAME_SECONDS = 0.15; // how often campfire flames flicker
 const MESSAGE_SECONDS = 3.5;
 const COLLAPSE_SECONDS = 1.8; // from health running out to the death screen: the player sinks and falls
+const NEW_WORLD_CONFIRM_SECONDS = 4; // how long New world waits for the second tap
 
 const FACINGS = {
   up: { x: 0, y: -1 },
@@ -95,6 +96,8 @@ const state = {
   dying: null, // while collapsing, { seconds } since health ran out; then the death screen
   dead: false,
   started: false,
+  resumed: false, // true if this visit carried on a saved world (see loadGame() in save.js)
+  savedAt: 0, // when the game was last saved, in seconds of play
   look: defaultLook(), // the player's colors, picked on the Your look panel
   hud: {}, // what the screen around the map last showed, so it's only touched when something changes
 };
@@ -102,17 +105,27 @@ const state = {
 function newGame(seed) {
   state.world = generateWorld(seed);
   state.dayClock = 0;
-  elements.seedLabel.textContent = String(seed);
   wakeUp();
 }
 
 // Starts a life: in the cottage, beside the bed, with an empty pack, at the start of a new day.
 function wakeUp() {
   const spawn = state.world.spawn;
+  state.survivor = newSurvivor();
+  state.dayClock = nextMorning(state.dayClock);
+  state.lifeStarted = state.time;
+  startLife(spawn.x, spawn.y, 'down');
+  showMessage(state, 'You wake up in your cottage. Find food and water to survive.');
+  saveGame(state);
+}
+
+// Puts the player at (x, y) with everything around them settled: nothing flying through the air,
+// nothing out in the dark yet. Used when waking up, and when carrying on a saved game.
+function startLife(x, y, facing) {
   state.player = {
-    x: spawn.x,
-    y: spawn.y,
-    facing: 'down',
+    x,
+    y,
+    facing,
     moving: false,
     stride: 0, // distance walked, for the walking animation
     steps: 0, // footsteps taken, to kick up a puff of dust at each one
@@ -121,8 +134,6 @@ function wakeUp() {
     working: null, // the action word while the action button is held on something
     holding: null, // the action word the button was held down for, while it's held
   };
-  state.survivor = newSurvivor();
-  state.dayClock = nextMorning(state.dayClock);
   state.sky = skyAt(state.dayClock, state.world.seed);
   state.fx = { particles: [], floaters: [], shake: null };
   state.creatures = [];
@@ -131,9 +142,7 @@ function wakeUp() {
   state.dying = null;
   elements.game.classList.remove('collapsing');
   state.dead = false;
-  state.lifeStarted = state.time;
   snapCamera(state.world, state.player);
-  showMessage(state, 'You wake up in your cottage. Find food and water to survive.');
 }
 
 // ---- Moving ----
@@ -173,6 +182,7 @@ function update(dt) {
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
   if (survivor.vitals.health <= 0) collapse();
+  if (state.time - state.savedAt >= SAVE_EVERY) saveGame(state);
 }
 
 function movePlayer(dt) {
@@ -307,6 +317,7 @@ function die() {
   elements.deathTime.textContent =
     minutes > 0 ? `${minutes} min ${seconds % 60} s` : `${seconds} seconds`;
   elements.death.hidden = false;
+  saveGame(state); // so reloading the page doesn't undo dying
 }
 
 // ---- Menus ----
@@ -314,8 +325,23 @@ function die() {
 function openMenu() {
   state.paused = true;
   releaseAll();
-  elements.startButton.textContent = state.started ? 'Resume' : 'Wake up';
+  saveGame(state);
+  elements.startButton.textContent = state.started ? 'Resume' : state.resumed ? 'Carry on' : 'Wake up';
+  const day = Math.floor(state.dayClock / CYCLE_SECONDS) + 1;
+  elements.seedLabel.textContent = `${state.world.seed}, day ${day}`;
+  confirmNewWorld(false);
   elements.menu.hidden = false;
+}
+
+// Starting a new world throws this one away, so once you've played in it, New world asks for a
+// second tap first.
+let newWorldTimer = null;
+
+function confirmNewWorld(asking) {
+  clearTimeout(newWorldTimer);
+  elements.newWorldButton.classList.toggle('asking', asking);
+  elements.newWorldButton.textContent = asking ? 'Tap again to leave this world' : 'New world';
+  if (asking) newWorldTimer = setTimeout(() => confirmNewWorld(false), NEW_WORLD_CONFIRM_SECONDS * 1000);
 }
 
 function closeMenu() {
@@ -344,6 +370,12 @@ elements.startButton.addEventListener('click', () => {
   closeMenu();
 });
 elements.newWorldButton.addEventListener('click', () => {
+  const played = state.started || state.resumed;
+  if (played && !elements.newWorldButton.classList.contains('asking')) {
+    confirmNewWorld(true);
+    return;
+  }
+  confirmNewWorld(false);
   newGame(Math.floor(Math.random() * 1_000_000));
   closeMenu();
 });
@@ -585,7 +617,9 @@ setupView(elements.canvas);
 setupInput(elements);
 setupCrafting(elements);
 setupLook();
-newGame(DEFAULT_SEED);
+// Carry on from last time if there's a saved world; otherwise the first island.
+state.resumed = loadGame(state);
+if (!state.resumed) newGame(DEFAULT_SEED);
 resizeView();
 snapCamera(state.world, state.player);
 openMenu();
@@ -601,4 +635,10 @@ if (document.fonts) {
     placeCamera(state.world);
   }, () => {});
 }
+// Save when the page is put away (switching apps, locking the phone, closing the tab), since it
+// might not come back.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveGame(state);
+});
+window.addEventListener('pagehide', () => saveGame(state));
 requestAnimationFrame(frame);
