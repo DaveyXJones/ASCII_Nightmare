@@ -3,7 +3,7 @@
 // Touch: put your left thumb down anywhere on the left half of the screen and a thumbstick
 // appears under it; the buttons on the right do things. Hold the action button to keep chopping.
 // Keyboard: WASD or the arrow keys to walk, Space or E for the action button, F to eat, C to craft
-// (and 1, 2, 3… to pick from the craft panel).
+// (and 1, 2, 3… 0 to pick from the craft panel).
 
 const STICK_RADIUS = 48; // CSS pixels the knob can travel from the middle of the stick
 const STICK_DEADZONE = 0.15; // ignore tiny thumb wobbles
@@ -82,8 +82,9 @@ function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButt
       if (!event.repeat) input.presses.push('menu');
     } else if (BACK_KEYS.has(code)) {
       if (!event.repeat) input.presses.push('back');
-    } else if (/^Digit[1-9]$/.test(code)) {
-      if (!event.repeat) input.presses.push(`recipe:${Number(code.slice(5)) - 1}`);
+    } else if (/^Digit[0-9]$/.test(code)) {
+      // 1 is the first recipe, 9 the ninth, and 0 the tenth, like the keys along the keyboard.
+      if (!event.repeat) input.presses.push(`recipe:${(Number(code.slice(5)) + 9) % 10}`);
     } else return;
     event.preventDefault(); // stop the arrow keys and space bar from scrolling the page
   });

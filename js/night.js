@@ -3,8 +3,9 @@
 // lights up the island; with no moon you can hardly see your own feet), it climbs the sky and sinks
 // again over the night, and now and then a cloud drifts across it.
 //
-// This file works out how dark it is and what color the dark is. render.js draws it over the map,
-// with holes where there's light: your torch, campfires, the candle in the cottage.
+// This file works out how dark it is and what color the dark is, with the weather (weather.js)
+// laid over it. render.js draws it over the map, with holes where there's light: your torch,
+// campfires, the candle in the cottage.
 
 const DAY_SECONDS = 480; // full daylight: eight minutes
 const DUSK_SECONDS = 60; // the sun going down
@@ -97,47 +98,67 @@ const MOONS = [
 //   color     the color of the dark, for the canvas
 //   left      how much of the daylight is still to come (by day and at dusk), or of the night (at
 //             night and dawn), from 1 down to 0
+//   weather   what the weather is doing, from weatherAt() in weather.js
+//   gloom     how much of `darkness` is the night's, leaving out the grey of a cloudy sky
 function skyAt(clock, seed) {
+  const weather = weatherAt(clock, seed);
+  const sky = sunAndMoonAt(clock, seed, weather.cloud);
+  // Cloud turns the light grey, by day as well as by night: a grey veil laid over the dark.
+  const grey = weather.cloud * OVERCAST_DIM;
+  const darkness = 1 - (1 - sky.darkness) * (1 - grey);
+  const share = darkness > 0 ? ((1 - sky.darkness) * grey) / darkness : 0; // how much of it is the grey
+  return {
+    ...sky,
+    darkness,
+    gloom: sky.darkness,
+    color: rgb(mixColor(sky.color, OVERCAST_COLOR, share)),
+    weather,
+  };
+}
+
+// The sky with clear weather: the sun, the moon, and the night's own clouds over the moon. `cloud`
+// is the weather's cloud cover, which hides the moon too.
+function sunAndMoonAt(clock, seed, cloud) {
   const night = Math.floor(clock / CYCLE_SECONDS); // counts up by one every morning
   const moon = MOONS[night % MOONS.length];
   const t = clock - night * CYCLE_SECONDS; // seconds since this morning
   const daylight = DAY_SECONDS + DUSK_SECONDS;
 
   if (t < DAY_SECONDS) {
-    return { phase: 'day', moon, darkness: 0, color: rgb(DARK_COLOR), left: 1 - t / daylight };
+    return { phase: 'day', moon, darkness: 0, color: DARK_COLOR, left: 1 - t / daylight };
   }
   if (t < daylight) {
     // The sun going down: the dark creeps in, red at first, turning into tonight's sky.
     const fall = smoothstep((t - DAY_SECONDS) / DUSK_SECONDS);
-    const dark = nightAt(moon, 0, night, seed);
+    const dark = nightAt(moon, 0, night, seed, cloud);
     return {
       phase: 'dusk',
       moon,
       darkness: dark.darkness * fall,
-      color: rgb(mixColor(SUNSET_COLOR, dark.color, fall)),
+      color: mixColor(SUNSET_COLOR, dark.color, fall),
       left: 1 - t / daylight,
     };
   }
   const left = (CYCLE_SECONDS - t) / (NIGHT_SECONDS + DAWN_SECONDS);
   if (t < daylight + NIGHT_SECONDS) {
-    const dark = nightAt(moon, t - daylight, night, seed);
-    return { phase: 'night', moon, darkness: dark.darkness, color: rgb(dark.color), left };
+    const dark = nightAt(moon, t - daylight, night, seed, cloud);
+    return { phase: 'night', moon, darkness: dark.darkness, color: dark.color, left };
   }
   // Dawn: the night as it was at its end, fading out through a pink sunrise.
   const rise = smoothstep((t - daylight - NIGHT_SECONDS) / DAWN_SECONDS);
-  const dark = nightAt(moon, NIGHT_SECONDS, night, seed);
+  const dark = nightAt(moon, NIGHT_SECONDS, night, seed, cloud);
   return {
     phase: 'dawn',
     moon,
     darkness: dark.darkness * (1 - rise),
-    color: rgb(mixColor(dark.color, SUNRISE_COLOR, rise)),
+    color: mixColor(dark.color, SUNRISE_COLOR, rise),
     left,
   };
 }
 
 // How dark it is `t` seconds into a night, and the color of the dark.
-function nightAt(moon, t, night, seed) {
-  const light = moonlightAt(moon, t, night, seed);
+function nightAt(moon, t, night, seed, cloud) {
+  const light = moonlightAt(moon, t, night, seed) * (1 - CLOUD_HIDES_MOON * cloud);
   return {
     darkness: DARKEST - (DARKEST - MOONLIT) * light,
     color: mixColor(DARK_COLOR, MOONLIGHT_COLOR, light),
@@ -145,11 +166,11 @@ function nightAt(moon, t, night, seed) {
 }
 
 // How much moonlight there is `t` seconds into a night: from 0 (none) to 1 (a full moon in a clear
-// sky at midnight).
+// sky at midnight). Rain clouds (see weather.js) come on top of this.
 function moonlightAt(moon, t, night, seed) {
   // The moon rises as night falls and sets at dawn, so it gives the most light at midnight.
   const height = MOON_LOW + (1 - MOON_LOW) * Math.sin((Math.PI * t) / NIGHT_SECONDS);
-  // Clouds come and go: smooth noise along the night, different every night and in every world.
+  // Wisps of cloud come and go: smooth noise along the night, different every night and in every world.
   const cloud = clamp01((fractalNoise(t / CLOUD_SECONDS, night * 17, seed + 4919, 2) - 0.45) / 0.25);
   return moon.light * height * (1 - CLOUD_SHADE * cloud);
 }

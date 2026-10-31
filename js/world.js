@@ -62,6 +62,7 @@ function generateWorld(seed) {
     variants: new Uint8Array(size), // a random number per tile, for picking glyphs and colors
     damage: new Map(), // tile index -> swings taken, for trees and rocks being worked on
     clawed: new Map(), // tile index -> scratches taken, for walls things in the dark are clawing at
+    soaked: new Map(), // tile index -> seconds of rain a campfire has taken (see weather.js)
     regrowing: [], // { index, at, into } for picked bushes
     house: null,
     spawn: null,
@@ -287,6 +288,7 @@ function setObject(world, x, y, key) {
   world.objects[i] = key;
   world.damage.delete(i);
   world.clawed.delete(i);
+  world.soaked.delete(i);
 }
 
 function clamp01(value) {

@@ -25,6 +25,8 @@ const TOOLS = {
 //   tool     a key in TOOLS: making it puts that tool in your pack (you only ever need one)
 //   builds   a key in OBJECTS: making it starts build mode, to put one on the map
 //   again    for things you build: stay in build mode afterwards, to build a row of them
+//   over     for things you build onto something already there, like a roof over a campfire: the keys
+//            in OBJECTS it can go on (it takes their place)
 //   gives    items it puts in your pack, e.g. { cooked: 1 }; the panel stays open to make more
 //   byFire   true if you have to be standing beside a campfire to make it (cooking)
 //   done     message shown once it's made
@@ -57,6 +59,14 @@ const RECIPES = {
     builds: 'campfire',
     done: 'The fire catches. Rest beside it to heal faster.',
   },
+  roof: {
+    name: 'Roof',
+    about: 'Build over a campfire to keep rain off.',
+    cost: { wood: 4 },
+    builds: 'roofedFire',
+    over: ['campfire', 'campfireOut'], // over a cold one, you light it again under the roof
+    done: 'You raise a little roof over the fire. Rain won\'t put it out now.',
+  },
   wall: {
     name: 'Wooden wall',
     about: 'Build a row of them into a fence.',
@@ -81,6 +91,9 @@ const RECIPES = {
 };
 
 const BUILD_HINT = 'Face where it should go and press Build.';
+const RECIPE_PICTURE_ROWS = 3; // pictures on the craft cards are at most this many rows tall
+const RECIPE_PICTURE_ROWS_SHORT = 2; // ...and this many on a short screen, like a phone held sideways
+const shortScreen = window.matchMedia('(max-height: 460px)'); // the same as in style.css
 
 // ---- Costs ----
 
@@ -171,6 +184,14 @@ function buildProblem(game, x, y, recipe) {
   const { world, survivor } = game;
   const ground = groundAt(world, x, y);
   const object = objectAt(world, x, y);
+  if (recipe.over) {
+    // Something that goes onto something else, like a roof over a campfire.
+    if (!inBounds(world, x, y) || !recipe.over.includes(world.objects[y * world.width + x])) {
+      return `Face a ${OBJECTS[recipe.over[0]].name.toLowerCase()} to build this over it.`;
+    }
+    if (!canAfford(survivor.pack, recipe.cost)) return `You need ${shortfall(survivor.pack, recipe.cost)}.`;
+    return null;
+  }
   if (!ground || ground.solid) return "You can't build there.";
   if (insideHouse(world, x, y)) return "There's no room for that inside the cottage.";
   // Things you can walk through, like stumps, are cleared away to make room. Doors aren't.
@@ -239,7 +260,7 @@ function setupCrafting(elements) {
     name.className = 'recipe-name';
     name.textContent = recipe.name;
     const shortcut = document.createElement('kbd'); // the number key that makes it, on a keyboard
-    shortcut.textContent = String(n + 1);
+    shortcut.textContent = String((n + 1) % 10); // the tenth is 0
     name.append(' ', shortcut);
 
     const about = document.createElement('span');
@@ -307,12 +328,16 @@ function closeCraft() {
   state.paused = false;
 }
 
-// Copies a sprite's ready-drawn picture into a card, at the same size it has on the map.
+// Copies a sprite's ready-drawn picture into a card, at the same size it has on the map, or smaller
+// if it's taller than RECIPE_PICTURE_ROWS (the roof), so every card stays the same height. On a
+// phone held sideways the cards are small, and so are the pictures.
 function drawRecipePicture(canvas, sprite) {
   const image = spriteImage(sprite);
+  const rows = shortScreen.matches ? RECIPE_PICTURE_ROWS_SHORT : RECIPE_PICTURE_ROWS;
+  const scale = Math.min(1, (rows * view.th) / image.height);
   canvas.width = image.width;
   canvas.height = image.height;
-  canvas.style.width = `${image.width / view.dpr}px`;
-  canvas.style.height = `${image.height / view.dpr}px`;
+  canvas.style.width = `${(image.width * scale) / view.dpr}px`;
+  canvas.style.height = `${(image.height * scale) / view.dpr}px`;
   canvas.getContext('2d').drawImage(image, 0, 0);
 }

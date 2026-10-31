@@ -25,6 +25,15 @@ const FIRE_INK = {
   s: ['#a3a69e'], // the ring of stones
 };
 
+// A campfire with a roof over it: the fire's colors, plus a little plank roof on two posts.
+const ROOFED_INK = {
+  ...FIRE_INK,
+  a: ['#d8b07a'], // the far slope of the roof, catching the light
+  b: ['#e2bf8a', '#9c7048'], // rows of shingles
+  e: ['#7a5230', '#2e1d10'], // the eave, with the shade under the roof
+  p: ['#8b6239'], // the posts
+};
+
 // The colors of things built from wood: the wall and the door.
 const WOOD_INK = {
   t: ['#d8b07a'], // tops, in the light
@@ -325,6 +334,85 @@ const SPRITES = {
     ],
     ink: FIRE_INK,
     shadow: 0,
+  },
+  // A campfire the rain has put out: the ring of stones round charred logs, and a little ash.
+  campfireOut: {
+    art: [
+      ' ·˙ ',
+      '◖╳╳◗',
+    ],
+    paint: [
+      ' aa ',
+      'sCCs',
+    ],
+    ink: {
+      a: ['#8a8580'],
+      C: ['#4a3a2e'],
+      s: ['#a3a69e'],
+    },
+    shadow: 0,
+  },
+  // A campfire under a roof (see `roofedFire` in objects.js): the same fire, with a small plank roof
+  // on a post either side. The three pictures differ only in the flame, like the campfire's.
+  roofedFire: {
+    art: [
+      ' ▄▄▄▄ ',
+      '▟◠⌒◠⌒▙',
+      '▀▀▀▀▀▀',
+      '▌ ▗▖ ▐',
+      '▌ ▟▙ ▐',
+      '▌◖╳╳◗▐',
+    ],
+    paint: [
+      ' aaaa ',
+      'abbbba',
+      'eeeeee',
+      'p yy p',
+      'p oO p',
+      'psLLsp',
+    ],
+    ink: ROOFED_INK,
+    shadow: 3,
+  },
+  roofedFire2: {
+    art: [
+      ' ▄▄▄▄ ',
+      '▟◠⌒◠⌒▙',
+      '▀▀▀▀▀▀',
+      '▌  ▖·▐',
+      '▌ ▟▙ ▐',
+      '▌◖╳╳◗▐',
+    ],
+    paint: [
+      ' aaaa ',
+      'abbbba',
+      'eeeeee',
+      'p  yYp',
+      'p Oo p',
+      'psLLsp',
+    ],
+    ink: ROOFED_INK,
+    shadow: 3,
+  },
+  roofedFire3: {
+    art: [
+      ' ▄▄▄▄ ',
+      '▟◠⌒◠⌒▙',
+      '▀▀▀▀▀▀',
+      '▌ ▗  ▐',
+      '▌ ▟▙ ▐',
+      '▌◖╳╳◗▐',
+    ],
+    paint: [
+      ' aaaa ',
+      'abbbba',
+      'eeeeee',
+      'p Y  p',
+      'p rO p',
+      'psLLsp',
+    ],
+    ink: ROOFED_INK,
+    shadow: 3,
   },
   // One stretch of wall: sharpened stakes, two to a tile, so a row of them joins up into a fence.
   woodWall: {

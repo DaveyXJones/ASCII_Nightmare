@@ -59,7 +59,7 @@ font from a file, so some characters may look a little different.
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
 | Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
-| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `7` |
+| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9` and `0` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
 | Menu | ☰ in the top right | `Esc` |
 
@@ -101,6 +101,7 @@ something you can afford.
 | **Stone pick** | 2 wood, 3 stone | Boulders break in half the swings. You lose it if you die. |
 | **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
+| **Roof** | 4 wood | Build it over a campfire and rain can't put the fire out (see Weather, below). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
 | **Wooden door** | 3 wood | Set it in a line of wall. It swings open as you walk up and shuts behind you; shades can't open it. |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
@@ -112,6 +113,8 @@ sideways, build again. Tap **Done** when you've finished.
 
 Changed your mind? Face the wall or door and **Break** it, or **Put out** the campfire, and you
 get the wood or stone back. Things you build stay in the world when you die.
+
+A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
 
 ## Night
 
@@ -134,6 +137,26 @@ Face a campfire and the big button says **Light**; it then burns for **five minu
 runs low (the game warns you, and the torch in your pack turns red), and goes out. Light it again
 at any campfire. Once it's burnt halfway down a fire offers to top it up, so you can set out with a
 fresh one.
+
+## Weather
+
+Now and then clouds roll in. First their shadows drift across the island, then the whole sky
+turns grey and it starts to rain: drops slant down the screen and splash on the ground and the
+water, and you hear it drumming on the cottage roof. The heaviest rain comes with **thunder and
+lightning**, and at night a flash of lightning lights up the island for a moment, showing whatever
+is out there with you. It rains about once a day and night, for a few minutes. The first day of a
+new world stays dry. While it rains, the sun on the fourth bar turns into an umbrella ☂ (a cloud
+☁ when it's just grey).
+
+- **Rain puts out campfires.** A fire out in the open hisses and steams, and after about half a
+  minute of heavy rain it goes out, and its light with it, which matters at night. Face a cold
+  campfire and the button says **Light**: once the rain stops, a piece of wood gets it going again.
+- **A roof keeps it burning.** Craft a **Roof** and build it over the campfire (or over a cold
+  one, which lights it again). Rain can't touch a fire under a roof.
+- **Your torch** burns down twice as fast out in pouring rain, so get under the cottage roof or
+  keep a fire going.
+- In the rain the crickets stop singing, so you can't listen for things creeping up. Lightning
+  shows them instead.
 
 ## Things in the dark
 
@@ -177,6 +200,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/objects.js` | The things standing on the map, and what the action button does to each one. |
 | `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage. |
 | `js/night.js` | Day and night: how long each lasts, the moon, and how dark it gets. |
+| `js/weather.js` | Clouds, rain and storms: when they come, and rain putting out campfires. |
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
 | `js/input.js` | The thumbstick, the buttons, and the keyboard. |
 | `js/sound.js` | Every sound, made by the browser on the spot, so there are no sound files. |
@@ -222,6 +246,10 @@ run straight from the file.
 - **Day and night.** `DAY_SECONDS` and `NIGHT_SECONDS` at the top of `js/night.js` (set
   `DAY_SECONDS` to 30 to see the night straight away). `DARKEST` is how black a moonless night
   gets, and `MOONS` is the moon's shape for each night, in order: add, remove or reorder them.
+- **Weather.** The numbers at the top of `js/weather.js`: `WEATHER_SECONDS` is about how long a
+  spell of weather lasts; lower `RAIN_FROM` and it rains more often; `DOUSE_SECONDS` is how long a
+  campfire lasts in the rain. How the rain looks (how many drops, how fast, their colors) is
+  `RAIN_DROPS` and its neighbours at the top of `js/render.js`.
 - **The torch.** `burns` (seconds) and `light` (how far it reaches, in tiles) on the torch in
   `TOOLS` in `js/crafting.js`. A campfire's reach is `light` in `OBJECTS`; give anything a `light`
   and it glows at night.

@@ -80,6 +80,7 @@ const state = {
   fx: { particles: [], floaters: [], shake: null },
   creatures: [], // things out in the dark (creatures.js)
   hunt: newHunt(), // tonight's hunt: when the next one comes out, and which warnings have shown
+  weather: newWeather(), // lightning, thunder on its way, and which rain messages have shown (weather.js)
   target: null,
   building: null, // in build mode: the key in RECIPES being built, otherwise null
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
@@ -139,6 +140,8 @@ function startLife(x, y, facing) {
   state.fx = { particles: [], floaters: [], shake: null };
   state.creatures = [];
   state.hunt = newHunt();
+  state.weather = newWeather();
+  state.weather.raining = state.sky.weather.rain > 0.15; // waking up in the rain isn't news
   stopBuilding(state);
   state.dying = null;
   elements.game.classList.remove('collapsing');
@@ -180,6 +183,7 @@ function update(dt) {
 
   updateVitals(state, dt);
   updateTorch(state, dt);
+  updateWeather(state, dt);
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
   if (survivor.vitals.health <= 0) collapse();
@@ -512,13 +516,17 @@ function updateHud() {
     elements.tools.torch.classList.toggle('low', torch === 'low');
   }
 
-  // By day: the sun, and how much daylight is left. By night: tonight's moon, and how long until dawn.
+  // By day: the sun (or a cloud, or an umbrella in the rain), and how much daylight is left. By night:
+  // tonight's moon, and how long until dawn.
   const sky = state.sky;
   const daylight = sky.phase === 'day' || sky.phase === 'dusk';
-  const skyName = daylight ? 'Daylight left' : `${sky.moon.name}: night left`;
+  const weather = sky.weather.rain > 0.15 ? 'rain' : sky.weather.cloud > 0.6 ? 'cloud' : 'sun';
+  const dayIcon = { rain: '☂', cloud: '☁', sun: '☼' }[weather];
+  const dayName = { rain: 'Raining. Daylight left', cloud: 'Cloudy. Daylight left', sun: 'Daylight left' }[weather];
+  const skyName = daylight ? dayName : `${sky.moon.name}: night left`;
   if (hud.skyName !== skyName) {
     hud.skyName = skyName;
-    elements.skyIcon.textContent = daylight ? '☼' : sky.moon.glyph;
+    elements.skyIcon.textContent = daylight ? dayIcon : sky.moon.glyph;
     elements.sky.title = skyName;
     elements.sky.classList.toggle('night', !daylight);
   }
@@ -618,6 +626,7 @@ function frame(now) {
 
   updateSound(state, playing);
   followCamera(state.world, state.player, dt);
+  stepRain(state, state.paused ? 0 : dt);
   drawFrame(state);
   updateHud();
   requestAnimationFrame(frame);
