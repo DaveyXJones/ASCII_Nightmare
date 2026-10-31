@@ -335,8 +335,9 @@ Item 1 of the owner's list, built as the notes above suggested:
   `pointerdown`, so the tap that opens a panel can't land on the panel as it appears.
 - Build mode is `state.building` (a recipe key) and `state.buildSpot` (`{ x, y, problem }`,
   recomputed each update). The spot is the tile one past the front edge of the feet, so it never
-  overlaps the player. Walking doesn't turn you in build mode; a flick does (`flickOrWalk`). While building, `findTarget` is skipped and the action button builds once
-  per press (the `'action'` press from `input.js`), not on hold. Anything built is an ordinary
+  overlaps the player. Walking doesn't turn you in build mode; a flick does (`flickOrWalk`). While
+  building, `findTarget` is skipped and the action button builds once per press (the `'action'`
+  press from `input.js`), not on hold. Anything built is an ordinary
   object with an `action` that takes it down again, so a misplaced wall is never a trap.
 - **Doors** are objects with `door: true` and no `solid`: the player walks through (`blockerAt`
   ignores them), creatures can't (`creatureCanStand`), and nothing can be built over one. While the
