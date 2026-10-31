@@ -239,16 +239,18 @@ run straight from the file.
 
 ## What's next
 
+Done lately: choosing your look, flashing when hurt and falling when you die, the stone pick,
+doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
+
 Roughly in order:
 
-1. **The character.** ~~Pick your own colors, flash when you're hurt and fall over when you
-   die~~ (done). Still to decide: a dark outline so you stand out on busy ground.
-2. **More to craft.** ~~A pick for stone, a door in a wall, cooking berries over the fire~~ (done).
-3. **More in the dark.** ~~Another kind of creature, shades that claw at walls~~ (done: brutes and
-   claws). Maybe next: lurkers that sit still in the tall grass, eyes open, and spring when you
+1. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
+   rule that the map is drawn only in characters, so it's waiting for a yes or no.
+2. **Weather.** Clouds that roll in, rain drawn as falling characters, and the sound of it. Rain
+   could put out campfires, so a roof starts to matter.
+3. **More in the dark.** Lurkers that sit still in the tall grass, eyes open, and spring when you
    walk too close.
-4. ~~**Saving.** Keep the world and your pack between visits.~~ (done)
-5. ~~**Sound.** Chops, footsteps~~ (done). Rain needs weather first: clouds that roll in, rain
-   drawn as falling characters, and its sound.
-6. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
-   and what's changed, not the whole map.
+4. **More to craft.** A chest that keeps its contents when you die, and a bed to wake up beside.
+5. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
+   and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a
+   small server running somewhere else.

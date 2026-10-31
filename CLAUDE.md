@@ -7,7 +7,7 @@ and overlap whatever is behind them. The owner is building toward a fuller survi
 (crafting, a day and night cycle with things that come out at night, saving, maybe multiplayer);
 see "What's next" in README.md.
 
-## Where things stand: the game is online (last updated 2026-10-29)
+## Where things stand: the game is online (last updated 2026-10-31)
 
 The game is live at **https://daveyxjones.github.io/ASCII_Nightmare/**. The repository
 (`DaveyXJones/ASCII_Nightmare`) is public, its default branch is `main`, and GitHub Pages deploys
@@ -70,9 +70,11 @@ of it tunable in `CREATURES`, the constants in `js/creatures.js` and `creatures`
 - **The moon sets the number** of each kind out at once (`creatures: { shade: 2 }` on each moon).
 - Dying to them shows "The dark takes you." instead of "You collapse."
 
-## The character (built 2026-10-31)
+## The "What's next" list (built 2026-10-31)
 
-The owner asked to build README's "What's next" list ("I like the ideas you have for it"):
+The owner asked to build README's "What's next" list ("I like the ideas you have for it"). Items
+1 to 5 were built, each its own commit; choices Claude made that the owner hadn't specified, any
+of which they may want changed:
 
 - **Your look**: a panel off the menu with a row of color squares each for hat, hair, skin, shirt
   and trousers (`LOOKS` in sprites.js; hair and skin were Claude's addition). Only the main color
@@ -110,7 +112,9 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   kept under `SOUND_KEY`. Levels were set by rendering each sound offline and measuring peaks
   (actions about 0.35, footsteps 0.07); the compressor only limits the loudest moments.
 - **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
-  "Draw only characters on the map", so it waits for the owner's say.
+  "Draw only characters on the map", so it waits for the owner's say. **Not built: multiplayer**:
+  it needs a server, and GitHub Pages only hosts files, so it needs the owner to choose a host.
+  Rain was in the sound item but needs weather first; README's "What's next" now lists that.
 
 ## Hard rules
 
