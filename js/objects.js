@@ -23,6 +23,8 @@
 //   claws    how many scratches it takes before something in the dark claws through it (see `claw`
 //            in CREATURES, creatures.js). Claw marks are forgotten by day.
 //   scarred  the picture to draw once it's been clawed halfway through
+//   repair   what it costs to mend the claw marks on it, e.g. { wood: 1 }: while it has any, the
+//            action button says Repair instead
 //   doused   what it turns into when rain puts it out (see weather.js): a fire with no roof
 //   relight  { cost, into } for a fire that's gone out: the action lights it again with a little wood
 //            (`cost`), turning it back `into` a fire, once the rain has stopped
@@ -123,6 +125,7 @@ const LOG_WALL = {
   sound: 'chop',
   soundDone: 'crash',
   claws: 10,
+  repair: { wood: 1 },
   scarred: 'logWallScarred',
   fence: true,
   side: { sprite: 'logWallSide', scarred: 'logWallSideScarred' },
@@ -319,6 +322,7 @@ const OBJECTS = {
     sound: 'chop',
     soundDone: 'build',
     claws: 15,
+    repair: { wood: 1 },
     scarred: 'woodWallScarred',
     fence: true,
     side: { sprite: 'woodWallSide', scarred: 'woodWallSideScarred' },
@@ -339,6 +343,7 @@ const OBJECTS = {
     sound: 'mine',
     soundDone: 'crumble',
     claws: 45,
+    repair: { stone: 1 },
     scarred: 'stoneWallScarred',
     fence: true,
     side: { sprite: 'stoneWallSide', scarred: 'stoneWallSideScarred' },
@@ -358,6 +363,7 @@ const OBJECTS = {
     sound: 'chop',
     soundDone: 'crash',
     claws: 45,
+    repair: { wood: 1 },
     scarred: 'stoneGateScarred',
     fence: true,
     side: { sprite: 'stoneGateSide', opens: 'stoneGateSideOpen', scarred: 'stoneGateSideScarred' },
@@ -377,6 +383,7 @@ const OBJECTS = {
     sound: 'chop',
     soundDone: 'build',
     claws: 12,
+    repair: { wood: 1 },
     scarred: 'spikesScarred',
     thorns: 1,
   },
@@ -500,16 +507,19 @@ const OBJECTS = {
   },
   // ---- Places to find (see places.js) ----
   logWall: LOG_WALL,
-  // Where an old wall has fallen: a heap of logs you can step over, or break up for wood.
+  // Where an old wall has fallen: a heap of logs you can step over. Repair stacks them back up into
+  // the wall (break that again for the wood, if it's wood you're after).
   logPile: {
     name: 'Fallen logs',
     sprite: 'logPile',
-    action: 'Break',
-    hits: 2,
-    gives: { wood: 2 },
-    becomes: null,
+    action: 'Repair',
+    hits: 3,
+    gives: {},
+    becomes: 'logWall',
     burst: 'wood',
     sound: 'chop',
+    soundDone: 'build',
+    says: 'You stack the logs back up into the wall.',
   },
   cupboard: {
     name: 'Old cupboard',
@@ -683,6 +693,7 @@ const OBJECTS = {
     sound: 'chop',
     soundDone: 'build',
     claws: 20,
+    repair: { wood: 1 },
     scarred: 'woodDoorScarred',
     fence: true,
     side: { sprite: 'woodDoorSide', opens: 'woodDoorSideOpen', scarred: 'woodDoorSideScarred' },

@@ -237,6 +237,9 @@ function findTarget(game) {
       } else if (object && object.fuel && lampWantsFuel(world, tx, ty, object)) {
         // A lamp burning low (or gone out) offers to be filled instead of taken down.
         candidate = { x: tx, y: ty, label: 'Fill', object, fill: true };
+      } else if (object && object.repair && world.clawed.get(ty * world.width + tx)) {
+        // Something has been clawing at this wall: mend it before it gives way.
+        candidate = { x: tx, y: ty, label: 'Repair', object, repair: true };
       } else if (object && object.dig && survivor.tools.spade && !object.gives) {
         // With the spade, something with nothing left to take (a picked bush, a stump) is dug up.
         candidate = { x: tx, y: ty, label: 'Dig up', object, dig: true };
@@ -301,6 +304,33 @@ function lampWantsFuel(world, x, y, object) {
   return (world.fuel.get(y * world.width + x) || 0) < object.fuel.burns * LAMP_REFILL;
 }
 
+// Whether the player's feet are on tile (x, y), even partly.
+function feetOn(player, x, y) {
+  return (
+    player.x + FOOT_HALF_WIDTH > x &&
+    player.x - FOOT_HALF_WIDTH < x + 1 &&
+    player.y + FOOT_HALF_DEPTH > y &&
+    player.y - FOOT_HALF_DEPTH < y + 1
+  );
+}
+
+// Mends the claw marks on a wall (or a door, or spikes) for a little of what it's made of (`repair`
+// in OBJECTS), so it holds out as long again.
+function repairWall(game, target) {
+  const { world, survivor, fx } = game;
+  const cost = target.object.repair;
+  if (!canAfford(survivor.pack, cost)) {
+    showMessage(game, `You need ${shortfall(survivor.pack, cost)} to repair it.`);
+    return;
+  }
+  spend(survivor.pack, cost);
+  world.clawed.delete(target.y * world.width + target.x);
+  burst(fx, target.x + 0.5, target.y + 0.5, target.object.burst || 'wood', 8);
+  playSound('build');
+  floatText(fx, target.x + 0.5, target.y - 2, 'repaired', '#ffd75e');
+  buzz(30);
+}
+
 // One press (or one swing of a held button) of the action button.
 function useTarget(game) {
   const { world, player, survivor } = game;
@@ -330,6 +360,10 @@ function useTarget(game) {
     fillLamp(game, target);
     return;
   }
+  if (target.repair) {
+    repairWall(game, target);
+    return;
+  }
   if (target.object.relight) {
     relightFire(game, target);
     return;
@@ -344,6 +378,13 @@ function useTarget(game) {
   const index = target.y * world.width + target.x;
   if (!object.gives && !object.tool && !object.loot) {
     showMessage(game, object.empty || `Nothing to take from the ${object.name.toLowerCase()}.`);
+    return;
+  }
+  // Something you can walk over that's about to stand up solid (fallen logs stacked back into a
+  // wall) would shut you inside it.
+  const after = object.becomes && OBJECTS[object.becomes];
+  if (after && after.solid && !object.solid && feetOn(player, target.x, target.y)) {
+    showMessage(game, `Step off the ${object.name.toLowerCase()} first.`);
     return;
   }
 
@@ -374,8 +415,10 @@ function useTarget(game) {
       survivor.pack[item] += count;
       parts.push(`+${count} ${ITEMS[item].name}`);
     }
-    const color = object.tool ? TOOLS[object.tool].color : ITEMS[Object.keys(object.gives)[0]].color;
-    floatText(game.fx, target.x + 0.5, target.y - 1, parts.join('  '), color);
+    if (parts.length > 0) {
+      const color = object.tool ? TOOLS[object.tool].color : ITEMS[Object.keys(object.gives)[0]].color;
+      floatText(game.fx, target.x + 0.5, target.y - 1, parts.join('  '), color);
+    }
     if (object.says) showMessage(game, object.says);
   }
   setObject(world, target.x, target.y, object.becomes);
