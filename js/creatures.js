@@ -132,7 +132,7 @@ const field = {
 // What a night's hunt has done so far: when night fell and when the next one comes out, and which
 // messages have shown, so each only shows once a night.
 function newHunt() {
-  return { nightAt: null, nextAt: null, seen: {}, bitten: false, clawed: false, sprung: false };
+  return { nightAt: null, nextAt: null, seen: {}, bitten: false, clawed: false, sprung: false, spiked: false };
 }
 
 function updateCreatures(game, dt) {
@@ -264,8 +264,10 @@ function moveCreature(game, creature, dt, fears, night) {
       // Missed, or the light's in the way: back off and try again.
       creature.state = 'run';
       creature.timer = between(BACK_OFF);
-    } else {
-      stepCreature(game, creature, dx, dy);
+    } else if (!stepCreature(game, creature, dx, dy)) {
+      // Stopped dead by something in the way. If it's spikes, it's run onto them.
+      const wall = wallAhead(game, creature, way);
+      if (wall && OBJECTS[wall.key].thorns) prick(game, creature, wall);
     }
   } else if (creature.state === 'claw') {
     const wall = creature.clawing;
@@ -401,10 +403,11 @@ function scratch(game, creature, wall) {
   fx.shake = { index: wall.index, until: game.time + 0.18 };
   burst(fx, wall.x + 0.5, wall.y + 0.5, object.burst || 'wood', 3);
   playSoundAt(game, 'claw', wall.x + 0.5, wall.y + 0.5);
-  if (!hunt.clawed) {
+  if (!hunt.clawed && !object.thorns) {
     hunt.clawed = true;
     showMessage(game, 'Something is clawing at your wall.');
   }
+  if (object.thorns) prick(game, creature, wall);
   if (scratches < object.claws) {
     world.clawed.set(wall.index, scratches);
     return;
@@ -415,6 +418,16 @@ function scratch(game, creature, wall) {
   showMessage(game, `Something breaks through your ${object.name.toLowerCase()}!`);
   buzz(60);
   field.at = -Infinity; // there's a way through now: work out the map of steps again
+}
+
+// Spikes (`thorns` in OBJECTS) cut a creature that claws at them or runs onto them: it's hurt and
+// backs off, or comes apart.
+function prick(game, creature, wall) {
+  woundCreature(game, creature, OBJECTS[wall.key].thorns, { x: wall.x + 0.5, y: wall.y + 0.5 });
+  if (!creature.gone && !game.hunt.spiked) {
+    game.hunt.spiked = true;
+    showMessage(game, 'Something tears itself on your spikes, and shrieks.');
+  }
 }
 
 // Which way to go to reach you: downhill on the map of steps, round whatever's in the way. If the
@@ -490,10 +503,10 @@ function hitCreature(game, creature) {
   woundCreature(game, creature, toolPower(survivor, 'Hit'));
 }
 
-// Takes `damage` off a creature: it's knocked back and runs, or comes apart if that was too much.
-// From a hit (above) or a shot (guns.js).
-function woundCreature(game, creature, damage) {
-  const { player } = game;
+// Takes `damage` off a creature: it's knocked back (away from `from`, you unless it's something else
+// that hurt it) and runs, or comes apart if that was too much. From a hit (above), a shot (guns.js)
+// or spikes (prick, above).
+function woundCreature(game, creature, damage, from = game.player) {
   const kind = CREATURES[creature.kind];
   creature.hp -= damage;
   creature.hurtAt = game.time;
@@ -506,8 +519,8 @@ function woundCreature(game, creature, damage) {
     showMessage(game, `The ${kind.name.toLowerCase()} comes apart into smoke.`);
     return;
   }
-  playSound('hit');
-  moveAway(game, creature, player.x, player.y, kind.knock);
+  playSoundAt(game, 'hit', creature.x, creature.y);
+  moveAway(game, creature, from.x, from.y, kind.knock);
   creature.state = 'run';
   creature.timer = kind.flinch;
   creature.clawing = null;

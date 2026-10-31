@@ -47,6 +47,8 @@
 //            table of what you might find in it. What you find is worked out from the island's seed
 //            and the tile, so it's the same however many times you load the game.
 //   epitaph  true for a grave: walking into it reads its stone, a line from EPITAPHS (places.js)
+//   thorns   how much it hurts a creature each time one claws at it or runs into it (the spiked
+//            barricade; see prick in creatures.js)
 //   dig      { hits, gives, becomes }: with a spade (TOOLS.spade), the action button says Dig up on
 //            it, once there's nothing else to take from it, and these replace its own `hits`,
 //            `gives` and `becomes`
@@ -63,6 +65,8 @@ const MARKS = {
   chest: { glyph: '■', color: '#e0b070', name: 'chest', rank: 4 },
   bed: { glyph: '▬', color: '#ff8a70', name: 'bedroll', rank: 5 },
   wall: { glyph: '#', color: '#c49a62', name: 'wall', rank: 1 },
+  stoneWall: { glyph: '#', color: '#b8b6b0', name: 'stone wall', rank: 1 },
+  spikes: { glyph: '×', color: '#e8cf9a', name: 'barricade', rank: 1 },
   wreck: { glyph: '∪', color: '#c8b08a', name: 'wreck', rank: 2 },
   crate: { glyph: '☐', color: '#e0c080', name: 'crate', rank: 4 },
   dropped: { glyph: '!', color: '#ff5a4a', name: 'your gun', rank: 6 },
@@ -318,6 +322,63 @@ const OBJECTS = {
     scarred: 'woodWallScarred',
     fence: true,
     side: { sprite: 'woodWallSide', scarred: 'woodWallSideScarred' },
+  },
+  // A stretch of stone wall: it takes things in the dark three times as long to claw through as a
+  // wooden one.
+  stoneWall: {
+    name: 'Stone wall',
+    mark: MARKS.stoneWall,
+    sprite: 'stoneWall',
+    solid: true,
+    blocked: 'Your stone wall. Break it to get through.',
+    action: 'Break',
+    hits: 4,
+    gives: { stone: 2 },
+    becomes: null,
+    burst: 'stone',
+    sound: 'mine',
+    soundDone: 'crumble',
+    claws: 45,
+    scarred: 'stoneWallScarred',
+    fence: true,
+    side: { sprite: 'stoneWallSide', scarred: 'stoneWallSideScarred' },
+  },
+  // A heavy plank gate between stone posts: a door that holds out as long as the stone wall.
+  stoneGate: {
+    name: 'Gate',
+    mark: MARKS.stoneWall,
+    sprite: 'stoneGate',
+    opens: 'stoneGateOpen',
+    door: true,
+    action: 'Break',
+    hits: 4,
+    gives: { stone: 1, wood: 2 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+    soundDone: 'crash',
+    claws: 45,
+    scarred: 'stoneGateScarred',
+    fence: true,
+    side: { sprite: 'stoneGateSide', opens: 'stoneGateSideOpen', scarred: 'stoneGateSideScarred' },
+  },
+  // Sharpened stakes, crossed: anything that claws at them, or runs into them, gets cut.
+  spikes: {
+    name: 'Spiked barricade',
+    mark: MARKS.spikes,
+    sprite: 'spikes',
+    solid: true,
+    blocked: 'Sharpened stakes. You keep your hands well clear.',
+    action: 'Break',
+    hits: 2,
+    gives: { wood: 2 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+    soundDone: 'build',
+    claws: 12,
+    scarred: 'spikesScarred',
+    thorns: 1,
   },
   // A chest keeps what's in it when you die (see chest.js). It's taken down from its own panel, once
   // it's empty.

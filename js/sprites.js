@@ -50,6 +50,34 @@ const WOOD_INK = {
   o: ['#4a2f1c'], // ...its latch side
 };
 
+// The colors of the stone wall and the gate you build: grey blocks with dark mortar between them, and
+// for the gate, heavy planks hung between stone posts.
+const STONE_WALL_INK = {
+  t: ['#cdcbc4'], // the coping along the top, in the light
+  T: ['#a3a19a'],
+  B: ['#4a4844', '#aaa8a1'], // blocks, with the mortar between them
+  b: ['#423f3b', '#97958e'],
+  D: ['#3a3834', '#86847d'], // the lower blocks, in shade
+  d: ['#34322e', '#77756f'],
+  S: ['#aaa8a1'], // the lit side of a wall seen from the side
+  s: ['#8c8a84'],
+  P: ['#6f6d67'], // ...and its shaded side
+  p: ['#5b5953'],
+  L: ['#4a2f1c', '#a87c50'], // the gate's planks, with their rails
+  l: ['#4a2f1c', '#946a42'],
+  W: ['#3a2414', '#86603a'],
+  w: ['#3a2414', '#74522f'],
+  k: ['#6b4528'], // the gate seen edge-on
+  o: ['#3a2414'], // ...its latch side
+};
+
+// Sharpened stakes, crossed: pale cut points, the shafts darker lower down.
+const SPIKE_INK = {
+  t: ['#f2dfb4'],
+  s: ['#b08458'],
+  S: ['#7a5230'],
+};
+
 // A lamp's colors: dark metal, glass lit from inside (two shades for the flicker), and a wooden post.
 const LAMP_INK = {
   m: ['#4a4842'], // the cap and the base
@@ -692,6 +720,179 @@ const SPRITES = {
     ],
     ink: WOOD_INK,
     shadow: 1,
+  },
+  // A stretch of stone wall: blocks laid in courses under a coping, two to a tile like the wooden
+  // wall, so a row of them joins up.
+  stoneWall: {
+    art: [
+      '▄▄',
+      '┴┬',
+      '┬┴',
+    ],
+    paint: [
+      'tT',
+      'Bb',
+      'Dd',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 2,
+  },
+  stoneWallScarred: {
+    art: [
+      '▄▄',
+      '╱┬',
+      '┬╱',
+    ],
+    paint: [
+      'tT',
+      'Bb',
+      'Dd',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 2,
+  },
+  // In a wall running up the screen, seen from the side, like woodWallSide.
+  stoneWallSide: {
+    art: [
+      '▗▖',
+      '▐▌',
+      '▐▌',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 1,
+  },
+  stoneWallSideScarred: {
+    art: [
+      '▗▖',
+      '╱▌',
+      '▐╱',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 1,
+  },
+  // The gate: planks and rails under a stone lintel. Beside it, it stands open between its two posts.
+  stoneGate: {
+    art: [
+      '▄▄',
+      '╫╫',
+      '╫╫',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Ww',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 2,
+  },
+  stoneGateScarred: {
+    art: [
+      '▄▄',
+      '╱╫',
+      '╫╱',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Ww',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 2,
+  },
+  stoneGateOpen: {
+    art: [
+      '▄▄',
+      '▌▐',
+      '▌▐',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 2,
+  },
+  stoneGateSide: {
+    art: [
+      '▄▄',
+      '▐▌',
+      '▐▌',
+    ],
+    paint: [
+      'TP',
+      'ko',
+      'kk',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 1,
+  },
+  stoneGateSideScarred: {
+    art: [
+      '▄▄',
+      '╱▌',
+      '▐╱',
+    ],
+    paint: [
+      'TP',
+      'ko',
+      'kk',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 1,
+  },
+  stoneGateSideOpen: {
+    art: [
+      '▄▄',
+      '  ',
+      ' ▏',
+    ],
+    paint: [
+      'TP',
+      '  ',
+      ' k',
+    ],
+    ink: STONE_WALL_INK,
+    shadow: 1,
+  },
+  // A spiked barricade: stakes crossed in an X, their sharpened ends pointing out.
+  spikes: {
+    art: [
+      '╲╱',
+      '╳╳',
+      '╱╲',
+    ],
+    paint: [
+      'tt',
+      'ss',
+      'SS',
+    ],
+    ink: SPIKE_INK,
+    shadow: 2,
+  },
+  spikesScarred: {
+    art: [
+      '╲ ',
+      '╳╱',
+      '╱╲',
+    ],
+    paint: [
+      't ',
+      'ss',
+      'SS',
+    ],
+    ink: SPIKE_INK,
+    shadow: 2,
   },
   // A lantern hanging from a post: a metal cap, glass with the flame glowing through it (the three
   // pictures flicker), a base, and the post. Gone out, the glass is dark.
