@@ -205,7 +205,11 @@ After merging PR #8 the owner said: "i want the outline for the player i think, 
 fishing, map and lamps idea. Im also wondering about a pistol and a rifle, and i also notice that
 when im trying to build walls there is no way to turn them and place them on the right or left
 side, is that possible?" README's "What's next" lists these in this order; build them each as its
-own commit, like the lists before. Notes and suggestions (Claude's, not the owner's):
+own commit, like the lists before. **Items 1 to 5 were built on 2026-10-31** (each in its own
+section below); the pistol and rifle wait on the owner's answers to the questions in item 6.
+Claude asked them at the start of that session, suggesting: found in crates (a wreck on a beach),
+bullets scarce and not craftable, a short-range six-shot pistol and a long-range one-shot rifle,
+and the bang drawing creatures in. Notes and suggestions (Claude's, not the owner's):
 
 1. **Walls.** (Built; see "Walls that join" below.) Two problems, both real (checked in a screenshot): a line of `woodWall` running up
    the screen draws as a stack of `▲▲` spikes, and since walking turns you (`turnToward`), you
