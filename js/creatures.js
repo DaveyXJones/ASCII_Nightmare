@@ -240,6 +240,7 @@ function bite(game, creature) {
   const kind = CREATURES[creature.kind];
   survivor.vitals.health = Math.max(0, survivor.vitals.health - kind.bite);
   survivor.hurtBy = 'dark';
+  survivor.hurtAt = game.time;
   floatText(game.fx, player.x, player.y - 3, `-${kind.bite}`, '#ff5a4e');
   burst(game.fx, player.x, player.y - 1, 'shadow', 4);
   buzz(80);

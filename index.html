@@ -61,6 +61,7 @@
             <p class="tagline">You wake alone on an island. Keep yourself fed and watered.</p>
             <div class="menu-buttons">
               <button type="button" id="start" class="button primary">Wake up</button>
+              <button type="button" id="look-button" class="button">Your look</button>
               <button type="button" id="new-world" class="button">New world</button>
               <button type="button" id="fullscreen" class="button">Full screen</button>
             </div>
@@ -96,6 +97,20 @@
         </div>
       </section>
 
+      <section id="look" class="overlay" aria-labelledby="look-title" hidden>
+        <div class="panel look-panel">
+          <div class="look-preview">
+            <h2 id="look-title" class="title">Your look</h2>
+            <canvas id="look-picture" class="look-picture" role="img" aria-label="You, from the front, the side and the back"></canvas>
+          </div>
+          <div class="look-choices">
+            <!-- One row of colors per part of you, made from LOOKS in js/sprites.js. -->
+            <div id="look-parts" class="look-parts"></div>
+            <button type="button" id="look-done" class="button primary">Done</button>
+          </div>
+        </div>
+      </section>
+
       <section id="death" class="overlay" aria-labelledby="death-title" hidden>
         <div class="panel panel-small">
           <h1 id="death-title" class="title">You collapse.</h1>
@@ -125,6 +140,7 @@
     <script src="js/survival.js"></script>
     <script src="js/crafting.js"></script>
     <script src="js/creatures.js"></script>
+    <script src="js/save.js"></script>
     <script src="js/game.js"></script>
   </body>
 </html>

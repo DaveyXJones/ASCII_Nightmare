@@ -69,15 +69,22 @@ of it tunable in `CREATURES`, the constants in `js/creatures.js` and `creatures`
 - **The moon sets the number** out at once: 2 (half), 3 (thin), 4 (none), 1 (full).
 - Dying to them shows "The dark takes you." instead of "You collapse."
 
-Next, the owner hasn't picked. Ideas noted in README's "What's next": more creature kinds, shades
-that break walls. Character ideas the owner liked (none started):
-1. **Choose your look:** hat, shirt and trouser colors picked from the menu. All of the player's
-   colors are in `PLAYER_INK`; after changing them, clear the player sprites' cached `image` so
-   `spriteImage` redraws them.
-2. **Hurt and collapse:** a flash while hunger or thirst is hurting, and a fall before the death
-   screen.
-3. **Outline:** a thin dark edge so the player stands out on busy ground. It bends "Draw only
-   characters on the map", so ask the owner before building it.
+## The character (built 2026-10-31)
+
+The owner asked to build README's "What's next" list ("I like the ideas you have for it"):
+
+- **Your look**: a panel off the menu with a row of color squares each for hat, hair, skin, shirt
+  and trousers (`LOOKS` in sprites.js; hair and skin were Claude's addition). Only the main color
+  is listed; `dressPlayer` derives the lit and shaded inks into `PLAYER_INK` and marks every player
+  picture for redrawing. Kept in localStorage (`LOOK_KEY`, js/save.js).
+- **Hurt**: after a bite the player flickers red (`hurtFlash` in render.js: a tinted copy of the
+  sprite, see `spriteImage`) and the screen's edges flash red (`.hud.hurt`); while starving, a short
+  red flash every 1.5 s. Under reduced motion a bite is one steady flash.
+- **Collapse**: when health runs out, `state.dying` holds the player for `COLLAPSE_SECONDS`: the
+  `crouch` pose, then `fallen` (lying down), with the screen's edges closing in (`.collapsing`),
+  then the death screen fades in. Nothing else updates meanwhile.
+- **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
+  "Draw only characters on the map", so it waits for the owner's say.
 
 ## Hard rules
 
@@ -89,7 +96,7 @@ that break walls. Character ideas the owner liked (none started):
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  render → input → survival → crafting → creatures → game`. A file may use globals from files
+  render → input → survival → crafting → creatures → save → game`. A file may use globals from files
   before it at load time, and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
@@ -105,7 +112,7 @@ that break walls. Character ideas the owner liked (none started):
 | --- | --- |
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
-| `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, and `ACTION_POSES`. Validated at load by `prepareSprite`. |
+| `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
 | `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles) and `flame` (a torch can be lit at it). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
@@ -114,7 +121,8 @@ that break walls. Character ideas the owner liked (none started):
 | `js/survival.js` | `ITEMS`, vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eatBerry`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
 | `js/creatures.js` | `CREATURES`, the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
-| `js/game.js` | `state`, player movement and collision, menus, death, HUD updates, the main loop. |
+| `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`. |
+| `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
 | `fonts/` | DejaVu Sans Mono (regular and bold) as WOFF2, with its license. |
 | `manifest.webmanifest`, `icons/` | Home-screen install: full screen, landscape. |
@@ -194,8 +202,9 @@ that break walls. Character ideas the owner liked (none started):
 - **Never call `fillText` per cell per frame.** Three caches keep phones fast:
   - **Glyph atlas** (`glyphSlot`): each (char, color, bold) is drawn once. Use `drawGlyph(ctx, …)`.
   - **Sprite images** (`spriteImage`): each sprite is rendered once to its own canvas and drawn with
-    one `drawImage`. Cottage images are cached the same way. These rebuild automatically when the
-    atlas changes (on resize or font load).
+    one `drawImage`, kept in `sprite.images` by tint (`'plain'`, or a color every ink is pushed
+    toward, like `HURT_COLOR`). Cottage images are cached the same way. These rebuild automatically
+    when the atlas changes (on resize or font load); `sprite.imageAtlas = null` forces it.
   - **Ground cache** (`groundCache`): ground, cliff-foot shadows and mountains for the screen plus a
     margin. When the camera moves, the old image is shifted and only the newly exposed strips are
     drawn (`drawGroundRegion`). Water tiles are redrawn when `waterFrame` ticks.
@@ -246,7 +255,8 @@ that break walls. Character ideas the owner liked (none started):
   a paint letter has no ink.
 - **The player** has a picture per pose per facing: `stand`, `blink` (not for `up`), `walk` (four:
   stride, legs passing, other stride, legs passing; arms shorten on the swinging side), `windup`,
-  `strike`, `crouch` (top row empty, so it's the same height). `held` gives the cell, from the
+  `strike`, `crouch` (top row empty, so it's the same height), and `fallen` (left and right only,
+  2 rows, 7 wide: lying down, for the collapse). `held` gives the cell, from the
   picture's top-left, where the tool glyph is drawn for each pose. `playerPose()` in render.js
   picks one: a recent `player.act` (`{ action, at }`, set by `useTarget`, `eatBerry` and `build`)
   for its `ACTION_POSES` seconds, then `windup` while `player.working` (the button held on a

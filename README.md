@@ -58,12 +58,16 @@ font from a file, so some characters may look a little different.
 
 Yellow brackets `[ ]` on the map show what the action button will use.
 
+**Your look.** In the menu, **Your look** lets you pick the colors of your hat, hair, skin, shirt
+and trousers. The game remembers them next time.
+
 ## Staying alive
 
 - **Food** (orange) and **water** (blue) run down as you go: a full stomach lasts about seven
   minutes, water about five.
-- Run out of either and your **health** (red) starts dropping. Keep both up and it slowly comes
-  back.
+- Run out of either and your **health** (red) starts dropping, and you flash red now and then
+  while it does. Keep both up and it slowly comes back. When it runs out you sink to your knees
+  and fall.
 - **Berry bushes** give three berries each and grow back after a minute and a half. Each berry is
   a little food.
 - **Drink** at the edge of any lake or the sea, or from the well beside the cottage.
@@ -153,6 +157,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/creatures.js` | The shades: when they come out, how they find you, what scares them off. |
+| `js/save.js` | What the game remembers between visits: your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
 | `.nojekyll` | An empty file that tells GitHub Pages to publish everything exactly as it is. |
@@ -166,10 +171,12 @@ run straight from the file.
   characters) and `paint` (a letter for each character saying which `ink` color to use). Change the
   oak tree's leaves, give the player a different hat, or recolor the berries. If the two pictures
   don't line up, the browser console tells you which row.
-- **Restyle the player.** `PLAYER_INK` holds their colors (hat, hair, shirt, trousers): change a
-  few and every picture of them changes. `PLAYER_SPRITES` has a picture for each pose in each
-  direction: standing, blinking, four steps of walking, the tool raised, the swing, kneeling.
-  `ACTION_POSES` says which pose and which tool goes with each action, like kneeling to drink.
+- **Restyle the player.** `LOOKS` in `js/sprites.js` holds the colors on the Your look panel: add
+  one to a row and it gets its own button. Only the main color is needed; `dressPlayer()` works out
+  the lighter and darker shades. `PLAYER_SPRITES` has a picture for each pose in each direction:
+  standing, blinking, four steps of walking, the tool raised, the swing, kneeling, and lying on the
+  ground. `ACTION_POSES` says which pose and which tool goes with each action, like kneeling to
+  drink.
 - **A new kind of ground.** Add an entry to `TILES` in `js/tiles.js`, then return its name from
   `pickTerrain()` in `js/world.js`.
 - **A new thing to gather.** Draw it in `SPRITES`, describe it in `OBJECTS` (what the button says,
@@ -201,8 +208,8 @@ run straight from the file.
 
 Roughly in order:
 
-1. **The character.** Pick your own hat and clothes colors, flash when you're hurt and fall over
-   when you die, and maybe a dark outline so you stand out on busy ground.
+1. **The character.** ~~Pick your own colors, flash when you're hurt and fall over when you
+   die~~ (done). Still to decide: a dark outline so you stand out on busy ground.
 2. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.
 3. **More in the dark.** Other kinds of creature, shades that claw at walls until they break.
 4. **Saving.** Keep the world and your pack between visits.

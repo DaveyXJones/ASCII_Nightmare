@@ -35,6 +35,8 @@ function newSurvivor() {
     torchLeft: 0, // seconds the torch will keep burning, or 0 when it isn't lit
     warm: false, // standing beside a campfire
     hurtBy: null, // what last hurt you: 'hunger' or 'dark', for the words when you die
+    hurtAt: -Infinity, // when something last bit you, in seconds of play: you flash red for a moment
+    starving: false, // true while hunger or thirst is taking your health
     warned: { food: false, water: false, health: false, torch: false },
     nextSwingAt: 0,
   };
@@ -46,7 +48,8 @@ function updateVitals(game, dt) {
   vitals.water = Math.max(0, vitals.water - WATER_PER_SECOND * dt);
   if (vitals.food === 0) vitals.health -= STARVING_DAMAGE * dt;
   if (vitals.water === 0) vitals.health -= STARVING_DAMAGE * dt;
-  if (vitals.food === 0 || vitals.water === 0) game.survivor.hurtBy = 'hunger';
+  game.survivor.starving = vitals.food === 0 || vitals.water === 0;
+  if (game.survivor.starving) game.survivor.hurtBy = 'hunger';
   game.survivor.warm = besideFire(game);
   if (vitals.food > LOW && vitals.water > LOW) {
     vitals.health += (game.survivor.warm ? FIRE_HEAL_PER_SECOND : HEAL_PER_SECOND) * dt;

@@ -88,6 +88,39 @@ body {
   pointer-events: none;
 }
 
+/* Collapsing: the edges of the screen close in to black before the death screen comes up. */
+.hud::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.35) 15%, rgba(0, 0, 0, 0.92) 85%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapsing .hud::after {
+  opacity: 1;
+  transition: opacity 1.6s ease-in;
+}
+
+/* Bitten: a red flash round the edges of the screen. */
+.hud.hurt {
+  animation: hurt 0.6s ease-out;
+}
+
+@keyframes hurt {
+  from { box-shadow: inset 0 0 90px rgba(255, 40, 30, 0.6); }
+  to { box-shadow: inset 0 0 90px rgba(255, 40, 30, 0); }
+}
+
+#death:not([hidden]) {
+  animation: fade-in 0.6s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
 [hidden] {
   display: none !important;
 }
@@ -636,6 +669,65 @@ button:focus-visible {
   font-size: 12px;
 }
 
+/* ---- Your look ---- */
+
+.look-panel {
+  align-items: center;
+  width: auto;
+  max-width: 100%;
+}
+
+.look-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.look-picture {
+  display: block;
+}
+
+.look-choices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.look-parts {
+  display: grid;
+  gap: 6px;
+}
+
+.look-part {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.look-name {
+  width: 6.5em;
+  color: var(--fog);
+  font-size: 13px;
+}
+
+/* Each color is a big square to tap. The one you're wearing has a lantern-yellow ring. */
+.swatch {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  background: var(--swatch);
+  box-shadow: 0 0 0 1px var(--rule);
+  cursor: pointer;
+}
+
+.swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 3px var(--lantern);
+}
+
 /* ---- Turn sideways ---- */
 
 .rotate {
@@ -722,6 +814,18 @@ button:focus-visible {
   .panel-help {
     padding-left: 0;
     border-left: 0;
+  }
+}
+
+/* Phones held sideways: smaller color squares so all five rows fit. */
+@media (max-height: 400px) {
+  .swatch {
+    width: 36px;
+    height: 36px;
+  }
+
+  .look-parts {
+    gap: 4px;
   }
 }
 
