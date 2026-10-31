@@ -60,13 +60,14 @@ of it tunable in `CREATURES`, the constants in `js/creatures.js` and `creatures`
 
 - **Shades**: dark eared silhouettes with red eyes. Their eyes are drawn above the darkness, so on
   a black night pairs of red eyes are all you see.
-- **Light keeps them back**: they never come within `FEAR_SHARE` (80%) of a light's reach, so a lit
-  torch or a campfire means safety, and they pace at the edge. Without light they creep in, lunge,
-  bite (8 health) and back off. **They never enter the cottage**, and walls stop them: they path
-  round obstacles but can't get through a closed ring.
+- **Light keeps them back**: they never come within `fear.fire`/`fear.torch` (80%) of a light's
+  reach, so a lit torch or a campfire means safety, and they pace at the edge. Without light they
+  creep in, lunge, bite (8 health) and back off. **They never enter the cottage**, and walls stop
+  them: they path round obstacles but can't get through a closed ring (since 2026-10-31, they claw
+  through it in the end; see "More in the dark" above).
 - **You can hit them**: the action button says **Hit** when one's in reach; 3 hits (2 with the
   axe, `power: { Hit: 2 }`) and it dissolves. Each hit knocks it back and sends it running.
-- **The moon sets the number** out at once: 2 (half), 3 (thin), 4 (none), 1 (full).
+- **The moon sets the number** of each kind out at once (`creatures: { shade: 2 }` on each moon).
 - Dying to them shows "The dark takes you." instead of "You collapse."
 
 ## The character (built 2026-10-31)
@@ -88,6 +89,11 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
   `bestFood`). On short screens the craft cards lie on their side, three to a row, so all seven
   fit on a 667×375 phone; keep card texts to about 40 characters so they stay on two lines.
+- **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
+  fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
+  thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
+  and `scarred` in OBJECTS); marks live in `world.clawed` and clear by day. `HIT_REACH` became 1.6
+  so you can hit back through a wall.
 - **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
   "Draw only characters on the map", so it waits for the owner's say.
 
@@ -120,12 +126,12 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
 | `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
-| `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
+| `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
-| `js/creatures.js` | `CREATURES`, the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
+| `js/creatures.js` | `CREATURES` (shade, brute), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
@@ -185,23 +191,28 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
 ## Creatures (js/creatures.js)
 
 - `state.creatures` is a list of free-moving things (`{ kind, x, y, hp, state, timer, fade, … }`,
-  feet position in tiles like the player), cleared on waking. `state.hunt` remembers when the
-  next one comes out and which once-a-night messages have shown. `updateCreatures` runs every
-  update after the vitals; it does nothing by day once they've all gone.
-- States: `creep` (follow the map of steps; lunge when within `LUNGE_RANGE` and ≤ 3 steps),
-  `lunge` (dart straight at you; bite within `BITE_REACH`, then `run`), `run` (away from you or the
-  light that caught it, for a time), `fade` (dawn: back away while fading, then removed).
+  feet position in tiles like the player), cleared on waking. `state.hunt` remembers when night
+  fell, when the next one comes out and which once-a-night messages have shown. `updateCreatures`
+  runs every update after the vitals; it does nothing by day once they've all gone. Each tick of
+  `CREATURE_EVERY`, `kindToComeOut` picks a kind the moon allows more of whose `after` has passed.
+- States: `creep` (follow the map of steps; lunge when within `LUNGE_RANGE` and ≤ 3 steps; claw
+  when off the map and a wall with `claws` is `CLAW_REACH` ahead), `lunge` (dart straight at you;
+  bite within `BITE_REACH`, then `run`), `run` (away from you or the light that caught it, for a
+  time), `claw` (scratch every `CLAW_SECONDS` until the wall breaks or a way opens), `fade` (dawn:
+  back away while fading, then removed).
 - **The map of steps** (`field`) is a breadth-first flood from the player's tile over a square of
   `FIELD_RADIUS`, through tiles where `creatureCanStand` (not solid, not inside the house), no
   diagonal squeezing between corners. Recomputed every `FIELD_SECONDS`; ~0.3 ms. If a creature's
   tile isn't on it (you're walled in or indoors), it heads straight for you and presses against
   whatever stops it, and never lunges. That's what makes walls and the cottage safe.
 - **Fear of light**: `lightsToFear` is the objects with `light` found by `mapSteps` plus the torch
-  (`torchReach`). A creature never steps to within `FEAR_SHARE` of any light's reach; at that edge
-  it `prowl`s sideways. If a light appears on top of it, it runs.
+  (`torchReach`, marked `torch: true`). A creature never steps to within its kind's `fear` share of
+  any light's reach (`fear.torch` for the torch, `fear.fire` for the rest; 0 = not afraid); at
+  that edge it `prowl`s sideways. If a light appears on top of it, it runs.
 - **Hitting**: `findTarget` (survival.js) puts any creature within `HIT_REACH` ahead of the player
-  before other targets, as `{ x, y, w: 2, label: 'Hit', creature }` (brackets round its face);
-  `useTarget` hands it to `hitCreature`, which uses `toolPower(survivor, 'Hit')`.
+  before other targets, as `{ x, y, w, label: 'Hit', creature }` (brackets round its face, sized
+  from its sprite and eye row); `useTarget` hands it to `hitCreature`, which uses
+  `toolPower(survivor, 'Hit')` and the kind's `knock` and `flinch`.
 - `survivor.hurtBy` (`'dark'` from a bite, `'hunger'` from starving) picks the death screen's words.
 
 ## Rendering (js/render.js)

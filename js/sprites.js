@@ -36,6 +36,16 @@ const WOOD_INK = {
   P: ['#7a5230'], // a post seen edge-on
 };
 
+// A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
+const BRUTE_INK = {
+  t: ['#3e3050'], // the top of its back, catching a little light
+  s: ['#241a30'], // its shoulders and sides
+  b: ['#3a2a4a', '#1a1224'], // its face
+  f: ['#33263f', '#140e1c'], // its shaggy hide
+  E: ['#ffb02e', '#1a1224'], // its eye
+  l: ['#1e1528'], // legs
+};
+
 // A shade's colors (see CREATURES in creatures.js), shared by both its pictures.
 const SHADE_INK = {
   w: ['#4a3a5a'], // ears
@@ -348,6 +358,35 @@ const SPRITES = {
     ink: WOOD_INK,
     shadow: 2,
   },
+  // The same, once something in the dark has clawed it halfway through (see `scarred` in objects.js).
+  woodWallScarred: {
+    art: [
+      '▲▲',
+      '╱▏',
+      '▏╱',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: WOOD_INK,
+    shadow: 2,
+  },
+  woodDoorScarred: {
+    art: [
+      '▄▄',
+      '╱╢',
+      '╟╱',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: WOOD_INK,
+    shadow: 2,
+  },
   woodDoorOpen: {
     art: [
       '▄▄',
@@ -361,6 +400,40 @@ const SPRITES = {
     ],
     ink: WOOD_INK,
     shadow: 2,
+  },
+  // A brute: a great hunched thing with a shaggy hide and a single amber eye, three tiles wide. Its
+  // legs shift between the two pictures as it lumbers along.
+  brute: {
+    art: [
+      ' ▗▄▄▖ ',
+      '▟▓●▓▓▙',
+      '▐#%#%▌',
+      '▐▘  ▝▌',
+    ],
+    paint: [
+      ' tttt ',
+      'sbEbbs',
+      'sffffs',
+      'll  ll',
+    ],
+    ink: BRUTE_INK,
+    shadow: 0,
+  },
+  brute2: {
+    art: [
+      ' ▗▄▄▖ ',
+      '▟▓●▓▓▙',
+      '▐%#%#▌',
+      '▝▌  ▐▘',
+    ],
+    paint: [
+      ' tttt ',
+      'sbEbbs',
+      'sffffs',
+      'll  ll',
+    ],
+    ink: BRUTE_INK,
+    shadow: 0,
   },
   // A shade: a hunched thing of shadow with pointed ears and red eyes. Its legs shift between the two
   // pictures as it walks.

@@ -634,11 +634,14 @@ function drawStanding(game, range, inside) {
 
 // The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
 // tile starts at a different point so two fires side by side don't flicker in step. A door stands
-// open while you're beside it or in it.
+// open while you're beside it or in it, and a wall clawed halfway through shows the marks.
 function objectSprite(game, object, tx, ty) {
   const { player, world } = game;
   if (object.opens && Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DOOR_OPEN_REACH) {
     return SPRITES[object.opens];
+  }
+  if (object.scarred && (world.clawed.get(ty * world.width + tx) || 0) >= object.claws / 2) {
+    return SPRITES[object.scarred];
   }
   if (!object.frames) return SPRITES[object.sprite];
   return SPRITES[object.frames[(game.flameFrame + ty * world.width + tx) % object.frames.length]];

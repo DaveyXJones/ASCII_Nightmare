@@ -133,12 +133,20 @@ health) and back off to come again.
 - **Light keeps them back.** They won't come into the light of a campfire or your torch. They pace
   round its edge, where you can see them, and as your torch burns low they come closer.
 - **They won't come indoors.** The cottage is safe, but the well is outside.
-- **Walls stop them.** Build a ring of walls and they gather round it, pressing to get in. Leave
-  a gap and they'll find it.
-- **Hit back.** When one's in reach the big button says **Hit**. Each hit knocks it back and sends
-  it running; three hits (two with the axe) and it comes apart into smoke.
-- **The moon decides how many** can be out at once: two on the first night's half moon, three on
-  a thin moon, four with no moon, one under a full moon.
+- **Walls stop them, for a while.** Build a ring of walls and they gather round it. Shut out,
+  they claw at the wall: it shakes, splinters fly, claw marks show once it's halfway gone, and then
+  it breaks. A door in the ring lets you in and out; it never opens for them. Leave a gap and
+  they'll find it. By morning the claw marks are gone.
+- **Hit back.** When one's in reach the big button says **Hit**, even through a wall. Each hit
+  knocks it back and sends it running; three hits (two with the axe) and it comes apart into
+  smoke.
+- **Brutes.** On the darkest nights (no moon, and the thin moon after it), once the night is a few
+  minutes old, something bigger comes: a great shaggy shadow with one amber eye. It's slow, but
+  **your torch doesn't scare it**, only a campfire's light does. It bites hard, claws through
+  walls quickly, and takes six hits (three with the axe). Outrun it to a fire, or the cottage.
+- **The moon decides how many** can be out at once: two shades on the first night's half moon,
+  three on a thin moon, three and a brute with no moon or the thin moon after it, one under a full
+  moon.
 - **At dawn** they back away and melt into what's left of the dark.
 
 If they get you, the screen says **The dark takes you.**
@@ -161,7 +169,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/input.js` | The thumbstick, the buttons, and the keyboard. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
-| `js/creatures.js` | The shades: when they come out, how they find you, what scares them off. |
+| `js/creatures.js` | The shades and brutes: when they come out, how they find you, what scares them off. |
 | `js/save.js` | What the game remembers between visits: your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
@@ -204,11 +212,12 @@ run straight from the file.
 - **The torch.** `burns` (seconds) and `light` (how far it reaches, in tiles) on the torch in
   `TOOLS` in `js/crafting.js`. A campfire's reach is `light` in `OBJECTS`; give anything a `light`
   and it glows at night.
-- **The shades.** `CREATURES` at the top of `js/creatures.js`: how many hits one takes, how hard it
-  bites, how fast it creeps and darts. The numbers under it say when they come out, how far off,
-  and how close to a light they dare go (`FEAR_SHARE`). How many come out each night is
-  `creatures` on each moon in `MOONS` (`js/night.js`). Redraw them as `shade` and `shade2` in
-  `js/sprites.js`.
+- **The shades and brutes.** `CREATURES` at the top of `js/creatures.js`: how many hits each takes,
+  how hard it bites, how fast it creeps and darts, how close to a campfire or a torch it dares go
+  (`fear`), how hard it claws at walls. The numbers under it say when they come out and how far
+  off. How many of each come out each night is `creatures` on each moon in `MOONS`
+  (`js/night.js`). How many scratches a wall or door takes is `claws` in `OBJECTS`. Redraw them as
+  `shade`/`shade2` and `brute`/`brute2` in `js/sprites.js`.
 - **Walking speed.** `WALK_SPEED` at the top of `js/game.js`.
 
 ## What's next
@@ -218,7 +227,9 @@ Roughly in order:
 1. **The character.** ~~Pick your own colors, flash when you're hurt and fall over when you
    die~~ (done). Still to decide: a dark outline so you stand out on busy ground.
 2. **More to craft.** ~~A pick for stone, a door in a wall, cooking berries over the fire~~ (done).
-3. **More in the dark.** Other kinds of creature, shades that claw at walls until they break.
+3. **More in the dark.** ~~Another kind of creature, shades that claw at walls~~ (done: brutes and
+   claws). Maybe next: lurkers that sit still in the tall grass, eyes open, and spring when you
+   walk too close.
 4. **Saving.** Keep the world and your pack between visits.
 5. **Sound.** Chops, footsteps, rain.
 6. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed

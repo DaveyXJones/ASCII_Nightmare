@@ -18,6 +18,9 @@
 //   flame    true for an open fire: facing it with a torch that needs lighting, the button lights it
 //   door     true for a door you've built: you walk through it (leave `solid` off), shades can't
 //   opens    the picture in SPRITES to draw instead while you're beside it: the door standing open
+//   claws    how many scratches it takes before something in the dark claws through it (see `claw`
+//            in CREATURES, creatures.js). Claw marks are forgotten by day.
+//   scarred  the picture to draw once it's been clawed halfway through
 
 const OBJECTS = {
   oak: {
@@ -152,6 +155,8 @@ const OBJECTS = {
     gives: { wood: 2 },
     becomes: null,
     burst: 'wood',
+    claws: 15,
+    scarred: 'woodWallScarred',
   },
   woodDoor: {
     name: 'Wooden door',
@@ -163,5 +168,7 @@ const OBJECTS = {
     gives: { wood: 3 },
     becomes: null,
     burst: 'wood',
+    claws: 20,
+    scarred: 'woodDoorScarred',
   },
 };

@@ -193,8 +193,12 @@ function findTarget(game) {
     if (distance > HIT_REACH || ahead < -0.2) continue;
     const score = distance - ahead * 0.6 - 1;
     if (score < bestScore) {
-      // Brackets round its face: its picture is two tiles wide, and its eyes a row and a bit up.
-      best = { x: creature.x - 1, y: creature.y - 1.75, w: 2, label: 'Hit', creature };
+      // Brackets round its face: as wide as its picture, on the row its eyes are on.
+      const kind = CREATURES[creature.kind];
+      const sprite = SPRITES[kind.frames[0]];
+      const w = sprite.width / 2;
+      const y = creature.y + 0.25 - sprite.cells.length + kind.eyes.cells[0][1];
+      best = { x: creature.x - w / 2, y, w, label: 'Hit', creature };
       bestScore = score;
     }
   }

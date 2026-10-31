@@ -28,17 +28,66 @@ const SUNRISE_COLOR = [100, 62, 76];
 // The moon's shape, one per night, in the order they come round. The first night has a half moon.
 //   glyph      how it looks next to the health bars
 //   light      how bright it is, from 0 (no moon) to 1 (full)
-//   creatures  how many things can be out in the dark at once that night (see creatures.js)
+//   creatures  how many of each kind of thing can be out in the dark at once that night (see
+//              CREATURES in creatures.js). Brutes only come on the darkest nights.
 //   rises      what the game says as night falls
 const MOONS = [
-  { name: 'Half moon', glyph: '◐', light: 0.5, creatures: 2, rises: 'A half moon rises.' },
-  { name: 'Thin moon', glyph: '☾', light: 0.25, creatures: 3, rises: 'A thin sliver of moon tonight.' },
-  { name: 'No moon', glyph: '○', light: 0, creatures: 4, rises: 'No moon tonight. Stay near the light.' },
-  { name: 'Thin moon', glyph: '☽', light: 0.25, creatures: 3, rises: 'A thin new moon hangs low.' },
-  { name: 'Half moon', glyph: '◑', light: 0.5, creatures: 2, rises: 'A half moon rises.' },
-  { name: 'Bright moon', glyph: '◕', light: 0.75, creatures: 2, rises: 'A bright moon rises.' },
-  { name: 'Full moon', glyph: '●', light: 1, creatures: 1, rises: 'A full moon lights up the island.' },
-  { name: 'Bright moon', glyph: '◕', light: 0.75, creatures: 2, rises: 'A bright moon rises.' },
+  {
+    name: 'Half moon',
+    glyph: '◐',
+    light: 0.5,
+    creatures: { shade: 2 },
+    rises: 'A half moon rises.',
+  },
+  {
+    name: 'Thin moon',
+    glyph: '☾',
+    light: 0.25,
+    creatures: { shade: 3 },
+    rises: 'A thin sliver of moon tonight.',
+  },
+  {
+    name: 'No moon',
+    glyph: '○',
+    light: 0,
+    creatures: { shade: 3, brute: 1 },
+    rises: 'No moon tonight. Stay near the fire.',
+  },
+  {
+    name: 'Thin moon',
+    glyph: '☽',
+    light: 0.25,
+    creatures: { shade: 3, brute: 1 },
+    rises: 'A thin new moon hangs low.',
+  },
+  {
+    name: 'Half moon',
+    glyph: '◑',
+    light: 0.5,
+    creatures: { shade: 2 },
+    rises: 'A half moon rises.',
+  },
+  {
+    name: 'Bright moon',
+    glyph: '◕',
+    light: 0.75,
+    creatures: { shade: 2 },
+    rises: 'A bright moon rises.',
+  },
+  {
+    name: 'Full moon',
+    glyph: '●',
+    light: 1,
+    creatures: { shade: 1 },
+    rises: 'A full moon lights up the island.',
+  },
+  {
+    name: 'Bright moon',
+    glyph: '◕',
+    light: 0.75,
+    creatures: { shade: 2 },
+    rises: 'A bright moon rises.',
+  },
 ];
 
 // What the sky is doing `clock` seconds after the first morning. Returns

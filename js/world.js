@@ -61,6 +61,7 @@ function generateWorld(seed) {
     shades: new Uint8Array(size), // which background color a tile uses, in patches
     variants: new Uint8Array(size), // a random number per tile, for picking glyphs and colors
     damage: new Map(), // tile index -> swings taken, for trees and rocks being worked on
+    clawed: new Map(), // tile index -> scratches taken, for walls things in the dark are clawing at
     regrowing: [], // { index, at, into } for picked bushes
     house: null,
     spawn: null,
@@ -283,6 +284,7 @@ function setObject(world, x, y, key) {
   const i = y * world.width + x;
   world.objects[i] = key;
   world.damage.delete(i);
+  world.clawed.delete(i);
 }
 
 function clamp01(value) {
