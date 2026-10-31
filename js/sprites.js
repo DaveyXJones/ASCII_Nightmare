@@ -63,6 +63,26 @@ const LAMP_INK = {
   P: ['#6b4528'],
 };
 
+// The wreck's colors: grey, sun-bleached planks, darker below, and the black of the hole.
+const WRECK_INK = {
+  t: ['#c8b89a'], // the top edge, bleached by the sun
+  h: ['#7a6650'], // the bow and stern posts
+  L: ['#5a4a38', '#8a7458'], // planks, with dark seams
+  X: ['#000000', '#1c140c'], // the hole in its side
+  d: ['#4a3c2c'], // the bottom, sunk in the sand
+  m: ['#8a7660'], // the broken mast
+};
+
+// A washed-up crate's colors: pale planks with a darker cross brace.
+const CRATE_INK = {
+  t: ['#e0c896'], // the lid's edge, in the light
+  L: ['#6b4a2a', '#b8925e'], // planks with the brace across them
+  l: ['#6b4a2a', '#a8844f'],
+  D: ['#5a3e22', '#94714a'], // the lower planks, in shade
+  d: ['#5a3e22', '#86653f'],
+  X: ['#000000', '#2a1c10'], // the dark inside of an open crate
+};
+
 // A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
 const BRUTE_INK = {
   t: ['#3e3050'], // the top of its back, catching a little light
@@ -665,6 +685,113 @@ const SPRITES = {
     ink: LAMP_INK,
     shadow: 1,
   },
+  // The wrecked boat on the beach, in three pieces (bow, middle, stern), seen from the side, bow to
+  // the left: sun-bleached planks along the top, a hole stove in the side, a broken mast.
+  wreckBow: {
+    art: [
+      ' ▄',
+      '◥═',
+      ' ▀',
+    ],
+    paint: [
+      ' t',
+      'hL',
+      ' d',
+    ],
+    ink: WRECK_INK,
+    shadow: 1,
+  },
+  wreckMid: {
+    art: [
+      ' ╽',
+      '▄▄',
+      '╱ ',
+      '▀▀',
+    ],
+    paint: [
+      ' m',
+      'tt',
+      'LX',
+      'dd',
+    ],
+    ink: WRECK_INK,
+    shadow: 2,
+  },
+  wreckStern: {
+    art: [
+      '▄▖',
+      '═▌',
+      '▀ ',
+    ],
+    paint: [
+      'tt',
+      'Lh',
+      'd ',
+    ],
+    ink: WRECK_INK,
+    shadow: 1,
+  },
+  // A crate washed up from the wreck: pale planks with a cross brace. Opened, it's empty inside.
+  crate: {
+    art: [
+      '▗▄▄▖',
+      '▐╲╱▌',
+      '▐╱╲▌',
+    ],
+    paint: [
+      'tttt',
+      'LllL',
+      'DddD',
+    ],
+    ink: CRATE_INK,
+    shadow: 2,
+  },
+  crateOpen: {
+    art: [
+      '▗▄▄▖',
+      '▐  ▌',
+      '▐══▌',
+    ],
+    paint: [
+      'tttt',
+      'LXXL',
+      'DddD',
+    ],
+    ink: CRATE_INK,
+    shadow: 2,
+  },
+  // A little tin box of bullets on the sand.
+  bulletBox: {
+    art: [
+      '▗▖',
+    ],
+    paint: [
+      'bB',
+    ],
+    ink: { b: ['#c8d0c0'], B: ['#8a968a'] },
+    shadow: 0,
+  },
+  // A gun lying on the ground where you fell.
+  pistolDropped: {
+    art: [
+      ' ⌐',
+    ],
+    paint: [
+      ' g',
+    ],
+    ink: { g: ['#aab4bc'] },
+    shadow: 0,
+  },
+  rifleDropped: {
+    art: [
+      '╾─',
+    ],
+    paint: [
+      'wg',
+    ],
+    ink: { w: ['#9c7048'], g: ['#aab4bc'] },
+    shadow: 0,
+  },
   // A chest of planks with a lid, banded, with a clasp on the front.
   chest: {
     art: [
@@ -1021,6 +1148,7 @@ function blendColor(a, b, share) {
 //   pose     which picture: 'strike', 'windup' or 'crouch' (see PLAYER_SPRITES)
 //   held     the character drawn in their hand, or null for an empty hand
 //   seconds  how long the pose is held
+//   aim      true to keep the pose (not the wind-up) while the button's held: a gun held out
 // Anything not listed uses `default`: a swing of the rough tool. A crafted tool with power for the
 // word (TOOLS in crafting.js) is drawn in place of `held`, so the axe shows when you chop.
 const ACTION_POSES = {
@@ -1034,6 +1162,8 @@ const ACTION_POSES = {
   'Roll up': { pose: 'crouch', held: null, seconds: 0.4 },
   Fill: { pose: 'windup', held: null, seconds: 0.4 },
   Fish: { pose: 'crouch', held: null, seconds: 0.3 }, // kneeling at the water, rod held out
+  Shoot: { pose: 'strike', held: null, seconds: 0.35, aim: true }, // the gun held out, and kept there
+  'Pick up': { pose: 'crouch', held: null, seconds: 0.4 },
   Eat: { pose: 'windup', held: null, seconds: 0.4 },
 };
 

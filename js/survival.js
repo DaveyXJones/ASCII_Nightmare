@@ -12,6 +12,7 @@ const ITEMS = {
   cooked: { name: 'cooked berries', glyph: '♨', color: '#ec8a4a', food: 30, heals: 10, hideEmpty: true },
   fish: { name: 'fish', glyph: '∝', color: '#a8cfe6', hideEmpty: true }, // raw: cook it to eat it
   cookedFish: { name: 'cooked fish', glyph: '∝', color: '#e8944e', food: 45, heals: 15, hideEmpty: true },
+  bullets: { name: 'bullets', glyph: '‣', color: '#e0c060', hideEmpty: true }, // for both guns (guns.js)
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -43,6 +44,7 @@ function newSurvivor() {
     pack: Object.fromEntries(Object.keys(ITEMS).map((item) => [item, 0])),
     tools: {}, // tools you've made, by their key in TOOLS (crafting.js): { axe: true }
     torchLeft: 0, // seconds the torch will keep burning, or 0 when it isn't lit
+    guns: {}, // for each gun you carry, shots left and when it's ready (see gunState in guns.js)
     warm: false, // standing beside a campfire
     hurtBy: null, // what last hurt you: 'hunger' or 'dark', for the words when you die
     hurtAt: -Infinity, // when something last bit you, in seconds of play: you flash red for a moment
@@ -265,16 +267,23 @@ function findTarget(game) {
     if (distance > HIT_REACH || ahead < -0.2) continue;
     const score = distance - ahead * 0.6;
     if (score < bestCreatureScore) {
-      // Brackets round its face: as wide as its picture, on the row its eyes are on.
-      const kind = CREATURES[creature.kind];
-      const sprite = SPRITES[kind.frames[0]];
-      const w = sprite.width / 2;
-      const y = creature.y + 0.25 - sprite.cells.length + kind.eyes.cells[0][1];
-      best = { x: creature.x - w / 2, y, w, label: 'Hit', creature };
+      best = creatureTarget(creature, 'Hit');
       bestCreatureScore = score;
     }
   }
+  // Out past arm's reach, with a gun: something in the dark ahead to shoot (see guns.js).
+  if (!best || !best.creature) best = findShot(game) || best;
   return best;
+}
+
+// A creature as the action button's target, with brackets round its face: as wide as its picture,
+// on the row its eyes are on.
+function creatureTarget(creature, label) {
+  const kind = CREATURES[creature.kind];
+  const sprite = SPRITES[kind.frames[0]];
+  const w = sprite.width / 2;
+  const y = creature.y + 0.25 - sprite.cells.length + kind.eyes.cells[0][1];
+  return { x: creature.x - w / 2, y, w, label, creature };
 }
 
 function lampWantsFuel(world, x, y, object) {
@@ -287,7 +296,8 @@ function useTarget(game) {
   const target = game.target;
   if (!target) return;
   if (target.creature) {
-    hitCreature(game, target.creature);
+    if (target.gun) shoot(game, target);
+    else hitCreature(game, target.creature);
     return;
   }
   player.act = { action: target.label, at: player.clock };
@@ -320,7 +330,7 @@ function useTarget(game) {
 
   const object = target.object;
   const index = target.y * world.width + target.x;
-  if (!object.gives) {
+  if (!object.gives && !object.tool) {
     showMessage(game, object.empty || `Nothing to take from the ${object.name.toLowerCase()}.`);
     return;
   }
@@ -338,14 +348,19 @@ function useTarget(game) {
   }
   playSound(object.soundDone || object.sound);
 
-  // Done: into the pack it goes, and whatever's left takes its place.
+  // Done: into the pack it goes (and a tool into your hands), and whatever's left takes its place.
   const parts = [];
-  for (const [item, count] of Object.entries(object.gives)) {
+  if (object.tool) {
+    survivor.tools[object.tool] = true;
+    parts.push(TOOLS[object.tool].short);
+  }
+  for (const [item, count] of Object.entries(object.gives || {})) {
     survivor.pack[item] += count;
     parts.push(`+${count} ${ITEMS[item].name}`);
   }
-  const color = ITEMS[Object.keys(object.gives)[0]].color;
+  const color = object.tool ? TOOLS[object.tool].color : ITEMS[Object.keys(object.gives)[0]].color;
   floatText(game.fx, target.x + 0.5, target.y - 1, parts.join('  '), color);
+  if (object.says) showMessage(game, object.says);
   setObject(world, target.x, target.y, object.becomes);
   const regrow = object.becomes && OBJECTS[object.becomes].regrow;
   if (regrow) {

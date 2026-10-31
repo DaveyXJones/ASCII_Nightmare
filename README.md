@@ -58,7 +58,7 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Fish**, **Light**, **Fill**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Fish**, **Light**, **Fill**, **Hit**, **Shoot**, **Open**. Hold it to keep going (one shot per tap) | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
 | Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9`, `0`, `-`, `=` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
@@ -241,6 +241,33 @@ health) and back off to come again.
 
 If they get you, the screen says **The dark takes you.**
 
+## Guns
+
+There's a **pistol** and a **rifle** on the island, but you can't make them: you have to find
+them.
+
+- **The wreck.** A wrecked boat lies on a beach a fair walk from the cottage, with a crate washed
+  up beside it. Face the crate and tap **Open**: inside are the pistol and 8 bullets. A second crate
+  has washed up on the beach furthest from the cottage, with the rifle and 6 bullets. Both show on
+  the map once you've seen them. The boat can be broken up for wood.
+- **Shooting.** With a gun, when something from the dark is in front of you, past arm's reach, and
+  nothing solid is in the way (trees, walls, rocks; water's fine), the big button says **Shoot**.
+  Each tap is one shot; holding the button doesn't keep firing. Up close it says **Hit** instead,
+  so you don't spend a bullet on what an axe can reach.
+- **Pistol:** reaches 6 tiles, six shots, then a second and a half to reload. Two shots put a shade
+  down, one a lurker, three a brute.
+- **Rifle:** reaches 14 tiles and hits harder (one shot for a shade or a lurker, two for a brute),
+  but it reloads after every shot, which takes two and a half seconds. Carrying both, the game uses
+  the pistol when it reaches and the rifle for things further off (or while the pistol reloads).
+- **Bullets are scarce.** Both guns take the same bullets (‣ in the pack) and you can't make
+  more. Some mornings a tin box with 3 bullets washes up somewhere on a beach, out of sight; never
+  more than two lying about at once.
+- **The bang carries.** Everything out in the dark nearby hears a shot: lurkers stop waiting in
+  the grass and come for you, the next thing comes out of the dark straight away, and the crickets
+  go quiet. A gun can get you out of trouble, and into more.
+- **If you die**, your guns drop where you fell (a red **!** on the map). Go back and **Pick up**
+  them. Bullets are lost with the rest of your pack, so keep spare ones in a chest.
+
 ## How it's put together
 
 Plain HTML, CSS and JavaScript, with nothing to install or build.
@@ -253,7 +280,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/tiles.js` | Every kind of ground: its characters, colors, and whether you can walk on it. |
 | `js/sprites.js` | The ASCII art for everything that stands up: trees, rocks, the well, the player. |
 | `js/objects.js` | The things standing on the map, and what the action button does to each one. |
-| `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage. |
+| `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage, the wreck and the crates. |
 | `js/night.js` | Day and night: how long each lasts, the moon, and how dark it gets. |
 | `js/weather.js` | Clouds, rain and storms: when they come, and rain putting out campfires. |
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
@@ -262,6 +289,8 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
+| `js/fishing.js` | Fishing: casting, the bite, and landing a fish (or losing it). |
+| `js/guns.js` | The pistol and rifle: aiming, shooting, reloading, the bang, and bullets washing up. |
 | `js/map.js` | The map: which tiles you've seen, and the map panel drawn in characters. |
 | `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
 | `js/save.js` | What the game remembers between visits: your island, your pack, your look. |
@@ -327,17 +356,12 @@ run straight from the file.
 
 ## What's next
 
-Done lately: walls that join up (a fence running up the screen is seen from the side), turning
-in place in build mode, an outline round the player, lamps, a map, and fishing. Before that: weather (clouds, rain, storms, and roofs to keep campfires
-burning), lurkers in the long grass, chests, and bedrolls; and before that, your look, flashing
-when hurt and falling when you die, the stone pick, doors, cooked berries, brutes, walls that get
-clawed down, saving, and sound.
-
-Next, the list you picked (2026-10-31), roughly in this order:
-
-1. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
-   the nights play, so there are questions to settle first: found or crafted, how scarce the
-   bullets are, and whether the bang draws things toward you.
+Done lately, your list of 2026-10-31: walls that join up (a fence running up the screen is seen
+from the side) and turning in place in build mode, an outline round the player, lamps, a map,
+fishing, and a pistol and a rifle to find. Before that: weather (clouds, rain, storms, and roofs to
+keep campfires burning), lurkers in the long grass, chests, and bedrolls; and before that, your
+look, flashing when hurt and falling when you die, the stone pick, doors, cooked berries, brutes,
+walls that get clawed down, saving, and sound.
 
 Later: **multiplayer**. Because the world is built from a seed, a server only has to share the seed
 and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a small

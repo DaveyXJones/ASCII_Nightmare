@@ -32,6 +32,30 @@ const TOOLS = {
   torch: { name: 'Torch', short: 'torch', glyph: '¡', color: '#c49a62', burns: 300, light: 5 },
   // The rod's `power` for Fish is only there so it's drawn in your hand while you fish.
   rod: { name: 'Fishing rod', short: 'rod', glyph: '⌠', color: '#c49a62', held: ['╲', '╱'], power: { Fish: 1 } },
+  // The guns can't be made: they're found, in crates washed up on the beaches (see guns.js). `gun`
+  // says how far it shoots (tiles), how much each shot hurts, how many shots before it needs
+  // reloading, how long that takes (seconds), and its sound. `dropped` is what's left on the ground
+  // where you fell, if you die carrying it.
+  pistol: {
+    name: 'Pistol',
+    short: 'pistol',
+    glyph: '⌐',
+    color: '#aab4bc',
+    held: ['¬', '⌐'],
+    power: { Shoot: 1 },
+    gun: { range: 6, damage: 2, rounds: 6, reload: 1.5, sound: 'bang' },
+    dropped: 'pistolDropped',
+  },
+  rifle: {
+    name: 'Rifle',
+    short: 'rifle',
+    glyph: '╾',
+    color: '#b08458',
+    held: ['╼', '╾'],
+    power: { Shoot: 1 },
+    gun: { range: 14, damage: 3, rounds: 1, reload: 2.5, sound: 'boom' },
+    dropped: 'rifleDropped',
+  },
 };
 
 // Everything you can make, in the order the craft panel shows them.

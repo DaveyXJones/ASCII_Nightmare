@@ -41,6 +41,12 @@ function setupChest(elements) {
       const count = document.createElement('span');
       count.className = 'thing-count';
       button.append(glyph, count);
+      if (thing.kind === 'tool') {
+        const name = document.createElement('span'); // hidden on a phone, where there's less room
+        name.className = 'thing-name';
+        name.textContent = TOOLS[thing.key].short;
+        button.insertBefore(name, count);
+      }
       button.addEventListener('click', () => {
         if (chestArmed) moveThing(thing.kind, thing.key, side === 'pack');
       });
@@ -88,7 +94,8 @@ function openedChest() {
   return state.world.chests.get(state.chest);
 }
 
-// Shows how many of each thing are on each side, and dims what there's none of.
+// Shows how many of each thing are on each side, and dims what there's none of. Things neither side
+// has are left out on both, so the two sides still line up and the panel fits a phone.
 function refreshChest() {
   const { pack, tools } = state.survivor;
   const chest = openedChest();
@@ -103,6 +110,13 @@ function refreshChest() {
     // You can't take out a tool you already carry: you only ever need one.
     showThing(button, kind, key, count, count > 0 && !(kind === 'tool' && tools[key]));
   }
+  const packButtons = elements.chestPack.children;
+  const chestButtons = elements.chestHeld.children;
+  for (let n = 0; n < packButtons.length; n++) {
+    const none = packButtons[n].classList.contains('none') && chestButtons[n].classList.contains('none');
+    packButtons[n].hidden = none;
+    chestButtons[n].hidden = none;
+  }
   const empty = isEmpty(chest);
   elements.chestPut.disabled = !Object.keys(ITEMS).some((item) => pack[item] > 0);
   elements.chestTake.disabled = empty;
@@ -110,8 +124,8 @@ function refreshChest() {
 }
 
 function showThing(button, kind, key, count, enabled) {
-  let label = String(count); // items show how many; tools show their name, and how many if more than one
-  if (kind === 'tool') label = count > 1 ? `${TOOLS[key].short} ×${count}` : TOOLS[key].short;
+  let label = String(count); // items show how many; tools their name (above), and how many if more than one
+  if (kind === 'tool') label = count > 1 ? `×${count}` : '';
   const name = kind === 'item' ? ITEMS[key].name : TOOLS[key].name.toLowerCase();
   button.querySelector('.thing-count').textContent = label;
   button.classList.toggle('none', count === 0);

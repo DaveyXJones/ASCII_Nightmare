@@ -191,7 +191,8 @@ function restoreSurvivor(saved) {
 }
 
 // A number standing for the island as it was built: its ground and what stood on it. Two islands
-// with the same print are (all but certainly) the same island.
+// with the same print are (all but certainly) the same island. Things placed for you to find
+// (`found` in OBJECTS) are left out, so adding them didn't change the print of islands already saved.
 function worldPrint(world) {
   let hash = 2166136261;
   const mix = (text) => {
@@ -199,7 +200,8 @@ function worldPrint(world) {
   };
   for (let i = 0; i < world.ground.length; i++) {
     mix(world.ground[i]);
-    mix(world.original[i] || '-');
+    const key = world.original[i];
+    mix(key && !OBJECTS[key].found ? key : '-');
   }
   return hash >>> 0;
 }

@@ -102,6 +102,8 @@ const state = {
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
   chest: null, // while a chest is open, the tile it stands on (see chest.js)
   fishing: null, // while your line is out, where the bobber is and when a fish bites (fishing.js)
+  shot: null, // the last gunshot: where it hit and when, { x, y, at }, for its streak and flash (guns.js)
+  dropped: 0, // guns dropped where you died, to mention when you wake
   tapped: false, // the action button went down since the last update (so even the quickest tap counts)
   time: 0, // seconds of play, paused while a menu is open
   dayClock: 0, // seconds since this world's first morning: the time of day and the moon come from it
@@ -139,7 +141,10 @@ function wakeUp() {
   state.lifeStarted = state.time;
   startLife(spot.x, spot.y, 'down');
   const where = bed ? 'on your bedroll' : 'in your cottage';
-  showMessage(state, `You wake up ${where}. Find food and water to survive.`);
+  const guns = state.dropped > 1 ? 'Your guns lie' : 'Your gun lies';
+  const after = state.dropped ? `${guns} where you fell.` : 'Find food and water to survive.';
+  state.dropped = 0;
+  showMessage(state, `You wake up ${where}. ${after}`);
   saveGame(state);
 }
 
@@ -168,6 +173,7 @@ function startLife(x, y, facing) {
   state.weather.raining = state.sky.weather.rain > 0.15; // waking up in the rain isn't news
   stopBuilding(state);
   state.fishing = null;
+  state.shot = null;
   state.dying = null;
   elements.game.classList.remove('collapsing');
   state.dead = false;
@@ -183,7 +189,10 @@ function update(dt) {
   player.clock += dt;
 
   const sky = skyAt(state.dayClock, state.world.seed);
-  if (sky.phase !== state.sky.phase) showMessage(state, skyMessage(state, sky));
+  if (sky.phase !== state.sky.phase) {
+    showMessage(state, skyMessage(state, sky));
+    if (sky.phase === 'day') washUp(state); // some mornings the sea brings something in
+  }
   state.sky = sky;
 
   movePlayer(dt);
@@ -197,7 +206,10 @@ function update(dt) {
     const label = state.target ? state.target.label : null;
     // Holding the button keeps doing one thing. If the thing changes under your thumb (lighting a
     // torch turns the fire's button into Put out), it waits until you let go.
-    if (!actionHeld() && !state.tapped) player.holding = null;
+    if (!actionHeld() && !state.tapped) {
+      player.holding = null;
+      player.triggerHeld = false; // a gun fires once per press
+    }
     else if (!player.holding) player.holding = label;
     player.working = label && label === player.holding ? label : null;
     if (player.working && player.clock >= survivor.nextSwingAt) {
@@ -215,6 +227,7 @@ function update(dt) {
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
   updateFishing(state);
+  updateGuns(state);
   if (survivor.vitals.health <= 0) collapse();
   if (state.time - state.savedAt >= SAVE_EVERY) saveGame(state);
 }
@@ -339,6 +352,7 @@ function faceToward(player, x, y) {
 // Health has run out. The player sinks to their knees and falls (see playerPose() in render.js)
 // while the screen darkens, and then the death screen comes up.
 function collapse() {
+  state.dropped = dropGuns(state);
   state.dying = { seconds: 0 };
   state.player.moving = false;
   state.player.working = null;
@@ -576,6 +590,14 @@ function updateHud() {
     hud.torch = torch;
     elements.tools.torch.classList.toggle('lit', torch !== 'out');
     elements.tools.torch.classList.toggle('low', torch === 'low');
+  }
+  // A gun dims in the pack while it's reloading.
+  for (const key of Object.keys(TOOLS)) {
+    if (!TOOLS[key].gun) continue;
+    const reloading = gunReloading(state.survivor, key);
+    if (hud[`reload-${key}`] === reloading) continue;
+    hud[`reload-${key}`] = reloading;
+    elements.tools[key].classList.toggle('reloading', reloading);
   }
 
   // By day: the sun (or a cloud, or an umbrella in the rain), and how much daylight is left. By night:

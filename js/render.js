@@ -325,6 +325,7 @@ function drawFrame(game) {
   drawParticles(game.fx);
   drawNight(game, range, inside);
   drawEyes(game);
+  if (game.shot && game.time - game.shot.at < SHOT_SECONDS) drawShot(game);
   // Above the dark, so you can always see what the button will use and where you're building.
   if (game.target) drawTarget(game.target, game.time);
   if (game.buildSpot) drawBuildSpot(game);
@@ -601,6 +602,7 @@ function drawStanding(game, range, inside) {
   let playerDrawn = false;
   view.playerBox = null;
   view.rodTip = null;
+  view.heldAt = null;
   view.playerCovered = false;
   view.shades.length = 0;
   resetCover(left, top - SPRITE_REACH_ROWS, right, bottom);
@@ -781,8 +783,11 @@ function actionPose(action) {
 
 // What the player holds for an action: a crafted tool made for it (the axe, for Chop), or else
 // whatever ACTION_POSES says. Tools have a picture for facing left and one for every other way.
-function heldGlyph(action, facing, survivor) {
-  for (const key of Object.keys(survivor.tools)) {
+// `prefer` is the tool that was just used, when more than one could do it (the pistol or the rifle).
+function heldGlyph(action, facing, survivor, prefer) {
+  const keys = Object.keys(survivor.tools);
+  if (prefer && survivor.tools[prefer]) keys.unshift(prefer);
+  for (const key of keys) {
     const tool = TOOLS[key];
     if (tool.held && tool.power[action]) return facing === 'left' ? tool.held[0] : tool.held[1];
   }
@@ -796,7 +801,7 @@ function playerPose(game) {
   const set = PLAYER_SPRITES[player.facing];
   const pose = (name, action) => ({
     sprite: set[name],
-    held: action ? heldGlyph(action, player.facing, survivor) : null,
+    held: action ? heldGlyph(action, player.facing, survivor, player.act && player.act.tool) : null,
     spot: set.held[name],
     // Once you've made a torch, it's in your other hand whatever you're doing.
     torch: survivor.tools.torch ? set.torch[name] || set.torch.stand : null,
@@ -819,7 +824,7 @@ function playerPose(game) {
   // Holding the button between swings: tool raised (or still kneeling, for a drink).
   if (player.working) {
     const look = actionPose(player.working);
-    return pose(look.pose === 'strike' ? 'windup' : look.pose, player.working);
+    return pose(look.pose === 'strike' && !look.aim ? 'windup' : look.pose, player.working);
   }
   if (player.moving) {
     const step = Math.floor(player.stride / WALK_FRAME_TILES) % set.walk.length;
@@ -856,10 +861,12 @@ function drawPlayer(game, alpha) {
   const left = Math.round(screenX(player.x) - image.width / 2);
   const top = Math.round(screenY(player.y) + view.th * 0.25) - image.height - look.lift;
   view.ctx.globalAlpha = alpha;
-  // The top end of a rod in hand, where the fishing line starts (╱ leans right, ╲ left).
+  // Where the thing in hand is: the top end of a rod (╱ leans right, ╲ left), where the fishing
+  // line starts, and the middle of a gun, where a shot starts.
   if (look.held && alpha === 1) {
     const lean = look.held === '╲' ? 0 : 1;
     view.rodTip = { x: left + (look.spot[0] + lean) * view.cw, y: top + look.spot[1] * view.th };
+    view.heldAt = { x: left + (look.spot[0] + 0.5) * view.cw, y: top + (look.spot[1] + 0.5) * view.th };
   }
   if (outline.on) {
     const { canvas, padX, padY } = outlinedFigure(game, look, image);
@@ -1166,6 +1173,10 @@ function findLights(game, range, inside) {
   // night (but not through the grey of a cloudy day: that isn't dark enough to need it).
   const torch = torchReach(survivor);
   const sky = game.sky;
+  // A gunshot's flash lights everything round you for a moment (not with motion turned down).
+  if (game.shot && game.time - game.shot.at < MUZZLE_FLASH_SECONDS && !reducedMotion.matches) {
+    lights.push({ x: player.x, y: player.y - 1, reach: MUZZLE_FLASH_REACH, strength: 1, warm: true });
+  }
   if (torch > 0) {
     lights.push({ x: player.x, y: player.y - 1, reach: torch * flicker(game, 0), strength: 1, warm: true });
   } else if (sky.gloom > 0) {
@@ -1411,6 +1422,31 @@ function drawFishingLine(game) {
     drawGlyph(view.ctx, '·', LINE_COLOR, Math.round(x - view.cw / 2), Math.round(y - view.th / 2));
   }
   view.ctx.globalAlpha = 1;
+}
+
+// A shot: a streak of light from the gun to what it hit, drawn in line characters that follow its
+// slant, fading fast, with a flash at the muzzle. Drawn above the dark: it's light itself.
+function drawShot(game) {
+  const { shot, player } = game;
+  const start = view.heldAt || { x: screenX(player.x), y: screenY(player.y - 1.5) };
+  const endX = screenX(shot.x);
+  const endY = screenY(shot.y);
+  const dx = (endX - start.x) / view.tw;
+  const dy = (endY - start.y) / view.th;
+  const length = Math.hypot(dx, dy);
+  let glyph = Math.abs(dx) > Math.abs(dy) * 2 ? '─' : Math.abs(dy) > Math.abs(dx) * 2 ? '│' : '╲';
+  if (glyph === '╲' && dx * dy < 0) glyph = '╱';
+  const ctx = view.ctx;
+  ctx.globalAlpha = 1 - (game.time - shot.at) / SHOT_SECONDS;
+  const dots = Math.max(1, Math.floor(length / 0.5));
+  for (let n = 1; n <= dots; n++) {
+    const t = n / dots;
+    const x = start.x + (endX - start.x) * t;
+    const y = start.y + (endY - start.y) * t;
+    drawGlyph(ctx, glyph, SHOT_COLOR, Math.round(x - view.cw / 2), Math.round(y - view.th / 2), true);
+  }
+  drawGlyph(ctx, '✶', SHOT_COLOR, Math.round(start.x - view.cw / 2), Math.round(start.y - view.th / 2), true);
+  ctx.globalAlpha = 1;
 }
 
 // Words that float up from where something happened, like "+3 wood".

@@ -281,6 +281,14 @@ button:focus-visible {
 .pick dt { color: #c9ccc4; }
 .torch dt { color: #c49a62; }
 .rod dt { color: #c49a62; }
+.bullets dt { color: #e0c060; }
+.pistol dt { color: #aab4bc; }
+.rifle dt { color: #b08458; }
+
+/* A gun dims while it's being reloaded. */
+.tool.reloading dt {
+  opacity: 0.35;
+}
 
 /* A lit torch glows in the pack, and turns red as it burns low. */
 .torch.lit dt {
@@ -743,6 +751,7 @@ button:focus-visible {
 .cost.cooked { color: #ec8a4a; }
 .cost.fish { color: #a8cfe6; }
 .cost.cookedFish { color: #e8944e; }
+.cost.bullets { color: #e0c060; }
 .cost.short { color: var(--health); }
 
 /* A tool you already carry: no cost to show, just a note. */
@@ -1015,10 +1024,13 @@ button:focus-visible {
 }
 
 /* Phones held sideways: the pack a little tighter, and tools shown by their picture alone, so it
-   fits beside the health bars with everything in it. */
+   fits beside the health bars; with almost everything in it, it wraps onto a second row. */
 @media (max-height: 460px) {
   .pack {
-    gap: 9px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px 9px;
+    max-width: calc(100vw - 250px); /* past this, it goes onto a second row instead of over the bars */
     padding: 6px 10px;
   }
 
@@ -1110,6 +1122,14 @@ button:focus-visible {
 
 /* Phones held sideways: the chest panel a little tighter. */
 @media (max-height: 460px) {
+  .thing-name {
+    display: none;
+  }
+
+  .chest-things {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
   .chest-panel {
     gap: 8px;
     padding: 10px 14px 12px;

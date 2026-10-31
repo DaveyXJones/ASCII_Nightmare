@@ -205,9 +205,8 @@ After merging PR #8 the owner said: "i want the outline for the player i think, 
 fishing, map and lamps idea. Im also wondering about a pistol and a rifle, and i also notice that
 when im trying to build walls there is no way to turn them and place them on the right or left
 side, is that possible?" README's "What's next" lists these in this order; build them each as its
-own commit, like the lists before. **Items 1 to 5 were built on 2026-10-31** (each in its own
-section below); the pistol and rifle wait on the owner's answers to the questions in item 6.
-Claude asked them at the start of that session, suggesting: found in crates (a wreck on a beach),
+own commit, like the lists before. **All six were built on 2026-10-31** (each in its own section
+below). For the guns the owner chose Claude's suggestions: found in crates (a wreck on a beach),
 bullets scarce and not craftable, a short-range six-shot pistol and a long-range one-shot rifle,
 and the bang drawing creatures in. Notes and suggestions (Claude's, not the owner's):
 
@@ -237,7 +236,7 @@ and the bang drawing creatures in. Notes and suggestions (Claude's, not the owne
 5. **Fishing.** (Built; see "Fishing" below.) A rod (a tool, like the axe), **Fish** when facing water with it: hold, a bobber
    glyph on the water, a bite after a few seconds, then a fish (a new item with a pack slot).
    Cook fish at the fire (a `byFire` recipe) for more food than berries.
-6. **A pistol and a rifle.** Ask the owner before building: these change how nights play. Points
+6. **A pistol and a rifle.** (Built; see "Guns" below.) Ask the owner before building: these change how nights play. Points
    to settle: found (a wreck on the beach? a crate?) or crafted (the game is stone tools so far),
    how scarce bullets are, ranges (pistol short, rifle long and slow to reload), whether the bang
    draws creatures toward you (a good horror trade-off). On a phone the action button would say
@@ -332,6 +331,48 @@ Item 5, in js/fishing.js. Choices that were Claude's:
   `hideEmpty`, so the pack fits across a 667-wide phone with everything in it (tools show only
   their glyph on short screens).
 
+## Guns (built 2026-10-31)
+
+Item 6, in js/guns.js, to the owner's choice of Claude's suggestions. Choices beyond those:
+
+- **Finding them**: `placeFinds` (world.js, run in `generateWorld` before `world.original` is
+  taken) puts the wreck (`wreckBow`/`wreckMid`/`wreckStern`, breakable for wood) with the
+  `pistolCrate` beside it on the beach whose walk from the door (`stepsFromDoor`) is nearest
+  `WRECK_STEPS` (40), and the `rifleCrate` on the beach furthest away. A beach is open sand within
+  `SEA_REACH` of the sea (`findSea`: water joined to the map's edge), so never a riverbank. Crates
+  are objects with `tool` (the gun) and `gives` (8 or 6 bullets), `says` a message, and become
+  `crateOpen`. **Keeping old saves**: these objects have `found: true`, which `worldPrint` leaves
+  out, and only go on tiles where nothing was generated, so every island's print is unchanged
+  (checked against the previous commit on six seeds, and a save from it loads with its changes).
+  Change `placeFinds` and finds move on existing islands (old crates stay where saved).
+- **Guns** are `TOOLS.pistol`/`rifle` with `gun: { range, damage, rounds, reload, sound }` and
+  `power: { Shoot: 1 }` (only so `heldGlyph` draws them; `prefer` picks the one just fired).
+  Pistol: 6 tiles, 2 damage, 6 rounds, 1.5 s. Rifle: 14 tiles, 3 damage, 1 round, 2.5 s. Both use
+  `ITEMS.bullets`. `survivor.guns[key]` (`gunState`: shots `left`, `readyAt`, `reloading`) isn't
+  saved: a gun is loaded again on carrying on. `updateGuns` reloads an empty gun when there are
+  bullets.
+- **Shoot** (`findShot`, from `findTarget` when no creature is in `HIT_REACH`): the nearest
+  creature past arm's reach within `AIM_CONE` of the facing, in range of a ready gun (`gunFor`: the
+  shortest range that reaches), with `clearShot` (solid objects, doors and solid ground block;
+  water doesn't). One shot per press: `player.triggerHeld`, cleared when the button is let go.
+  `woundCreature` (creatures.js, shared with `hitCreature`) does the damage. Shots always hit.
+- **The bang** (`hearShot`): creatures within `BANG_REACH` that `lurk`/`hide` switch to `creep`;
+  at night `hunt.nextAt` comes within `BANG_SOONER`; `hushCrickets` (sound.js) holds the crickets
+  for `SHOT_HUSH`; a once-a-night message. The shot is drawn by `drawShot` (render.js) above the
+  dark, from `view.heldAt` (the gun's cell) to the target, for `SHOT_SECONDS`, with a muzzle
+  light in `findLights` (not under reduced motion). Sounds `bang`, `boom`, `click`, `reload`,
+  levelled offline (the pistol about a falling tree's peak, the rifle louder, thunder loudest).
+- **Death**: `collapse` calls `dropGuns`: each gun becomes `pistolDropped`/`rifleDropped` on the
+  nearest bare tile (action **Pick up**, `mark: MARKS.dropped`), and waking says where they are.
+  This was Claude's call: tools are lost on death, but these are one of a kind.
+- **Bullet tins**: on each change to day, `washUp` places a `bulletBox` (3 bullets, walk-over) on a
+  random beach in `world.beaches` at least `WASH_UP_AWAY` from you, with `WASH_UP_CHANCE`, never
+  more than `WASH_UP_MOST` at once. Saved as ordinary object changes.
+- **Room on a phone**: the pack wraps onto a second row on short screens when it would reach the
+  health bars (`max-width` on `.pack`); the chest panel shows five to a row there, tool names
+  hidden (`.thing-name`), and leaves out things neither side has. A gun dims in the pack while
+  reloading (`.tool.reloading`).
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -342,8 +383,8 @@ Item 5, in js/fishing.js. Choices that were Claude's:
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  weather → render → input → sound → survival → crafting → chest → fishing → map → creatures → save →
-  game`. A file
+  weather → render → input → sound → survival → crafting → chest → fishing → guns → map → creatures →
+  save → game`. A file
   may use globals from files before it at load time, and from any file inside functions that run
   later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
@@ -361,13 +402,14 @@ Item 5, in js/fishing.js. Choices that were Claude's:
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`. |
-| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print). |
+| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
 | `js/weather.js` | `weatherAt(clock, seed)` (cloud, rain, storm, wind), `updateWeather` (rain messages, the torch in rain, lightning and thunder, `soakFires`), `relightFire`, `lightningAt`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
 | `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
+| `js/guns.js` | Shooting (`findShot`, `clearShot`, `gunFor`, `shoot`, `hearShot`), reloading (`gunState`, `updateGuns`), `dropGuns` on death, `washUp` of bullet tins. Placement of the wreck and crates is `placeFinds` in world.js; the streak and flash are `drawShot` and `findLights` in render.js. |
 | `js/fishing.js` | `wantsToFish`, `castLine`, `updateFishing` (bite, hook, catch or lose). The bobber and line are drawn in render.js (`drawBobber`, `drawFishingLine`). |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat, `hideEmpty` for pack slots shown only while you have some), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
@@ -390,11 +432,14 @@ Item 5, in js/fishing.js. Choices that were Claude's:
   small foot box (`FOOT_HALF_WIDTH`, `FOOT_HALF_DEPTH`), moving one axis at a time with corner
   slipping so thumbstick movement slides through doorways.
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
-- `world.original` is `objects` as generated (saving keeps only the differences); `damage`,
-  `clawed` and `soaked` are Maps of tile index to swings, scratches or seconds of rain taken
-  (`setObject` clears all three, and `chests`; `soaked` isn't saved). `chests` holds what's in each
-  chest and `bed` the newest bedroll's tile; both are saved. **Anything new that should survive
-  a reload** (a survivor field, a world Map) needs adding to `saveGame` and `loadGame`.
+- `world.original` is `objects` as generated, including the wreck and crates (saving keeps only
+  the differences; `found` objects are left out of `worldPrint`). `damage`, `clawed` and `soaked`
+  are Maps of tile index to swings, scratches or seconds of rain taken; `fuel` holds each lamp's
+  seconds left; `seen` is the map's explored tiles (`setObject` clears `damage`, `clawed`, `soaked`,
+  `chests` and `fuel`; `soaked` isn't saved). `chests` holds what's in each chest and `bed` the
+  newest bedroll's tile. `beaches` (open sand by the sea you can walk to) is rebuilt with the
+  island, not saved. **Anything new that should survive a reload** (a survivor field, a world Map)
+  needs adding to `saveGame` and `loadGame`.
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
 

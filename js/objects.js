@@ -36,6 +36,11 @@
 //            like trees
 //   mark     { glyph, color, name, rank }: something you built, always shown on the map (the
 //            highest `rank` wins where two share a spot) and listed in the map's key by `name`
+//   tool     a key in TOOLS that's yours once it gives (a gun in a crate)
+//   says     message shown when it gives what it gives
+//   found    true for things placed on the island for you to find (the wreck, the crates): they're
+//            left out of the island's print (see worldPrint in save.js), so saves from before they
+//            were added still fit
 //   side     { sprite, opens, scarred }: the pictures to use instead in a fence running up the
 //            screen (see runsUpAndDown in world.js), where it's seen from the side
 
@@ -51,6 +56,39 @@ const MARKS = {
   chest: { glyph: '■', color: '#e0b070', name: 'chest', rank: 4 },
   bed: { glyph: '▬', color: '#ff8a70', name: 'bedroll', rank: 5 },
   wall: { glyph: '#', color: '#c49a62', name: 'wall', rank: 1 },
+  wreck: { glyph: '∪', color: '#c8b08a', name: 'wreck', rank: 2 },
+  crate: { glyph: '☐', color: '#e0c080', name: 'crate', rank: 4 },
+  dropped: { glyph: '!', color: '#ff5a4a', name: 'your gun', rank: 6 },
+};
+
+// The wrecked boat, in three pieces side by side: bow, middle, stern. It can be broken up for wood.
+const WRECK_PIECE = {
+  name: 'Wrecked boat',
+  solid: true,
+  blocked: 'The broken hull of a boat, half buried in the sand.',
+  action: 'Break',
+  hits: 4,
+  gives: { wood: 2 },
+  becomes: null,
+  burst: 'wood',
+  sound: 'chop',
+  soundDone: 'crash',
+  found: true,
+};
+
+// A crate washed up from the wreck, with a gun inside.
+const GUN_CRATE = {
+  name: 'Crate',
+  sprite: 'crate',
+  solid: true,
+  blocked: 'A crate, washed up by the sea.',
+  action: 'Open',
+  hits: 1,
+  becomes: 'crateOpen',
+  burst: 'wood',
+  sound: 'chop',
+  found: true,
+  mark: MARKS.crate,
 };
 
 const OBJECTS = {
@@ -289,6 +327,70 @@ const OBJECTS = {
     blocked: 'Your lamp. It has gone out.',
     action: 'Fill',
     fuel: LAMP_FUEL,
+  },
+  wreckBow: { ...WRECK_PIECE, sprite: 'wreckBow' },
+  wreckMid: { ...WRECK_PIECE, sprite: 'wreckMid', mark: MARKS.wreck },
+  wreckStern: { ...WRECK_PIECE, sprite: 'wreckStern' },
+  pistolCrate: {
+    ...GUN_CRATE,
+    tool: 'pistol',
+    gives: { bullets: 8 },
+    says: 'Inside, wrapped in oilcloth: a pistol and a box of bullets. The bang will carry.',
+  },
+  rifleCrate: {
+    ...GUN_CRATE,
+    tool: 'rifle',
+    gives: { bullets: 6 },
+    says: 'Inside, packed in straw: a rifle and a few bullets. It shoots a long way.',
+  },
+  crateOpen: {
+    name: 'Empty crate',
+    sprite: 'crateOpen',
+    solid: true,
+    blocked: 'An empty crate.',
+    action: 'Break',
+    hits: 1,
+    gives: { wood: 2 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+  },
+  // Washed up on a beach some mornings (see washUp in guns.js). You walk over it.
+  bulletBox: {
+    name: 'Tin box',
+    sprite: 'bulletBox',
+    action: 'Pick up',
+    hits: 1,
+    gives: { bullets: 3 },
+    becomes: null,
+    burst: 'stone',
+    sound: 'pick',
+    says: 'A tin box the sea brought in. Bullets, still dry.',
+  },
+  // A gun you were carrying when you died, lying where you fell (see dropGuns in guns.js).
+  pistolDropped: {
+    name: 'Pistol',
+    sprite: 'pistolDropped',
+    action: 'Pick up',
+    hits: 1,
+    tool: 'pistol',
+    becomes: null,
+    burst: 'dust',
+    sound: 'pick',
+    says: 'You pick your pistol up again.',
+    mark: MARKS.dropped,
+  },
+  rifleDropped: {
+    name: 'Rifle',
+    sprite: 'rifleDropped',
+    action: 'Pick up',
+    hits: 1,
+    tool: 'rifle',
+    becomes: null,
+    burst: 'dust',
+    sound: 'pick',
+    says: 'You pick your rifle up again.',
+    mark: MARKS.dropped,
   },
   woodDoor: {
     name: 'Wooden door',
