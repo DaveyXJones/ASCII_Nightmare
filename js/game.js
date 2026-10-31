@@ -57,6 +57,7 @@ const elements = {
   newWorldButton: document.getElementById('new-world'),
   fullscreenButton: document.getElementById('fullscreen'),
   soundButton: document.getElementById('sound-button'),
+  outlineButton: document.getElementById('outline-button'), // the dark edge round the player, on or off
   seedLabel: document.getElementById('seed'),
   death: document.getElementById('death'),
   deathTitle: document.getElementById('death-title'),
@@ -430,6 +431,16 @@ elements.soundButton.addEventListener('click', () => {
   showSoundButton();
 });
 
+elements.outlineButton.addEventListener('click', () => {
+  setOutlineOn(!outline.on);
+  showOutlineButton();
+});
+
+function showOutlineButton() {
+  elements.outlineButton.textContent = outline.on ? 'Outline on' : 'Outline off';
+  elements.outlineButton.setAttribute('aria-pressed', String(outline.on));
+}
+
 function showSoundButton() {
   elements.soundButton.textContent = audio.on ? 'Sound on' : 'Sound off';
   elements.soundButton.setAttribute('aria-pressed', String(audio.on));
@@ -683,6 +694,8 @@ setupChest(elements);
 setupLook();
 setupSound();
 showSoundButton();
+outline.on = recall(OUTLINE_KEY) !== false;
+showOutlineButton();
 // Carry on from last time if there's a saved world; otherwise the first island.
 state.resumed = loadGame(state);
 if (!state.resumed) newGame(DEFAULT_SEED);

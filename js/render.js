@@ -43,6 +43,9 @@ const STARVE_FLASH_EVERY = 1.5; // while hunger or thirst is hurting, a flash th
 const STARVE_FLASH_SECONDS = 0.16;
 const KNEEL_SECONDS = 0.35; // collapsing: how long the player sinks to their knees before falling
 const DOOR_OPEN_REACH = 1.4; // a door you've built stands open while you're this close, in tiles
+const OUTLINE_COLOR = 'rgba(6, 8, 6, 0.85)'; // the thin dark edge round the player (Outline in the menu)
+const OUTLINE_CSS = 1; // how thick it is, in CSS pixels
+const OUTLINE_KEY = 'ascii-nightmare-outline'; // where the Outline on/off choice is kept (see save.js)
 const GHOST_ALPHA = 0.55; // how solid the see-through copy in build mode looks
 const NIGHT_SCALE = 4; // the dark is drawn this many times smaller than the screen, then stretched
 const EYES_REACH = 2; // with no light at all you can still make out this far around you, in tiles
@@ -850,18 +853,75 @@ function drawPlayer(game, alpha) {
   const left = Math.round(screenX(player.x) - image.width / 2);
   const top = Math.round(screenY(player.y) + view.th * 0.25) - image.height - look.lift;
   view.ctx.globalAlpha = alpha;
-  view.ctx.drawImage(image, left, top);
-  if (look.held) {
-    const [col, row] = look.spot;
-    drawGlyph(view.ctx, look.held, TOOL_COLOR, left + col * view.cw, top + row * view.th, true);
+  if (outline.on) {
+    const { canvas, padX, padY } = outlinedFigure(game, look, image);
+    view.ctx.drawImage(canvas, left - padX, top - padY);
+  } else {
+    drawFigure(view.ctx, game, look, image, left, top);
   }
-  if (look.torch) drawTorch(game, left + look.torch[0] * view.cw, top + look.torch[1] * view.th);
   view.ctx.globalAlpha = 1;
   if (alpha < 1) return;
 
   view.playerBox = { x0: left, y0: top, x1: left + image.width, y1: top + image.height };
   markCover(left, top, left + image.width, top + image.height);
   drawGrassOver(world, player.x, player.y);
+}
+
+// The player as they stand this moment: their picture, what's in their hand, and the torch.
+function drawFigure(ctx, game, look, image, left, top) {
+  ctx.drawImage(image, left, top);
+  if (look.held) {
+    const [col, row] = look.spot;
+    drawGlyph(ctx, look.held, TOOL_COLOR, left + col * view.cw, top + row * view.th, true);
+  }
+  if (look.torch) drawTorch(ctx, game, left + look.torch[0] * view.cw, top + look.torch[1] * view.th);
+}
+
+// The player with a thin dark edge round them, so they stand out on busy ground. The figure is drawn
+// onto a spare canvas, then copied a pixel or so out in each of eight directions onto a second one,
+// turned dark (keeping only its shape), and the figure is put back on top. That's a dozen small
+// copies, and the torch and tool in hand get the edge too. It's only done again when the picture
+// changes (a step, a swing, the torch flickering). Returns the canvas and how far its top-left
+// corner sits out from the picture's.
+function outlinedFigure(game, look, image) {
+  const edge = Math.max(1, Math.round(view.dpr * OUTLINE_CSS));
+  const padX = view.cw + edge; // room for the torch beside the picture...
+  const padY = view.th + edge; // ...and its flame above it
+  const width = image.width + padX * 2;
+  const height = image.height + padY * 2;
+  const { figure, edged } = outline;
+  const lit = look.torch && game.survivor.torchLeft > 0 ? game.flameFrame % TORCH_LOOK.flames.length : -1;
+  const drawn = [image, look.held, look.spot, look.torch, lit, width, height];
+  if (outline.drawn && drawn.every((part, n) => part === outline.drawn[n])) {
+    return { canvas: edged.canvas, padX, padY };
+  }
+  outline.drawn = drawn;
+  for (const { canvas, ctx } of [figure, edged]) {
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    } else {
+      ctx.clearRect(0, 0, width, height);
+    }
+  }
+  drawFigure(figure.ctx, game, look, image, padX, padY);
+  const ctx = edged.ctx;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx || dy) ctx.drawImage(figure.canvas, dx * edge, dy * edge);
+    }
+  }
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.fillStyle = OUTLINE_COLOR;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(figure.canvas, 0, 0);
+  return { canvas: edged.canvas, padX, padY };
+}
+
+function setOutlineOn(on) {
+  outline.on = on;
+  remember(OUTLINE_KEY, on);
 }
 
 // Tall grass in front of someone's feet at (x, y) is drawn again over them, so they wade through
@@ -880,11 +940,11 @@ function drawGrassOver(world, x, y) {
 
 // The torch in the player's hand at (x, y): its stick, and above that the rag wrapped round its
 // top, or a flickering flame once it's lit.
-function drawTorch(game, x, y) {
+function drawTorch(ctx, game, x, y) {
   const flames = TORCH_LOOK.flames;
   const head = game.survivor.torchLeft > 0 ? flames[game.flameFrame % flames.length] : TORCH_LOOK.rag;
-  drawGlyph(view.ctx, TORCH_LOOK.stick[0], TORCH_LOOK.stick[1], x, y, true);
-  drawGlyph(view.ctx, head[0], head[1], x, y - view.th, true);
+  drawGlyph(ctx, TORCH_LOOK.stick[0], TORCH_LOOK.stick[1], x, y, true);
+  drawGlyph(ctx, head[0], head[1], x, y - view.th, true);
 }
 
 // Remembers what's been drawn over, so cliffs in front of it can be drawn again, and whether
@@ -1144,6 +1204,10 @@ function flicker(game, seed) {
 // they stay put as the camera moves). One that lands might splash, and another starts falling
 // somewhere else. How many there are follows how hard it's raining (weatherAt() in weather.js).
 const rain = { drops: [] };
+
+// The player's outline: whether it's on, and two small canvases reused every frame to make it.
+// `drawn` says what's on them, so a frame where nothing about the player's picture changed reuses it.
+const outline = { on: true, figure: makeCanvas(1, 1), edged: makeCanvas(1, 1), drawn: null };
 
 // Moves the rain on by `dt` seconds. Called every frame before drawing.
 function stepRain(game, dt) {

@@ -74,6 +74,9 @@ day and crickets at night, a campfire crackling. Listen to the crickets: they go
 something from the dark is close, and growls come from the side the creature is on. **Sound on** /
 **Sound off** is in the menu. On an iPhone, the silent switch mutes the game too.
 
+**Outline.** A thin dark edge round you, so you stand out on busy ground and in the long grass.
+**Outline on** / **Outline off** in the menu switches it, to compare; the game remembers which.
+
 ## Staying alive
 
 - **Food** (orange) and **water** (blue) run down as you go: a full stomach lasts about seven
@@ -297,24 +300,21 @@ run straight from the file.
 
 ## What's next
 
-Done lately: walls that join up (a fence running up the screen is seen from the side) and turning
-in place in build mode. Before that: weather (clouds, rain, storms, and roofs to keep campfires
+Done lately: walls that join up (a fence running up the screen is seen from the side), turning
+in place in build mode, and an outline round the player. Before that: weather (clouds, rain, storms, and roofs to keep campfires
 burning), lurkers in the long grass, chests, and bedrolls; and before that, your look, flashing
 when hurt and falling when you die, the stone pick, doors, cooked berries, brutes, walls that get
 clawed down, saving, and sound.
 
 Next, the list you picked (2026-10-31), roughly in this order:
 
-1. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
-   rule that the map is drawn only in characters, so it'll come with an on/off switch in the menu
-   to compare.
-2. **Lamps.** A lantern on a post that keeps the dark back without a campfire, and has to be
+1. **Lamps.** A lantern on a post that keeps the dark back without a campfire, and has to be
    filled now and then.
-3. **A map.** The island is big. A map of where you've been, drawn in characters like everything
+2. **A map.** The island is big. A map of where you've been, drawn in characters like everything
    else, with your fires, chests and bedroll marked on it.
-4. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
+3. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
    berries to cook at the fire.
-5. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
+4. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
    the nights play, so there are questions to settle first: found or crafted, how scarce the
    bullets are, and whether the bang draws things toward you.
 

@@ -216,7 +216,7 @@ own commit, like the lists before. Notes and suggestions (Claude's, not the owne
    (b) In build mode, walking keeps your facing (you strafe), and a quick flick of the stick
    (pushed and let go within a moment, without walking far) turns you in place. Then: face right,
    walk up, Build, walk up, Build. Check it one-thumbed on a phone size in Playwright.
-2. **The outline.** The owner said yes ("i think"), so build it with an **Outline on/off** in the
+2. **The outline.** (Built; see "The outline" below.) The owner said yes ("i think"), so build it with an **Outline on/off** in the
    menu (on by default, kept in localStorage like Sound) so they can compare. A thin dark edge
    around the player's sprite only: e.g. a cached silhouette of each picture (a tint-like key in
    `spriteImage`) drawn a device pixel or two out in each direction behind it. Update the "Draw
@@ -257,6 +257,15 @@ Item 1 of the owner's list, built as the notes above suggested:
   `FLICK_SECONDS` (0.22): let go before then and you turn that way without moving; hold longer and
   you walk, still facing the same way. Checked one-thumbed at 667×375 with CDP touch events.
 
+## The outline (built 2026-10-31)
+
+Item 2. `drawPlayer` draws `outlinedFigure` when `outline.on`: the figure (sprite, tool in hand,
+torch; `drawFigure`) goes on a spare canvas, is copied `OUTLINE_CSS` (1 CSS px) out in eight
+directions onto a second, filled `OUTLINE_COLOR` with `source-in`, and the figure goes back on top.
+`outline.drawn` remembers what's on the canvases, so most frames reuse them (measured: no frame
+cost). The ghost behind trees gets the edge too. **Outline on/off** in the menu, kept under
+`OUTLINE_KEY`, on by default.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -274,8 +283,8 @@ Item 1 of the owner's list, built as the notes above suggested:
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
   Keyboard controls are the desktop equivalent, not the primary design.
 - **Draw only characters on the map.** Everything in the world is a glyph from a monospace font,
-  optionally on a background-color cell. Shadows, dimming and the target brackets are the only
-  non-glyph drawing. Block and quadrant characters (`▀▄▌▐▗▖▝▘▙▟▛▜█`) are fine for silhouettes,
+  optionally on a background-color cell. Shadows, dimming, the target brackets and the player's
+  outline (which the owner asked for, with a switch) are the only non-glyph drawing. Block and quadrant characters (`▀▄▌▐▗▖▝▘▙▟▛▜█`) are fine for silhouettes,
   as long as they're mixed with ASCII texture.
 
 ## Files
