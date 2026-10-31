@@ -39,6 +39,7 @@
             <div class="item fish" hidden><dt aria-label="Fish">∝</dt><dd id="count-fish">0</dd></div>
             <div class="item cookedFish" hidden><dt aria-label="Cooked fish">∝</dt><dd id="count-cookedFish">0</dd></div>
             <div class="item bullets" hidden><dt aria-label="Bullets">‣</dt><dd id="count-bullets">0</dd></div>
+            <div class="item tins" hidden><dt aria-label="Tins of food">◘</dt><dd id="count-tins">0</dd></div>
             <div class="item tool axe" id="tool-axe" hidden><dt aria-hidden="true">┮</dt><dd>axe</dd></div>
             <div class="item tool pick" id="tool-pick" hidden><dt aria-hidden="true">ϒ</dt><dd>pick</dd></div>
             <div class="item tool torch" id="tool-torch" hidden><dt aria-hidden="true">¡</dt><dd>torch</dd></div>
@@ -131,6 +132,15 @@
         </div>
       </section>
 
+      <!-- A note found in a ruin (see openNote in js/places.js). -->
+      <section id="note" class="overlay" aria-labelledby="note-title" hidden>
+        <div class="panel note-panel">
+          <h2 id="note-title" class="note-title">A note</h2>
+          <p id="note-text" class="note-text"></p>
+          <button type="button" id="note-close" class="button">Put it away</button>
+        </div>
+      </section>
+
       <section id="chest" class="overlay" aria-labelledby="chest-title" hidden>
         <div class="panel chest-panel">
           <div class="craft-head">
@@ -198,6 +208,7 @@
     <script src="js/sprites.js?v=11"></script>
     <script src="js/objects.js?v=11"></script>
     <script src="js/world.js?v=11"></script>
+    <script src="js/places.js?v=11"></script>
     <script src="js/night.js?v=11"></script>
     <script src="js/weather.js?v=11"></script>
     <script src="js/render.js?v=11"></script>

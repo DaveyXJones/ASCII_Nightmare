@@ -64,6 +64,14 @@ const SOUNDS = {
     noise: { seconds: 0.08, filter: 'lowpass', hz: 700 },
     tone: { seconds: 0.12, wave: 'triangle', hz: 150, to: 70 },
   },
+  // An old cupboard door swinging open on rusty hinges (places.js): a buzzy note sliding down, with a
+  // scrape of wood under it.
+  creak: {
+    volume: 1,
+    vary: 0.12,
+    noise: { seconds: 0.45, filter: 'bandpass', hz: 900, q: 3, to: 600 },
+    tone: { seconds: 0.45, wave: 'sawtooth', hz: 210, to: 150 },
+  },
   cast: { volume: 1.9, noise: { seconds: 0.3, filter: 'bandpass', hz: 1400, q: 1.2, to: 3200 } },
   plop: { volume: 1.05, tone: { seconds: 0.12, wave: 'sine', hz: 900, to: 260 } },
   catch: { volume: 2, noise: { seconds: 0.35, filter: 'bandpass', hz: 900, q: 0.8, to: 380 } },

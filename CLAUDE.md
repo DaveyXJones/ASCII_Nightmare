@@ -19,9 +19,13 @@ minutes, so `main` must always be playable.
   can't open github.io itself (blocked by its network policy), so for what the page actually does,
   serve the game from a subfolder the way Pages does (see "Checking a change").
 - **Browser cache.** Pages lets browsers keep files for up to 10 minutes, so right after a merge
-  the owner may still see the old game, or briefly a mix of old and new files that misbehaves.
-  If they report something broken just after an update, have them wait a few minutes and reload
-  before hunting for a bug.
+  the owner may still see the old game. **Every script and the stylesheet carry `?v=N` in
+  `index.html`: raise N in every PR that changes any js or css file**, all of them together. That
+  makes a new `index.html` fetch the files that go with it. Without it, a new page could run an old
+  cached `map.js`; that happened after PR #10, where the new map's + and − buttons showed but did
+  nothing. (In Chromium they worked; the owner's phone had kept the old file.) If the owner reports
+  something broken just after an update, have them wait a few minutes and reload before hunting
+  for a bug.
 - **Settings live with the owner.** Claude can't change repository settings (visibility, Pages,
   default branch). **The owner finds GitHub hard to navigate**: if a setting needs changing, walk
   them through it one step at a time with direct links (e.g.
@@ -92,7 +96,8 @@ of which they may want changed:
   `bestFood`). On short screens (since fishing) the craft cards lie on their side, four to a row:
   picture on the left, name, `about` and cost beside it, so up to sixteen fit on a 667×375 phone.
   Each `about` must stay within two lines of about 16 characters there (thirteen cards fill the
-  panel to 370 of 375 px). The chest panel is full too: one more item or tool adds a row to it.
+  panel to 370 of 375 px). The chest panel is full too: with tins it holds fifteen things, three
+  rows of five at 667×375; one more item or tool adds a row to it.
 - **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
   fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
@@ -376,13 +381,14 @@ Item 6, in js/guns.js, to the owner's choice of Claude's suggestions. Choices be
 After merging PR #9 the owner asked "Can we make the map a lot bigger?", and when asked which, chose
 both: a bigger island and a bigger map picture.
 
-- **The island**: new worlds are `WORLD_SIZE` (384×256, four times the land; `pickTerrain` shapes
-  the island relative to the size while the noise keeps its scale, so features are the same size
-  and there are more of them). `generateWorld(seed, island)` takes the size; `saveGame` stores it
-  as `size`, and `loadGame` rebuilds with `savedSize(save.size)`, which is `FIRST_WORLD_SIZE`
-  (192×128) for saves without it, so every world saved before keeps its size, print and changes
-  (checked with a save made by `main`'s code). Generation takes about 50 ms; a save is about 17 KB.
-  Everything else reads `world.width`/`world.height`; don't use a fixed size anywhere.
+- **The island** (now 768×512, see "Places to find" below): new worlds were `WORLD_SIZE` (384×256,
+  four times the land; `pickTerrain` shapes the island relative to the size while the noise keeps
+  its scale, so features are the same size and there are more of them). `generateWorld(seed,
+  island)` takes the size; `saveGame` stores it as `size`, and `loadGame` rebuilds with
+  `savedSize(save.size)`, which is `FIRST_WORLD_SIZE` (192×128) for saves without it, so every world
+  saved before keeps its size, print and changes (checked with a save made by `main`'s code).
+  Generation takes about 50 ms; a save is about 17 KB. Everything else reads
+  `world.width`/`world.height`; don't use a fixed size anywhere.
 - **The map panel** is now a window (`mapView`: `scale` in CSS px per tile, `cx`/`cy` the tile in
   the middle, `width`/`height` of the window). `drawMap` draws only the characters in the window,
   each standing for `block` tiles across and twice that down, `block` being the fewest that keeps
@@ -395,6 +401,61 @@ both: a bigger island and a bigger map picture.
   the last zoom (`MAP_FIRST_ZOOM` the first time on an island). On short screens the side column
   is tightened to fit 667×375.
 
+## Places to find, and a bigger island again (built 2026-11-01)
+
+After merging PR #10 the owner reported the map's + and − did nothing (most likely a cached old
+`map.js` with the new page: they work in Chromium with touch taps; fixed for the future with the
+`?v=` numbers, see "Browser cache" above) and asked: "I would like to make the island a lot bigger
+still, with points of interest and dilapidated cabins that can be spots to find loot. You can be
+creative with it." Everything below beyond that is Claude's design, all in js/places.js:
+
+- **Size**: `WORLD_SIZE` is 768×512 with `places: true`. Saves store `places` beside `size`;
+  `savedIsland(save)` (save.js) rebuilds an island with places only if its save says so, so
+  192×128 and 384×256 worlds load unchanged (checked with saves made by `main`'s code: same print,
+  same changes). Generation is about 250 ms in headless Chromium (`pickTerrain` now skips ridge and
+  moisture for the sea, which changes no tile; `findSea` runs once and is passed in); a save is
+  about 66 KB, mostly `seen`.
+- **The places** (`PLACES`, placed in that order): the lighthouse (`site: 'coast'`: the sand spot
+  with the most sea round it among those with room for the keeper's hut within
+  `KEEPER_HUT_REACH`; revealed on the map from the start), the village (`fromHome` 160, furthest
+  spots tried first: a hall with a strongbox, four cabins round a path square with a `well`, a
+  graveyard), standing stones (`site: 'hills'`, a ring round an `altar` with candles: `light` 4, so
+  creatures fear it like firelight), ruined cabins (four layouts, flipped at random, door at the top
+  sometimes) and camps (`site: 'water'`: tent, `oldPack`, a `campfireOut` you can relight, a
+  `logSeat`). Counts are per 100,000 land tiles (`count`) or `exactly`; on six seeds every island got
+  1 lighthouse, 1 keeper's hut, 1 village, 3 stone rings, 12 cabins and 8 camps. Each place is
+  tried at shuffled grid spots (`PLACE_TRY_EVERY`) with `siteFits`: right ground, every tile and
+  its margin walkable (`steps`), at most `PLACE_MOST_TREES` trees, `PLACE_SPACING` from others.
+  `buildPlace` clears `PLACE_CLEARS` objects in a `CLEARING` (wider below, where trees would stand
+  in front of it in the 3/4 view and hide it), lays the layout, drops walls (`WALL_FALLEN` into a
+  `logPile`, `WALL_GONE` to nothing, never corners) and grows `WEEDS` (tall grass, so lurkers can
+  sit in a cabin).
+- **Old walls** (`logWall`) have `fence` and `side` pictures, so they join up with walls you build:
+  patch the gaps and a cabin is shelter. `claws: 10` (yours are 15). Building replaces a `logPile`
+  (it isn't solid), but nothing is built over an object with `loot` (`buildProblem`).
+- **Searching**: objects with `loot` (`cupboard`, `tent`, `oldPack`, `strongbox`, `altar`) go
+  through `useTarget` as usual (hits, swings), then `searchLoot` instead of `gives`: `rolls` picks
+  from `LOOT[...].finds` by `hash2(tile, roll, seed + LOOT_SALT)`, so it's fixed per island; a
+  `tool` you have becomes its `or` items. `useTarget` saves right after a search so a reload can't
+  repeat it. New item `tins` (food 35, heals 5, `hideEmpty`). A `map` find (`readScrap`) reveals
+  `SCRAP_REACH` round the nearest unseen place and names its direction.
+- **Notes**: `handOutNotes` gives each place's first cupboard, tent or pack (`NOTE_HOLDERS`) a note:
+  the keeper's hut and the village hall their own (`PLACE_NOTES`), the rest `NOTES` in order of
+  their walk from the cottage, so the story runs outward. Twelve notes, 23 holders: the far ones get
+  none. `openNote` pauses like the chest panel and arms on a `pointerdown` the same way; a scrap
+  found with a note is said once the note's put away. Esc closes it.
+- **Graves** have `epitaph`: walking into one shows a line from `EPITAPHS` picked by its tile
+  (`epitaphNear`, from `movePlayer` in game.js).
+- **The map** marks places through `MARKS` (`ruin` on cupboards and the strongbox, `camp` on tents
+  ranked over its cold fire, `stones`, `graves`, `lighthouse`); `logWall` has `map` like trees. The
+  key only lists names whose marks are on seen land (`showKeyLines`, on opening), so it grows as you
+  explore; all fifteen lines fit 667×375. Drawing the map zoomed all the way out with the whole
+  768×512 island seen takes about 14 ms in headless Chromium (0.6 ms zoomed in), so a pinch at full
+  zoom-out may be choppy on a slow phone.
+- **Sounds**: `creak` (searching a cupboard), levelled offline against `pick` and `drink`.
+- **Ideas the README offers next**: lighting the lighthouse (the notes hint at it), a book of
+  found notes, and a Repair action on fallen logs.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -404,9 +465,9 @@ both: a bigger island and a bigger map picture.
 - **Relative paths only.** The live game sits in a subfolder (`/ASCII_Nightmare/`), not at the site
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
-- **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  weather → render → input → sound → survival → crafting → chest → fishing → guns → map → creatures →
-  save → game`. A file
+- **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → places →
+  night → weather → render → input → sound → survival → crafting → chest → fishing → guns → map →
+  creatures → save → game`. A file
   may use globals from files before it at load time, and from any file inside functions that run
   later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
@@ -424,8 +485,9 @@ both: a bigger island and a bigger map picture.
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print). |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print), `loot` (searched: a table in `LOOT`, places.js) and `epitaph` (a grave). |
 | `js/world.js` | `WORLD_SIZE` and `FIRST_WORLD_SIZE`, `generateWorld(seed, island)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
+| `js/places.js` | Places to find on islands with `places`: `PLACES` (layouts as text, how many, where), `PLACE_LEGEND`, `LOOT`, `NOTES`, `PLACE_NOTES`, `EPITAPHS`; `placePlaces` (and `placeLighthouse`, `siteFits`, `buildPlace`, `handOutNotes`), `searchLoot`, `readScrap`, `epitaphNear`, the note panel (`setupNote`, `openNote`, `closeNote`). |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
 | `js/weather.js` | `weatherAt(clock, seed)` (cloud, rain, storm, wind), `updateWeather` (rain messages, the torch in rain, lightning and thunder, `soakFires`), `relightFire`, `lightningAt`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
@@ -454,14 +516,18 @@ both: a bigger island and a bigger map picture.
   small foot box (`FOOT_HALF_WIDTH`, `FOOT_HALF_DEPTH`), moving one axis at a time with corner
   slipping so thumbstick movement slides through doorways.
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
-- `world.original` is `objects` as generated, including the wreck and crates (saving keeps only
-  the differences; `found` objects are left out of `worldPrint`). `damage`, `clawed` and `soaked`
-  are Maps of tile index to swings, scratches or seconds of rain taken; `fuel` holds each lamp's
-  seconds left; `seen` is the map's explored tiles (`setObject` clears `damage`, `clawed`, `soaked`,
-  `chests` and `fuel`; `soaked` isn't saved). `chests` holds what's in each chest and `bed` the
-  newest bedroll's tile. `beaches` (open sand by the sea you can walk to) is rebuilt with the
-  island, not saved. **Anything new that should survive a reload** (a survivor field, a world Map)
-  needs adding to `saveGame` and `loadGame`.
+- `world.original` is `objects` as generated, including the wreck, crates and places (saving keeps
+  only the differences). `world.print` (`worldPrint`) is taken in `generateWorld` right after the
+  cottage, before `placeFinds` and `placePlaces`, so finds and places can change without saved
+  islands losing their changes (`found` objects are also left out, since prints were once taken
+  after the wreck). `damage`, `clawed` and `soaked` are Maps of tile index to swings, scratches or
+  seconds of rain taken; `fuel` holds each lamp's seconds left; `seen` is the map's explored tiles
+  (`setObject` clears `damage`, `clawed`, `soaked`, `chests` and `fuel`; `soaked` isn't saved).
+  `chests` holds what's in each chest and `bed` the newest bedroll's tile. `beaches` (open sand by
+  the sea you can walk to) is rebuilt with the island, not saved; so are `places` (`{ kind, x, y,
+  search }`) and `notes` (tile index → note), and `hasPlaces` comes from the save's `places` flag.
+  **Anything new that should survive a reload** (a survivor field, a world Map) needs adding to
+  `saveGame` and `loadGame`.
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
 

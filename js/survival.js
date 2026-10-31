@@ -13,6 +13,8 @@ const ITEMS = {
   fish: { name: 'fish', glyph: '∝', color: '#a8cfe6', hideEmpty: true }, // raw: cook it to eat it
   cookedFish: { name: 'cooked fish', glyph: '∝', color: '#e8944e', food: 45, heals: 15, hideEmpty: true },
   bullets: { name: 'bullets', glyph: '‣', color: '#e0c060', hideEmpty: true }, // for both guns (guns.js)
+  // Tinned food, found in the ruins (see LOOT in places.js). Eat it anywhere, no fire needed.
+  tins: { name: 'tins', glyph: '◘', color: '#b8c4c8', food: 35, heals: 5, hideEmpty: true },
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -330,7 +332,7 @@ function useTarget(game) {
 
   const object = target.object;
   const index = target.y * world.width + target.x;
-  if (!object.gives && !object.tool) {
+  if (!object.gives && !object.tool && !object.loot) {
     showMessage(game, object.empty || `Nothing to take from the ${object.name.toLowerCase()}.`);
     return;
   }
@@ -349,19 +351,25 @@ function useTarget(game) {
   playSound(object.soundDone || object.sound);
 
   // Done: into the pack it goes (and a tool into your hands), and whatever's left takes its place.
-  const parts = [];
-  if (object.tool) {
-    survivor.tools[object.tool] = true;
-    parts.push(TOOLS[object.tool].short);
+  // Something you search has its own table of what might be in it (see searchLoot in places.js).
+  if (object.loot) {
+    searchLoot(game, target, object, index);
+  } else {
+    const parts = [];
+    if (object.tool) {
+      survivor.tools[object.tool] = true;
+      parts.push(TOOLS[object.tool].short);
+    }
+    for (const [item, count] of Object.entries(object.gives || {})) {
+      survivor.pack[item] += count;
+      parts.push(`+${count} ${ITEMS[item].name}`);
+    }
+    const color = object.tool ? TOOLS[object.tool].color : ITEMS[Object.keys(object.gives)[0]].color;
+    floatText(game.fx, target.x + 0.5, target.y - 1, parts.join('  '), color);
+    if (object.says) showMessage(game, object.says);
   }
-  for (const [item, count] of Object.entries(object.gives || {})) {
-    survivor.pack[item] += count;
-    parts.push(`+${count} ${ITEMS[item].name}`);
-  }
-  const color = object.tool ? TOOLS[object.tool].color : ITEMS[Object.keys(object.gives)[0]].color;
-  floatText(game.fx, target.x + 0.5, target.y - 1, parts.join('  '), color);
-  if (object.says) showMessage(game, object.says);
   setObject(world, target.x, target.y, object.becomes);
+  if (object.loot) saveGame(game); // so reloading the page can't put back what you just took
   const regrow = object.becomes && OBJECTS[object.becomes].regrow;
   if (regrow) {
     world.regrowing.push({ index, at: game.time + regrow.after, from: object.becomes, into: regrow.into });

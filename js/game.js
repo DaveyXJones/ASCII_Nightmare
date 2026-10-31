@@ -57,6 +57,10 @@ const elements = {
   mapZoomIn: document.getElementById('map-zoom-in'),
   mapZoomOut: document.getElementById('map-zoom-out'),
   mapCentre: document.getElementById('map-centre'),
+  note: document.getElementById('note'), // a note found in a ruin (see places.js)
+  noteTitle: document.getElementById('note-title'),
+  noteText: document.getElementById('note-text'),
+  noteClose: document.getElementById('note-close'),
   stickZone: document.getElementById('stick-zone'),
   stick: document.getElementById('stick'),
   knob: document.getElementById('knob'),
@@ -270,7 +274,9 @@ function movePlayer(dt) {
     state.bumpedInto = null;
   } else if (blocker && blocker !== state.bumpedInto) {
     state.bumpedInto = blocker;
-    if (blocker.blocked) showMessage(state, blocker.blocked);
+    // A grave says what's written on its stone (see EPITAPHS in places.js).
+    const words = blocker.epitaph ? epitaphNear(state.world, player) : blocker.blocked;
+    if (words) showMessage(state, words);
   }
 }
 
@@ -676,6 +682,7 @@ function frame(now) {
       if (crafting) closeCraft();
       else if (!elements.map.hidden) closeMap();
       else if (!elements.chest.hidden) closeChest();
+      else if (!elements.note.hidden) closeNote();
       else if (!elements.look.hidden) closeLook();
       else if (!elements.menu.hidden && state.started) closeMenu();
       else if (press === 'back' && state.building && playing) stopBuilding(state);
@@ -733,6 +740,7 @@ setupInput(elements);
 setupCrafting(elements);
 setupChest(elements);
 setupMap(elements);
+setupNote(elements);
 setupLook();
 setupSound();
 showSoundButton();

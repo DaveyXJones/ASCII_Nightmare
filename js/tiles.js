@@ -118,6 +118,15 @@ const TILES = {
     colors: ['#6f5133', '#7a5a39'],
     bgs: ['#9a7448', '#93703f'],
   },
+  // The floor of a ruined cabin (see places.js): grey, warped boards with gaps where they've rotted.
+  boards: {
+    name: 'Rotten boards',
+    map: ['=', '#8f7c62', '#4a3c2c'],
+    glyphs: ['═', '─', ' ', '═', '╌', '─'],
+    colors: ['#4a3c2c', '#54442f'],
+    bgs: ['#6e5a42', '#665339', '#5c4a35'],
+    step: 'dust',
+  },
   rug: {
     name: 'Rug',
     glyphs: ['░', '▒', '░'],

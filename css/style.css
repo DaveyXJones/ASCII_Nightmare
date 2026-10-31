@@ -282,6 +282,7 @@ button:focus-visible {
 .torch dt { color: #c49a62; }
 .rod dt { color: #c49a62; }
 .bullets dt { color: #e0c060; }
+.tins dt { color: #b8c4c8; }
 .pistol dt { color: #aab4bc; }
 .rifle dt { color: #b08458; }
 
@@ -767,6 +768,7 @@ button:focus-visible {
 .cost.fish { color: #a8cfe6; }
 .cost.cookedFish { color: #e8944e; }
 .cost.bullets { color: #e0c060; }
+.cost.tins { color: #b8c4c8; }
 .cost.short { color: var(--health); }
 
 /* A tool you already carry: no cost to show, just a note. */
@@ -793,6 +795,44 @@ button:focus-visible {
 }
 
 /* ---- Chest panel ---- */
+
+/* ---- A note found in a ruin ---- */
+
+/* Old paper: a pale page with faded ink, in the middle of the dark. */
+.note-panel {
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: min(440px, 100%);
+  padding: 22px 28px 18px;
+  border-color: #6a5a3e;
+  background: #d8ccb0;
+  color: #3a2e1e;
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
+}
+
+.note-title {
+  margin: 0;
+  color: #6a5030;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.note-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.note-panel .button {
+  min-width: 160px;
+  border-color: #6a5a3e;
+  background: #3a2e1e;
+  color: #efe6d2;
+}
 
 .chest-panel {
   flex-direction: column;
@@ -1151,9 +1191,9 @@ button:focus-visible {
   }
 
   .map-key {
-    gap: 1px;
+    gap: 0;
     font-size: 12px;
-    line-height: 1.25;
+    line-height: 1.2; /* fifteen lines of key (everything found) still fit at 667×375 */
   }
 
   .map-note {
