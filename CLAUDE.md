@@ -42,8 +42,8 @@ minutes, so `main` must always be playable.
 ## Working locally (from 2026-10-31)
 
 The owner now also works on the game from a clone on their Windows PC
-(`Desktop\SideProjects\ASCII_Nightmare`, inside OneDrive), with Claude in the desktop app, not
-only through cloud sessions. What's different there:
+(`C:\Users\david\SideProjects\ASCII_Nightmare`, kept out of OneDrive on purpose), with Claude in
+the desktop app, not only through cloud sessions. What's different there:
 
 - **Pushing goes live.** A local session pushes as the owner, so it can push straight to `main`,
   and that updates the live game. Check the change in the browser first, raise `?v=N` as above,
