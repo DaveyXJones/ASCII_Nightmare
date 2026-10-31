@@ -30,12 +30,14 @@ const TOOLS = {
     power: { Mine: 2 },
   },
   torch: { name: 'Torch', short: 'torch', glyph: '¡', color: '#c49a62', burns: 300, light: 5 },
+  // The rod's `power` for Fish is only there so it's drawn in your hand while you fish.
+  rod: { name: 'Fishing rod', short: 'rod', glyph: '⌠', color: '#c49a62', held: ['╲', '╱'], power: { Fish: 1 } },
 };
 
 // Everything you can make, in the order the craft panel shows them.
 //
 //   name     what the panel calls it
-//   about    one line on what it's for
+//   about    one line on what it's for: two lines of about 16 characters, to fit a phone
 //   cost     what it takes from your pack, e.g. { wood: 3, stone: 2 }
 //   tool     a key in TOOLS: making it puts that tool in your pack (you only ever need one)
 //   builds   a key in OBJECTS: making it starts build mode, to put one on the map
@@ -49,28 +51,35 @@ const TOOLS = {
 const RECIPES = {
   axe: {
     name: 'Stone axe',
-    about: 'Twice as fast on trees and shades.',
+    about: 'Halves swings on trees and shades.',
     cost: { wood: 3, stone: 2 },
     tool: 'axe',
     done: 'You lash a sharp stone to a stick. Trees fall twice as fast now.',
   },
   pick: {
     name: 'Stone pick',
-    about: 'Twice as fast on boulders.',
+    about: 'Halves swings on boulders.',
     cost: { wood: 2, stone: 3 },
     tool: 'pick',
     done: 'You bind a pointed stone to a handle. Boulders break twice as fast now.',
   },
   torch: {
     name: 'Torch',
-    about: 'Light it at a fire to see in the dark.',
+    about: 'Light it at a fire, to see.',
     cost: { wood: 2, cloth: 1 },
     tool: 'torch',
     done: 'You wrap a rag round a stick. Light it at a campfire.',
   },
+  rod: {
+    name: 'Fishing rod',
+    about: 'Face water and hold to fish.',
+    cost: { wood: 2, cloth: 1 },
+    tool: 'rod',
+    done: 'You tie a line to a long stick. Face water and hold the button to fish.',
+  },
   campfire: {
     name: 'Campfire',
-    about: 'Rest beside it to heal faster.',
+    about: 'Rest by it to heal faster.',
     cost: { wood: 4, stone: 3 },
     builds: 'campfire',
     done: 'The fire catches. Rest beside it to heal faster.',
@@ -85,28 +94,28 @@ const RECIPES = {
   },
   wall: {
     name: 'Wooden wall',
-    about: 'Build a row of them into a fence.',
+    about: 'Line them up into a fence.',
     cost: { wood: 2 },
     builds: 'woodWall',
     again: true,
   },
   door: {
     name: 'Wooden door',
-    about: 'Goes in a wall. Opens only for you.',
+    about: 'In a wall. Opens only for you.',
     cost: { wood: 3 },
     builds: 'woodDoor',
     done: 'You hang the door. It swings open as you come near.',
   },
   lamp: {
     name: 'Lamp',
-    about: 'Keeps the dark back. Burns cloth.',
+    about: 'Lights the dark. Fill with cloth.',
     cost: { wood: 2, cloth: 2 },
     builds: 'lamp',
     done: 'You hang the lamp on its post. It burns through half a night.',
   },
   chest: {
     name: 'Chest',
-    about: 'What you put in it is kept when you die.',
+    about: 'Keeps things when you die.',
     cost: { wood: 6 },
     builds: 'chest',
     indoors: true,
@@ -114,7 +123,7 @@ const RECIPES = {
   },
   bedroll: {
     name: 'Bedroll',
-    about: 'You wake up on it after you die.',
+    about: 'After you die, you wake on it.',
     cost: { cloth: 2, wood: 1 },
     builds: 'bedroll',
     done: 'You spread out the bedroll. If you die, you\'ll wake up here.',
@@ -124,6 +133,13 @@ const RECIPES = {
     about: 'Fills more, and heals a little.',
     cost: { berries: 2 },
     gives: { cooked: 1 },
+    byFire: true,
+  },
+  cookFish: {
+    name: 'Cooked fish',
+    about: 'Fills you up, and heals.',
+    cost: { fish: 1 },
+    gives: { cookedFish: 1 },
     byFire: true,
   },
 };
@@ -336,7 +352,7 @@ function setupCrafting(elements) {
     if (recipe.byFire) {
       const need = document.createElement('span'); // shown while you're not beside a fire
       need.className = 'recipe-need';
-      need.textContent = 'Needs a fire';
+      need.textContent = 'At a fire';
       cost.append(need);
     }
     card.append(picture, name, about, cost);

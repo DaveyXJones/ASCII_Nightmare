@@ -58,7 +58,7 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Fish**, **Light**, **Fill**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
 | Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9`, `0`, `-`, `=` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
@@ -105,6 +105,7 @@ something you can afford.
 | **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings, and shades too. You lose it if you die. |
 | **Stone pick** | 2 wood, 3 stone | Boulders break in half the swings. You lose it if you die. |
 | **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
+| **Fishing rod** | 2 wood, 1 cloth | Face water and hold the button to fish (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
 | **Roof** | 4 wood | Build it over a campfire and rain can't put the fire out (see Weather, below). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
@@ -113,6 +114,7 @@ something you can afford.
 | **Chest** | 6 wood | Keeps whatever you put in it, even when you die. It can go inside the cottage. |
 | **Bedroll** | 2 cloth, 1 wood | After you die, you wake up on it instead of in the cottage. |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
+| **Cooked fish** | 1 fish | Only beside a campfire. Fills you up the most (45), and heals 15. |
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
 front of you. Yellow brackets mean it can go there, red means it can't (the message says why).
@@ -129,6 +131,15 @@ Changed your mind? Face the wall or door and **Break** it, or **Put out** the ca
 get the wood or stone back. Things you build stay in the world when you die.
 
 A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
+
+**Fishing.** With a fishing rod, face water (a lake, a river or the sea) and the button says
+**Fish** instead of **Drink** (unless you're thirsty: then it offers a drink first). Hold it: you
+kneel, the line goes out and a red bobber floats on the water. After a few seconds something
+bites, the bobber goes under, and a moment later you land a fish, or it gets away. Deep water
+(the darker blue) loses fewer. Keep holding to cast again; let go or walk off to reel in. Raw
+fish can't be eaten: cook it beside a campfire (**Cooked fish** on the craft panel).
+
+Fish and cooked food only show in the pack while you have some, so it fits across a phone.
 
 **The map.** Tap **Map** (under ☰, or `M`) to see the island, drawn in characters, one character
 for a few tiles. It only shows land you've seen: by day you take in about 11 tiles around you, at
@@ -317,16 +328,14 @@ run straight from the file.
 ## What's next
 
 Done lately: walls that join up (a fence running up the screen is seen from the side), turning
-in place in build mode, an outline round the player, lamps, and a map. Before that: weather (clouds, rain, storms, and roofs to keep campfires
+in place in build mode, an outline round the player, lamps, a map, and fishing. Before that: weather (clouds, rain, storms, and roofs to keep campfires
 burning), lurkers in the long grass, chests, and bedrolls; and before that, your look, flashing
 when hurt and falling when you die, the stone pick, doors, cooked berries, brutes, walls that get
 clawed down, saving, and sound.
 
 Next, the list you picked (2026-10-31), roughly in this order:
 
-1. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
-   berries to cook at the fire.
-2. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
+1. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
    the nights play, so there are questions to settle first: found or crafted, how scarce the
    bullets are, and whether the bang draws things toward you.
 

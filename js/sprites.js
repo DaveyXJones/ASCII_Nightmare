@@ -1033,6 +1033,7 @@ const ACTION_POSES = {
   Open: { pose: 'crouch', held: null, seconds: 0.3 },
   'Roll up': { pose: 'crouch', held: null, seconds: 0.4 },
   Fill: { pose: 'windup', held: null, seconds: 0.4 },
+  Fish: { pose: 'crouch', held: null, seconds: 0.3 }, // kneeling at the water, rod held out
   Eat: { pose: 'windup', held: null, seconds: 0.4 },
 };
 

@@ -2,13 +2,16 @@
 
 // Everything that goes in your pack. Each needs a counter in the pack in index.html, with the id
 // count-<item>. Things you can eat say how much `food` they give, and `heals` how much health.
-// The Eat button eats whatever fills you most.
+// The Eat button eats whatever fills you most. `hideEmpty` items only show in the pack while you
+// have some, so the pack fits across a phone.
 const ITEMS = {
   wood: { name: 'wood', glyph: '≡', color: '#d0a46a' },
   stone: { name: 'stone', glyph: '●', color: '#b4b8b0' },
   berries: { name: 'berries', glyph: '•', color: '#ff5a6e', food: 12 },
   cloth: { name: 'cloth', glyph: '▦', color: '#e6dcc4' },
-  cooked: { name: 'cooked berries', glyph: '♨', color: '#ec8a4a', food: 30, heals: 10 },
+  cooked: { name: 'cooked berries', glyph: '♨', color: '#ec8a4a', food: 30, heals: 10, hideEmpty: true },
+  fish: { name: 'fish', glyph: '∝', color: '#a8cfe6', hideEmpty: true }, // raw: cook it to eat it
+  cookedFish: { name: 'cooked fish', glyph: '∝', color: '#e8944e', food: 45, heals: 15, hideEmpty: true },
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -44,7 +47,7 @@ function newSurvivor() {
     hurtBy: null, // what last hurt you: 'hunger' or 'dark', for the words when you die
     hurtAt: -Infinity, // when something last bit you, in seconds of play: you flash red for a moment
     starving: false, // true while hunger or thirst is taking your health
-    warned: { food: false, water: false, health: false, torch: false },
+    warned: { food: false, water: false, health: false, torch: false, fish: false },
     nextSwingAt: 0,
   };
 }
@@ -226,6 +229,9 @@ function findTarget(game) {
         candidate = { x: tx, y: ty, label: 'Fill', object, fill: true };
       } else if (object && object.action) {
         candidate = { x: tx, y: ty, label: object.action, object };
+      } else if (!object && wantsToFish(survivor, ground)) {
+        // With a rod, and not thirsty, facing water fishes (see fishing.js).
+        candidate = { x: tx, y: ty, label: 'Fish', fish: true };
       } else if (!object && ground && ground.drink) {
         candidate = { x: tx, y: ty, label: 'Drink', drink: true };
       }
@@ -287,6 +293,10 @@ function useTarget(game) {
   player.act = { action: target.label, at: player.clock };
   faceToward(player, target.x + 0.5, target.y + 0.5);
 
+  if (target.fish) {
+    castLine(game, target);
+    return;
+  }
   if (target.drink || (target.object && target.object.drink)) {
     drink(game, target);
     return;

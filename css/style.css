@@ -275,9 +275,12 @@ button:focus-visible {
 .berries dt { color: #ff5a6e; }
 .cloth dt { color: #e6dcc4; }
 .cooked dt { color: #ec8a4a; }
+.fish dt { color: #a8cfe6; }
+.cookedFish dt { color: #e8944e; }
 .axe dt { color: #c9ccc4; }
 .pick dt { color: #c9ccc4; }
 .torch dt { color: #c49a62; }
+.rod dt { color: #c49a62; }
 
 /* A lit torch glows in the pack, and turns red as it burns low. */
 .torch.lit dt {
@@ -738,6 +741,8 @@ button:focus-visible {
 .cost.berries { color: #ff5a6e; }
 .cost.cloth { color: #e6dcc4; }
 .cost.cooked { color: #ec8a4a; }
+.cost.fish { color: #a8cfe6; }
+.cost.cookedFish { color: #e8944e; }
 .cost.short { color: var(--health); }
 
 /* A tool you already carry: no cost to show, just a note. */
@@ -1009,7 +1014,21 @@ button:focus-visible {
   }
 }
 
-/* Phones held sideways: smaller cards, six to a row, so every recipe fits on the screen at once. */
+/* Phones held sideways: the pack a little tighter, and tools shown by their picture alone, so it
+   fits beside the health bars with everything in it. */
+@media (max-height: 460px) {
+  .pack {
+    gap: 9px;
+    padding: 6px 10px;
+  }
+
+  .tool dd {
+    display: none;
+  }
+}
+
+/* Phones held sideways: smaller cards laid on their side (the picture on the left, the words
+   beside it), four to a row, so every recipe fits on the screen at once (up to sixteen). */
 @media (max-height: 460px) {
   .craft-panel {
     gap: 8px;
@@ -1022,40 +1041,65 @@ button:focus-visible {
   }
 
   .craft-head .button.close {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
   }
 
   .recipes {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
   }
 
   .recipe {
-    gap: 3px;
-    padding: 6px 5px;
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-areas:
+      "picture name"
+      "picture about"
+      "picture cost";
+    align-content: start;
+    align-items: start;
+    gap: 1px 6px;
+    padding: 4px 6px 4px 4px;
+    text-align: left;
   }
 
   .recipe-picture {
-    min-height: 30px;
-    font-size: 28px;
+    grid-area: picture;
+    align-self: center;
+    justify-self: center;
+    min-height: 0;
+    font-size: 26px;
+  }
+
+  canvas.recipe-picture {
+    max-width: 26px;
+    object-fit: contain;
   }
 
   .recipe-name {
+    grid-area: name;
     font-size: 12px;
-    line-height: 1.2;
-  }
-
-  .recipe-about {
-    font-size: 10.5px;
     line-height: 1.25;
   }
 
+  .recipe-about {
+    grid-area: about;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
   .recipe-cost {
+    grid-area: cost;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0 8px;
-    font-size: 13px;
+    margin-top: 2px;
+    font-size: 12px;
+  }
+
+  .recipe.owned::after {
+    grid-area: cost;
   }
 
   .recipe.owned::after,

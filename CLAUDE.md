@@ -89,9 +89,10 @@ of which they may want changed:
 - **More to craft**: a stone pick (`TOOLS.pick`, `power: { Mine: 2 }`, held as `⌐`/`¬`); a wooden
   door (`woodDoor`, see below); cooked berries (`RECIPES.cook`, 2 berries → 1 `cooked`: 30 food and
   10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
-  `bestFood`). On short screens the craft cards are small and six to a row (since the lamp), with
-  pictures capped at `RECIPE_PICTURE_ROWS_SHORT` rows, so twelve fit on a 667×375 phone; keep card
-  texts to about 32 characters (lines of about 13) so they stay within three lines.
+  `bestFood`). On short screens (since fishing) the craft cards lie on their side, four to a row:
+  picture on the left, name, `about` and cost beside it, so up to sixteen fit on a 667×375 phone.
+  Each `about` must stay within two lines of about 16 characters there (thirteen cards fill the
+  panel to 370 of 375 px). The chest panel is full too: one more item or tool adds a row to it.
 - **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
   fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
@@ -229,7 +230,7 @@ own commit, like the lists before. Notes and suggestions (Claude's, not the owne
    one cell per few tiles (192×128 tiles won't fit a phone at one each), only what you've seen (a
    saved bitmap of explored tiles, kept compact), with you, the cottage, fires, chests and the
    bedroll marked. Needs a touch control that fits the HUD on 667×375 (and a key, e.g. `M`).
-5. **Fishing.** A rod (a tool, like the axe), **Fish** when facing water with it: hold, a bobber
+5. **Fishing.** (Built; see "Fishing" below.) A rod (a tool, like the axe), **Fish** when facing water with it: hold, a bobber
    glyph on the water, a bite after a few seconds, then a fish (a new item with a pack slot).
    Cook fish at the fire (a `byFire` recipe) for more food than berries.
 6. **A pistol and a rifle.** Ask the owner before building: these change how nights play. Points
@@ -305,6 +306,28 @@ Item 4, in js/map.js. Choices that were Claude's:
 - **Controls**: a **Map** button under ☰ (`.corner-buttons`) and `M`; Esc or ✕ or a tap outside
   closes it.
 
+## Fishing (built 2026-10-31)
+
+Item 5, in js/fishing.js. Choices that were Claude's:
+
+- **The rod** (`TOOLS.rod`, 2 wood and 1 cloth) has `power: { Fish: 1 }` only so `heldGlyph`
+  draws it (`╲`/`╱`) in the `crouch` pose (`ACTION_POSES.Fish`: kneeling at the water).
+- **Fish or drink**: `findTarget` offers `{ label: 'Fish', fish: true }` on ground with `fish`
+  (`TILES`: the share of bites landed, 0.85 deep water, 0.6 shallow) when you have the rod and
+  water ≥ `FISH_THIRST` (75); otherwise Drink, as before.
+- **The line** (`state.fishing`): `castLine` (from `useTarget`) puts the bobber up to
+  `FISH_CAST_TILES` past the edge and picks a bite time in `FISH_BITE_SECONDS` (3 to 8).
+  `updateFishing` reels in as soon as `player.working` isn't Fish or you move (a tap shorter than
+  a second gets a hint to hold), dips the bobber at the bite (`plop`), and after
+  `FISH_HOOK_SECONDS` lands a fish or loses it; the next swing of a held button casts again.
+  `drawBobber` goes before the standing pass, `drawFishingLine` after it, from `view.rodTip`
+  (where `drawPlayer` drew the rod this frame). Sounds `cast`, `plop` and `catch` were levelled by
+  rendering them offline beside `drink`.
+- **Fish** can't be eaten raw (no `food`); `RECIPES.cookFish` (1 fish, by a fire) gives
+  `cookedFish` (45 food, 15 health), the best food. `fish`, `cookedFish` and `cooked` have
+  `hideEmpty`, so the pack fits across a 667-wide phone with everything in it (tools show only
+  their glyph on short screens).
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -315,7 +338,8 @@ Item 4, in js/map.js. Choices that were Claude's:
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  weather → render → input → sound → survival → crafting → chest → map → creatures → save → game`. A file
+  weather → render → input → sound → survival → crafting → chest → fishing → map → creatures → save →
+  game`. A file
   may use globals from files before it at load time, and from any file inside functions that run
   later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
@@ -340,7 +364,8 @@ Item 4, in js/map.js. Choices that were Claude's:
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
 | `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
-| `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
+| `js/fishing.js` | `wantsToFish`, `castLine`, `updateFishing` (bite, hook, catch or lose). The bobber and line are drawn in render.js (`drawBobber`, `drawFishingLine`). |
+| `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat, `hideEmpty` for pack slots shown only while you have some), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
 | `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `drawMap`, `readCell`). |
@@ -377,7 +402,8 @@ Item 4, in js/map.js. Choices that were Claude's:
   with `gives` adds items to the pack and keeps the panel open (`refreshCraft`). `byFire` recipes
   need `survivor.warm` (beside a campfire), checked in `canMake`. A `builds` recipe with `over` (the
   roof) must be built onto one of those objects and replaces it, instead of going on clear ground.
-  Number keys: `1`–`9`, then `0`, `-` and `=` for the tenth to twelfth (`RECIPE_KEYS`, input.js).
+  Number keys: `1`–`9`, then `0`, `-` and `=` for the tenth to twelfth (`RECIPE_KEYS`, input.js);
+  the thirteenth (cooked fish) has none, and is clicked or reached with Tab.
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
 - The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not

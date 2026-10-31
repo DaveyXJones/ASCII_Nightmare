@@ -13,12 +13,14 @@
 //   drink    true if the player can drink from it
 //   tall     the glyphs stand up and are drawn over the player's feet (grass you wade through)
 //   raised   drawn as a raised block with a cliff face (mountains), see drawMountain() in render.js
+//   fish     for water with fish in it: the share of bites that end in a catch (see fishing.js)
 //   map      [glyph, color, background] for the map (js/map.js); if left out, the first of each
 //   step     what a footstep kicks up: a style in BURSTS (survival.js), like 'dust' or 'grass'
 
 const TILES = {
   deepWater: {
     name: 'Deep water',
+    fish: 0.85, // a fish on the line is landed this often (see fishing.js)
     map: ['≈', '#2f5f9e', '#0a1930'],
     glyphs: ['≈', '~', '≈', '∼'],
     colors: ['#3a6fb0', '#2f5f9e'],
@@ -30,6 +32,7 @@ const TILES = {
   },
   water: {
     name: 'Shallow water',
+    fish: 0.6,
     map: ['~', '#7ab4e8', '#163a5e'],
     glyphs: ['~', '∼', '~', '≈'],
     colors: ['#7ab4e8', '#62a2dc'],

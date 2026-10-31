@@ -315,7 +315,9 @@ function drawFrame(game) {
   ctx.drawImage(groundCache.canvas, screenX(groundCache.left), screenY(groundCache.top));
 
   drawShadows(game, range, inside);
+  if (game.fishing) drawBobber(game);
   drawStanding(game, range, inside);
+  if (game.fishing) drawFishingLine(game);
   drawRain(world.house, inside);
 
   if (inside) dimOutside(world.house);
@@ -598,6 +600,7 @@ function drawStanding(game, range, inside) {
   const bottom = Math.min(world.height - 1, range.bottom + SPRITE_REACH_ROWS);
   let playerDrawn = false;
   view.playerBox = null;
+  view.rodTip = null;
   view.playerCovered = false;
   view.shades.length = 0;
   resetCover(left, top - SPRITE_REACH_ROWS, right, bottom);
@@ -853,6 +856,11 @@ function drawPlayer(game, alpha) {
   const left = Math.round(screenX(player.x) - image.width / 2);
   const top = Math.round(screenY(player.y) + view.th * 0.25) - image.height - look.lift;
   view.ctx.globalAlpha = alpha;
+  // The top end of a rod in hand, where the fishing line starts (╱ leans right, ╲ left).
+  if (look.held && alpha === 1) {
+    const lean = look.held === '╲' ? 0 : 1;
+    view.rodTip = { x: left + (look.spot[0] + lean) * view.cw, y: top + look.spot[1] * view.th };
+  }
   if (outline.on) {
     const { canvas, padX, padY } = outlinedFigure(game, look, image);
     view.ctx.drawImage(canvas, left - padX, top - padY);
@@ -1372,6 +1380,37 @@ function drawParticles(fx) {
     drawGlyph(ctx, p.glyph, p.color, x, y);
   }
   ctx.globalAlpha = 1;
+}
+
+// The bobber on the water while you fish: it bobs, and goes under when something bites.
+function drawBobber(game) {
+  const { fishing } = game;
+  const under = fishing.hookedAt !== null;
+  const bob = !reducedMotion.matches && game.flameFrame % 4 < 2;
+  const glyph = under ? (bob ? '°' : 'o') : bob ? '•' : '◦';
+  const x = Math.round(screenX(fishing.x) - view.cw / 2);
+  const y = screenY(fishing.y - 0.5) + (under ? Math.round(view.th * 0.25) : 0);
+  drawGlyph(view.ctx, glyph, under ? LINE_COLOR : BOBBER_COLOR, x, y, true);
+}
+
+// The line from the rod's tip (where drawPlayer drew it this frame) to the bobber, drawn as a row
+// of dots sagging a little.
+function drawFishingLine(game) {
+  const { fishing } = game;
+  const tip = view.rodTip;
+  if (!tip) return;
+  const endX = screenX(fishing.x);
+  const endY = screenY(fishing.y - 0.3);
+  const length = Math.hypot((endX - tip.x) / view.tw, (endY - tip.y) / view.th);
+  const dots = Math.max(1, Math.floor(length / FISH_LINE_STEP));
+  view.ctx.globalAlpha = 0.75;
+  for (let n = 1; n < dots; n++) {
+    const t = n / dots;
+    const x = tip.x + (endX - tip.x) * t;
+    const y = tip.y + (endY - tip.y) * t + Math.sin(t * Math.PI) * view.th * 0.4;
+    drawGlyph(view.ctx, '·', LINE_COLOR, Math.round(x - view.cw / 2), Math.round(y - view.th / 2));
+  }
+  view.ctx.globalAlpha = 1;
 }
 
 // Words that float up from where something happened, like "+3 wood".

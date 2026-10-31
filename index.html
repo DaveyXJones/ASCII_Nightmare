@@ -35,10 +35,13 @@
             <div class="item stone"><dt aria-label="Stone">●</dt><dd id="count-stone">0</dd></div>
             <div class="item berries"><dt aria-label="Berries">•</dt><dd id="count-berries">0</dd></div>
             <div class="item cloth"><dt aria-label="Cloth">▦</dt><dd id="count-cloth">0</dd></div>
-            <div class="item cooked"><dt aria-label="Cooked berries">♨</dt><dd id="count-cooked">0</dd></div>
+            <div class="item cooked" hidden><dt aria-label="Cooked berries">♨</dt><dd id="count-cooked">0</dd></div>
+            <div class="item fish" hidden><dt aria-label="Fish">∝</dt><dd id="count-fish">0</dd></div>
+            <div class="item cookedFish" hidden><dt aria-label="Cooked fish">∝</dt><dd id="count-cookedFish">0</dd></div>
             <div class="item tool axe" id="tool-axe" hidden><dt aria-hidden="true">┮</dt><dd>axe</dd></div>
             <div class="item tool pick" id="tool-pick" hidden><dt aria-hidden="true">ϒ</dt><dd>pick</dd></div>
             <div class="item tool torch" id="tool-torch" hidden><dt aria-hidden="true">¡</dt><dd>torch</dd></div>
+            <div class="item tool rod" id="tool-rod" hidden><dt aria-hidden="true">⌠</dt><dd>rod</dd></div>
           </dl>
           <div class="corner-buttons">
             <button type="button" id="menu-button" class="menu-button" aria-label="Menu">☰</button>
@@ -191,6 +194,7 @@
     <script src="js/survival.js"></script>
     <script src="js/crafting.js"></script>
     <script src="js/chest.js"></script>
+    <script src="js/fishing.js"></script>
     <script src="js/map.js"></script>
     <script src="js/creatures.js"></script>
     <script src="js/save.js"></script>

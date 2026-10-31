@@ -101,6 +101,7 @@ const state = {
   building: null, // in build mode: the key in RECIPES being built, otherwise null
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
   chest: null, // while a chest is open, the tile it stands on (see chest.js)
+  fishing: null, // while your line is out, where the bobber is and when a fish bites (fishing.js)
   tapped: false, // the action button went down since the last update (so even the quickest tap counts)
   time: 0, // seconds of play, paused while a menu is open
   dayClock: 0, // seconds since this world's first morning: the time of day and the moon come from it
@@ -166,6 +167,7 @@ function startLife(x, y, facing) {
   state.weather = newWeather();
   state.weather.raining = state.sky.weather.rain > 0.15; // waking up in the rain isn't news
   stopBuilding(state);
+  state.fishing = null;
   state.dying = null;
   elements.game.classList.remove('collapsing');
   state.dead = false;
@@ -212,6 +214,7 @@ function update(dt) {
   updateWeather(state, dt);
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
+  updateFishing(state);
   if (survivor.vitals.health <= 0) collapse();
   if (state.time - state.savedAt >= SAVE_EVERY) saveGame(state);
 }
@@ -542,6 +545,8 @@ function updateHud() {
     if (hud[item] === pack[item]) continue;
     hud[item] = pack[item];
     elements.counts[item].textContent = String(pack[item]);
+    // Things you only have now and then only take up room in the pack while you have some.
+    if (ITEMS[item].hideEmpty) elements.counts[item].parentElement.hidden = pack[item] === 0;
   }
   for (const tool of Object.keys(TOOLS)) {
     const has = Boolean(state.survivor.tools[tool]);
