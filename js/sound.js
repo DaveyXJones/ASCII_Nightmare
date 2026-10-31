@@ -199,6 +199,7 @@ function playSound(name, { volume = 1, pan = 0 } = {}) {
     const { seconds, filter: type, hz, q = 1, to } = sound.noise;
     const source = ctx.createBufferSource();
     source.buffer = audio.noise;
+    source.loop = true; // so a long sound that starts late in the noise doesn't run off its end
     const filter = ctx.createBiquadFilter();
     filter.type = type;
     filter.frequency.setValueAtTime(hz * pitch, start);

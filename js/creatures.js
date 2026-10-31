@@ -73,7 +73,7 @@ const RUN_SECONDS = 2; // seconds it runs after a light catches it
 const RUN_SPEED = 4.5; // tiles per second as it backs off or runs
 const PROWL_SPEED = 1.4; // tiles per second as it paces round the edge of a light
 const KEEP_APART = 0.8; // how close, in tiles, two of them get before they shuffle apart
-const HIT_REACH = 1.6; // how far, in tiles, you can reach to hit one: far enough to hit through a wall
+const HIT_REACH = 1.9; // how far, in tiles, you can reach to hit one: far enough to hit through a wall
 const CLAW_SECONDS = 1; // time between scratches at a wall
 const CLAW_REACH = 0.6; // how far ahead of its feet, in tiles, it reaches to claw at a wall
 const FIELD_RADIUS = 20; // how far, in tiles, the map of steps toward you reaches
@@ -229,7 +229,12 @@ function moveCreature(game, creature, dt, fears, night) {
     if (game.world.objects[wall.index] !== wall.key || steps >= 0) {
       creature.state = 'creep';
       creature.clawing = null;
-    } else if (creature.timer <= 0) {
+      return;
+    }
+    // It presses right up against the wall (close enough for you to hit it from the other side).
+    const way = towards(creature, wall.x + 0.5, wall.y + 0.5);
+    stepCreature(game, creature, way.x * kind.speed * dt, way.y * kind.speed * dt);
+    if (creature.timer <= 0) {
       scratch(game, creature, wall);
       creature.timer = CLAW_SECONDS;
     }
@@ -242,8 +247,12 @@ function moveCreature(game, creature, dt, fears, night) {
       return;
     }
     const way = wayToPlayer(game, creature, steps);
-    // No way round to you (you've walled yourself in) and a wall right in front: it claws at it.
-    const wall = steps < 0 && distance < FIELD_RADIUS ? wallAhead(game, creature, way) : null;
+    // No way round to you because you've walled yourself in, and a wall right in front: it claws at
+    // it. (Indoors there's no way to you either, but that's the cottage, which nothing gets into, so
+    // there's no point clawing down fences on the way.)
+    const indoors = insideHouse(game.world, Math.floor(player.x), Math.floor(player.y));
+    const walledIn = steps < 0 && distance < FIELD_RADIUS && !indoors;
+    const wall = walledIn ? wallAhead(game, creature, way) : null;
     if (wall) {
       creature.state = 'claw';
       creature.clawing = wall;

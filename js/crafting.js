@@ -126,8 +126,8 @@ function craft(game, key) {
   const recipe = RECIPES[key];
   const survivor = game.survivor;
   if (!recipe || !canMake(survivor, recipe)) return;
-  closeCraft();
   if (recipe.builds) {
+    closeCraft();
     game.building = key;
     showMessage(game, BUILD_HINT);
     return;
@@ -146,6 +146,7 @@ function craft(game, key) {
     refreshCraft();
     return;
   }
+  closeCraft();
   survivor.tools[recipe.tool] = true;
   showMessage(game, recipe.done);
   playSound('craft');

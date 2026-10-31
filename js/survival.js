@@ -186,6 +186,9 @@ function findTarget(game) {
     }
   }
 
+  // A creature in reach comes before anything else, even a wall right in front of you (so you can
+  // hit one clawing at the other side of it, instead of breaking the wall).
+  let bestCreatureScore = Infinity;
   for (const creature of game.creatures) {
     if (creature.state === 'fade') continue;
     const toX = creature.x - player.x;
@@ -193,15 +196,15 @@ function findTarget(game) {
     const distance = Math.hypot(toX, toY);
     const ahead = (toX * facing.x + toY * facing.y) / (distance || 1);
     if (distance > HIT_REACH || ahead < -0.2) continue;
-    const score = distance - ahead * 0.6 - 1;
-    if (score < bestScore) {
+    const score = distance - ahead * 0.6;
+    if (score < bestCreatureScore) {
       // Brackets round its face: as wide as its picture, on the row its eyes are on.
       const kind = CREATURES[creature.kind];
       const sprite = SPRITES[kind.frames[0]];
       const w = sprite.width / 2;
       const y = creature.y + 0.25 - sprite.cells.length + kind.eyes.cells[0][1];
       best = { x: creature.x - w / 2, y, w, label: 'Hit', creature };
-      bestScore = score;
+      bestCreatureScore = score;
     }
   }
   return best;

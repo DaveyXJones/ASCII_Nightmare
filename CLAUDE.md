@@ -94,8 +94,11 @@ of which they may want changed:
 - **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
   fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
-  and `scarred` in OBJECTS); marks live in `world.clawed` and clear by day. `HIT_REACH` became 1.6
-  so you can hit back through a wall.
+  and `scarred` in OBJECTS); marks live in `world.clawed` and clear by day. A clawing creature
+  presses right up to the wall, `HIT_REACH` is 1.9 (a creature against a wall to your side is about
+  1.75 away), and a creature in reach always beats any object as the target, so you hit it through
+  the wall instead of breaking your own. Nothing claws while you're in the cottage (the map of
+  steps is one tile there, so everything looks cut off).
 - **Saving** (js/save.js): `saveGame` keeps the seed, the clock, the player, the survivor, and only
   the objects that differ from `world.original` (the island as generated), plus `damage`,
   `clawed` and `regrowing`, in localStorage under `SAVE_KEY`. It runs every `SAVE_EVERY` seconds
@@ -233,7 +236,7 @@ of which they may want changed:
   any light's reach (`fear.torch` for the torch, `fear.fire` for the rest; 0 = not afraid); at
   that edge it `prowl`s sideways. If a light appears on top of it, it runs.
 - **Hitting**: `findTarget` (survival.js) puts any creature within `HIT_REACH` ahead of the player
-  before other targets, as `{ x, y, w, label: 'Hit', creature }` (brackets round its face, sized
+  before every other target, as `{ x, y, w, label: 'Hit', creature }` (brackets round its face, sized
   from its sprite and eye row); `useTarget` hands it to `hitCreature`, which uses
   `toolPower(survivor, 'Hit')` and the kind's `knock` and `flinch`.
 - `survivor.hurtBy` (`'dark'` from a bite, `'hunger'` from starving) picks the death screen's words.

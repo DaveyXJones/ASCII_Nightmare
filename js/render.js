@@ -816,6 +816,8 @@ function blinking(clock) {
 // shows as one steady flash instead of flickering.
 function hurtFlash(game) {
   const { survivor } = game;
+  // The game's clock stops while collapsing, dead or behind a menu, so a flash would never end.
+  if (game.dying || game.dead || game.paused) return false;
   const since = game.time - survivor.hurtAt;
   if (since < HURT_FLASH_SECONDS) {
     return reducedMotion.matches || Math.floor(since / HURT_BLINK_SECONDS) % 2 === 0;
