@@ -53,6 +53,8 @@ Start a tiny local server in this folder and open http://localhost:8000:
 python3 -m http.server
 ```
 
+On Windows, type `python` instead of `python3`.
+
 Opening `index.html` directly by double-clicking works too, but browsers won't load the bundled
 font from a file, so some characters may look a little different.
 

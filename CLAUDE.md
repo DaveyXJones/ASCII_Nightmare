@@ -39,6 +39,25 @@ minutes, so `main` must always be playable.
   disconnect"), so the owner does it: https://github.com/DaveyXJones/ASCII_Nightmare/branches,
   trash-can icon at the right end of each branch's row, or **Delete branch** on a merged PR's page.
 
+## Working locally (from 2026-10-31)
+
+The owner now also works on the game from a clone on their Windows PC
+(`Desktop\SideProjects\ASCII_Nightmare`, inside OneDrive), with Claude in the desktop app, not
+only through cloud sessions. What's different there:
+
+- **Pushing goes live.** A local session pushes as the owner, so it can push straight to `main`,
+  and that updates the live game. Check the change in the browser first, raise `?v=N` as above,
+  and ask the owner before every push.
+- **Running it.** On that PC `python3` is a Microsoft Store placeholder; use
+  `python -m http.server 8000`. A `.claude/launch.json` (config `game`) starts it for the desktop
+  app's browser pane; it's kept out of git through `.git/info/exclude`.
+- **Keeping cloud and local in step.** Cloud sessions still push to their own branches, merged on
+  GitHub. Pull (`git pull`) before starting local work, and push local work before starting a
+  cloud session, so neither side builds on an old copy.
+- **No `gh` on that PC.** Pushes sign in through Git Credential Manager (a browser window the first
+  time). To check a deploy, open https://github.com/DaveyXJones/ASCII_Nightmare/actions or the live
+  game in the browser pane.
+
 ## Night and the torch (built 2026-10-29)
 
 Crafting (PR #2), the redrawn, animated player (PR #3) and night and the torch (PR #5) are merged
@@ -698,7 +717,7 @@ for the owner) and this file.
 There are no automated tests. Run it and look:
 
 ```sh
-python3 -m http.server 8000   # then open http://localhost:8000
+python3 -m http.server 8000   # then open http://localhost:8000 (`python` on the owner's Windows PC)
 ```
 
 To check it the way GitHub Pages serves it, run the server from the folder *above* the repo and
