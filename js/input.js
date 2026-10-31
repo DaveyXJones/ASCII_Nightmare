@@ -37,7 +37,8 @@ const input = {
   actionKey: false,
   actionButton: false,
   // One-off presses for the game to handle: 'action' (the moment the action button goes down),
-  // 'eat', 'craft', 'menu', 'map', 'back' (Esc), and 'recipe:0', 'recipe:1'… for the number keys.
+  // 'eat', 'craft', 'menu', 'map', 'back' (Esc), 'recipe:0', 'recipe:1'… for the number keys, and
+  // 'side:-1' or 'side:1' for a left or right key.
   presses: [],
 };
 
@@ -76,8 +77,12 @@ function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButt
     // Leave browser shortcuts like Ctrl+W alone.
     if (event.ctrlKey || event.metaKey || event.altKey) return;
     const code = event.code;
-    if (KEY_MOVES[code]) input.keys.add(code);
-    else if (ACTION_KEYS.has(code)) {
+    if (KEY_MOVES[code]) {
+      input.keys.add(code);
+      // Left and right also switch tabs in the craft panel ('side:-1', 'side:1'); the game ignores
+      // them otherwise.
+      if (!event.repeat && KEY_MOVES[code][1] === 0) input.presses.push(`side:${KEY_MOVES[code][0]}`);
+    } else if (ACTION_KEYS.has(code)) {
       input.actionKey = true;
       if (!event.repeat) input.presses.push('action');
     } else if (EAT_KEYS.has(code)) {

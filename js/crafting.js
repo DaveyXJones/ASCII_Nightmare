@@ -1,6 +1,7 @@
 // Crafting: turning wood and stone into tools and things to build.
 //
-// The Craft button (or C) opens the craft panel. A tool goes straight into your pack. Something to
+// The Craft button (or C) opens the craft panel, with its recipes on tabs (Tools, Build and so on;
+// the arrow keys switch tabs on a keyboard). A tool goes straight into your pack. Something to
 // build (a campfire, a wall) starts build mode instead: a see-through copy of it shows on the tile in
 // front of you, the action button says Build, and the Craft button says Done.
 
@@ -58,8 +59,13 @@ const TOOLS = {
   },
 };
 
+// The tabs along the top of the craft panel, in order: the key each recipe's `tab` names, and the
+// word on the tab.
+const CRAFT_TABS = { tools: 'Tools', build: 'Build', garden: 'Garden', cook: 'Cook' };
+
 // Everything you can make, in the order the craft panel shows them.
 //
+//   tab      which tab of the craft panel it's on: a key in CRAFT_TABS
 //   name     what the panel calls it
 //   about    one line on what it's for: two lines of about 16 characters, to fit a phone
 //   cost     what it takes from your pack, e.g. { wood: 3, stone: 2 }
@@ -74,6 +80,7 @@ const TOOLS = {
 //   done     message shown once it's made
 const RECIPES = {
   axe: {
+    tab: 'tools',
     name: 'Stone axe',
     about: 'Halves swings on trees and shades.',
     cost: { wood: 3, stone: 2 },
@@ -81,6 +88,7 @@ const RECIPES = {
     done: 'You lash a sharp stone to a stick. Trees fall twice as fast now.',
   },
   pick: {
+    tab: 'tools',
     name: 'Stone pick',
     about: 'Halves swings on boulders.',
     cost: { wood: 2, stone: 3 },
@@ -88,6 +96,7 @@ const RECIPES = {
     done: 'You bind a pointed stone to a handle. Boulders break twice as fast now.',
   },
   torch: {
+    tab: 'tools',
     name: 'Torch',
     about: 'Light it at a fire, to see.',
     cost: { wood: 2, cloth: 1 },
@@ -95,6 +104,7 @@ const RECIPES = {
     done: 'You wrap a rag round a stick. Light it at a campfire.',
   },
   rod: {
+    tab: 'tools',
     name: 'Fishing rod',
     about: 'Face water and hold to fish.',
     cost: { wood: 2, cloth: 1 },
@@ -102,6 +112,7 @@ const RECIPES = {
     done: 'You tie a line to a long stick. Face water and hold the button to fish.',
   },
   campfire: {
+    tab: 'build',
     name: 'Campfire',
     about: 'Rest by it to heal faster.',
     cost: { wood: 4, stone: 3 },
@@ -109,6 +120,7 @@ const RECIPES = {
     done: 'The fire catches. Rest beside it to heal faster.',
   },
   roof: {
+    tab: 'build',
     name: 'Roof',
     about: 'Keeps rain off a campfire.',
     cost: { wood: 4 },
@@ -117,6 +129,7 @@ const RECIPES = {
     done: 'You raise a little roof over the fire. Rain won\'t put it out now.',
   },
   wall: {
+    tab: 'build',
     name: 'Wooden wall',
     about: 'Line them up into a fence.',
     cost: { wood: 2 },
@@ -124,6 +137,7 @@ const RECIPES = {
     again: true,
   },
   door: {
+    tab: 'build',
     name: 'Wooden door',
     about: 'In a wall. Opens only for you.',
     cost: { wood: 3 },
@@ -131,6 +145,7 @@ const RECIPES = {
     done: 'You hang the door. It swings open as you come near.',
   },
   lamp: {
+    tab: 'build',
     name: 'Lamp',
     about: 'Lights the dark. Fill with cloth.',
     cost: { wood: 2, cloth: 2 },
@@ -138,6 +153,7 @@ const RECIPES = {
     done: 'You hang the lamp on its post. It burns through half a night.',
   },
   chest: {
+    tab: 'build',
     name: 'Chest',
     about: 'Keeps things when you die.',
     cost: { wood: 6 },
@@ -146,6 +162,7 @@ const RECIPES = {
     done: 'You knock together a chest. Open it to keep things safe.',
   },
   bedroll: {
+    tab: 'build',
     name: 'Bedroll',
     about: 'After you die, you wake on it.',
     cost: { cloth: 2, wood: 1 },
@@ -153,6 +170,7 @@ const RECIPES = {
     done: 'You spread out the bedroll. If you die, you\'ll wake up here.',
   },
   cook: {
+    tab: 'cook',
     name: 'Cooked berries',
     about: 'Fills more, and heals a little.',
     cost: { berries: 2 },
@@ -160,6 +178,7 @@ const RECIPES = {
     byFire: true,
   },
   cookFish: {
+    tab: 'cook',
     name: 'Cooked fish',
     about: 'Fills you up, and heals.',
     cost: { fish: 1 },
@@ -331,9 +350,29 @@ function stopBuilding(game) {
 
 // ---- The craft panel ----
 
-// One card per recipe, made once at startup. Each card is a big button: tap it to make that thing.
+let craftTab = 'tools'; // the tab showing in the craft panel; it opens on the one you used last
+
+// The recipes on a tab, in order.
+function tabRecipes(tab = craftTab) {
+  return Object.keys(RECIPES).filter((key) => RECIPES[key].tab === tab);
+}
+
+// One tab button per tab that has recipes, and one card per recipe, made once at startup. Each card
+// is a big button: tap it to make that thing.
 function setupCrafting(elements) {
-  Object.entries(RECIPES).forEach(([key, recipe], n) => {
+  for (const [tab, word] of Object.entries(CRAFT_TABS)) {
+    if (tabRecipes(tab).length === 0) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button craft-tab';
+    button.dataset.tab = tab;
+    button.setAttribute('role', 'tab');
+    button.textContent = word;
+    button.addEventListener('click', () => showCraftTab(tab));
+    elements.craftTabs.append(button);
+  }
+
+  Object.entries(RECIPES).forEach(([key, recipe]) => {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'recipe';
@@ -357,7 +396,7 @@ function setupCrafting(elements) {
     name.className = 'recipe-name';
     name.textContent = recipe.name;
     const shortcut = document.createElement('kbd'); // the number key that makes it, on a keyboard
-    shortcut.textContent = '1234567890-='[n] || ''; // the tenth is 0, then - and =
+    shortcut.textContent = '1234567890-='[tabRecipes(recipe.tab).indexOf(key)] || ''; // 0, - and = after 9
     name.append(' ', shortcut);
 
     const about = document.createElement('span');
@@ -400,12 +439,29 @@ function openCraft() {
       drawRecipePicture(card.querySelector('canvas'), SPRITES[OBJECTS[recipe.builds].sprite]);
     }
   }
+  showCraftTab(craftTab);
   state.paused = true;
   releaseAll();
   elements.craft.hidden = false;
 }
 
-// Shows which cards you can make right now, and what you're short of.
+// Shows one tab's cards and hides the rest.
+function showCraftTab(tab) {
+  craftTab = tab;
+  for (const button of elements.craftTabs.children) {
+    button.setAttribute('aria-selected', String(button.dataset.tab === tab));
+  }
+  for (const card of elements.recipes.children) card.hidden = RECIPES[card.dataset.recipe].tab !== tab;
+}
+
+// The next tab along (`step` 1) or the one before (-1), going round: the arrow keys, on a keyboard.
+function turnCraftTab(step) {
+  const tabs = [...elements.craftTabs.children].map((button) => button.dataset.tab);
+  showCraftTab(tabs[(tabs.indexOf(craftTab) + step + tabs.length) % tabs.length]);
+}
+
+// Shows which cards you can make right now, and what you're short of. A tab with something on it
+// you could make has a dot.
 function refreshCraft() {
   const survivor = state.survivor;
   for (const card of elements.recipes.children) {
@@ -416,6 +472,10 @@ function refreshCraft() {
     for (const part of card.querySelectorAll('.cost')) {
       part.classList.toggle('short', survivor.pack[part.dataset.item] < recipe.cost[part.dataset.item]);
     }
+  }
+  for (const button of elements.craftTabs.children) {
+    const ready = tabRecipes(button.dataset.tab).some((key) => canMake(survivor, RECIPES[key]));
+    button.classList.toggle('ready', ready);
   }
 }
 

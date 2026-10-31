@@ -687,6 +687,33 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+}
+
+/* Tools, Build, Garden, Cook: the tab showing is lit, and a dot marks a tab with something on it you
+   could make right now. */
+.craft-tabs {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  gap: 6px;
+}
+
+.craft-tab {
+  min-height: 40px;
+  padding: 6px 14px;
+  color: var(--fog);
+}
+
+.craft-tab[aria-selected="true"] {
+  border-color: var(--lantern);
+  color: var(--lantern);
+}
+
+.craft-tab.ready::after {
+  content: "•";
+  margin-left: 5px;
+  color: var(--lantern);
 }
 
 .button.close {
@@ -1110,6 +1137,12 @@ button:focus-visible {
   .craft-head .button.close {
     width: 34px;
     height: 34px;
+  }
+
+  .craft-tab {
+    min-height: 34px;
+    padding: 4px 12px;
+    font-size: 13px;
   }
 
   .recipes {

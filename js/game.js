@@ -78,6 +78,7 @@ const elements = {
   deathNewWorldButton: document.getElementById('death-new-world'),
   craft: document.getElementById('craft'),
   recipes: document.getElementById('recipes'),
+  craftTabs: document.getElementById('craft-tabs'),
   craftClose: document.getElementById('craft-close'),
   lookButton: document.getElementById('look-button'),
   look: document.getElementById('look'),
@@ -695,7 +696,9 @@ function frame(now) {
       if (!elements.map.hidden) closeMap();
       else openMap();
     } else if (press.startsWith('recipe:') && crafting) {
-      craft(state, Object.keys(RECIPES)[Number(press.slice(7))]);
+      craft(state, tabRecipes()[Number(press.slice(7))]);
+    } else if (press.startsWith('side:') && crafting) {
+      turnCraftTab(Number(press.slice(5)));
     } else if (press === 'action' && playing && state.building) {
       build(state);
     } else if (press === 'action' && playing) {
