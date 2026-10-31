@@ -193,9 +193,53 @@ design:
   under the finger, so the panel ignores clicks until a `pointerdown` lands on it (`chestArmed`).
 - **Bedroll** (2 cloth, 1 wood): not solid, `bed: true`, action **Roll up** (gives the cloth back).
   Building one sets `world.bed`; `wakeUp` puts you on `bedSpot(world)`: that tile if it still
-  holds a bed, else any other bed on the map, else the cottage. Nothing can be built over a bed. `world.bed` is saved.
+  holds a bed, else any other bed on the map, else the cottage. Nothing can be built over a bed.
+  `world.bed` is saved.
 - **Quick taps**: a press of the action button sets `state.tapped`, which counts as held for one
   update, so a tap shorter than a frame isn't lost (it was, before; Playwright's taps showed it).
+
+## Next: the owner's list (noted 2026-10-31)
+
+After merging PR #8 the owner said: "i want the outline for the player i think, i also like the
+fishing, map and lamps idea. Im also wondering about a pistol and a rifle, and i also notice that
+when im trying to build walls there is no way to turn them and place them on the right or left
+side, is that possible?" README's "What's next" lists these in this order; build them each as its
+own commit, like the lists before. Notes and suggestions (Claude's, not the owner's):
+
+1. **Walls.** Two problems, both real (checked in a screenshot): a line of `woodWall` running up
+   the screen draws as a stack of `▲▲` spikes, and since walking turns you (`turnToward`), you
+   can't walk along a line building beside you. Suggested: (a) walls pick a picture from their
+   neighbours, like the cottage's `║`/`═` in `drawGroundTile`: a side-on fence (posts and rails)
+   when the walls join above or below, the front-on stakes when they join left or right, and
+   corners; doors the same, so a door in an up-and-down fence looks side-on. Keep it a field on
+   the object (e.g. sprites for each join) rather than special-casing `woodWall` in render.js.
+   (b) In build mode, walking keeps your facing (you strafe), and a quick flick of the stick
+   (pushed and let go within a moment, without walking far) turns you in place. Then: face right,
+   walk up, Build, walk up, Build. Check it one-thumbed on a phone size in Playwright.
+2. **The outline.** The owner said yes ("i think"), so build it with an **Outline on/off** in the
+   menu (on by default, kept in localStorage like Sound) so they can compare. A thin dark edge
+   around the player's sprite only: e.g. a cached silhouette of each picture (a tint-like key in
+   `spriteImage`) drawn a device pixel or two out in each direction behind it. Update the "Draw
+   only characters" hard rule to name the outline as an exception.
+3. **Lamps.** A lantern on a post (wood and cloth, say): a `light` smaller than a campfire's, no
+   `warmth`, not put out by rain (it's behind glass), feared like firelight. It burns for a few
+   minutes of night and needs refilling (an action like **Fill**, costing cloth); the fuel left
+   per lamp needs a world Map that's saved.
+4. **The map.** A panel like the craft panel (pauses the game), the island drawn in characters at
+   one cell per few tiles (192×128 tiles won't fit a phone at one each), only what you've seen (a
+   saved bitmap of explored tiles, kept compact), with you, the cottage, fires, chests and the
+   bedroll marked. Needs a touch control that fits the HUD on 667×375 (and a key, e.g. `M`).
+5. **Fishing.** A rod (a tool, like the axe), **Fish** when facing water with it: hold, a bobber
+   glyph on the water, a bite after a few seconds, then a fish (a new item with a pack slot).
+   Cook fish at the fire (a `byFire` recipe) for more food than berries.
+6. **A pistol and a rifle.** Ask the owner before building: these change how nights play. Points
+   to settle: found (a wreck on the beach? a crate?) or crafted (the game is stone tools so far),
+   how scarce bullets are, ranges (pistol short, rifle long and slow to reload), whether the bang
+   draws creatures toward you (a good horror trade-off). On a phone the action button would say
+   **Shoot** with a creature in line ahead; the shot is drawn in characters with a flash in the
+   night layer.
+
+Multiplayer still waits on the owner choosing a server host.
 
 ## Hard rules
 
@@ -207,8 +251,9 @@ design:
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  weather → render → input → sound → survival → crafting → chest → creatures → save → game`. A file may use globals from files
-  before it at load time, and from any file inside functions that run later.
+  weather → render → input → sound → survival → crafting → chest → creatures → save → game`. A file
+  may use globals from files before it at load time, and from any file inside functions that run
+  later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
   Keyboard controls are the desktop equivalent, not the primary design.

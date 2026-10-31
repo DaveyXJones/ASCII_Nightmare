@@ -295,16 +295,25 @@ Done lately: weather (clouds, rain, storms, and roofs to keep campfires burning)
 long grass, chests, and bedrolls. Before that: your look, flashing when hurt and falling when you
 die, the stone pick, doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
 
-Roughly in order:
+Next, the list you picked (2026-10-31), roughly in this order:
 
-1. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
-   rule that the map is drawn only in characters, so it's waiting for a yes or no.
-2. **A map.** The island is big. A map of where you've been, drawn in characters like everything
+1. **Walls that turn, and building to the side.** A wall in a line running up the screen should
+   look like a fence seen from the side, not a stack of spikes; walls will pick their look from
+   the walls next to them, so there's nothing to turn by hand. And in build mode you'll be able
+   to turn to face a side without walking, so you can walk along a line and build beside you.
+2. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
+   rule that the map is drawn only in characters, so it'll come with an on/off switch in the menu
+   to compare.
+3. **Lamps.** A lantern on a post that keeps the dark back without a campfire, and has to be
+   filled now and then.
+4. **A map.** The island is big. A map of where you've been, drawn in characters like everything
    else, with your fires, chests and bedroll marked on it.
-3. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
+5. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
    berries to cook at the fire.
-4. **Lamps.** A light you can build that isn't a campfire: a lantern on a post, burning cloth, that
-   keeps the dark back from your fence and has to be filled now and then.
-5. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
-   and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a
-   small server running somewhere else.
+6. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
+   the nights play, so there are questions to settle first: found or crafted, how scarce the
+   bullets are, and whether the bang draws things toward you.
+
+Later: **multiplayer**. Because the world is built from a seed, a server only has to share the seed
+and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a small
+server running somewhere else, and you to pick where.
