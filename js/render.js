@@ -859,10 +859,15 @@ function drawPlayer(game, alpha) {
 
   view.playerBox = { x0: left, y0: top, x1: left + image.width, y1: top + image.height };
   markCover(left, top, left + image.width, top + image.height);
-  // Tall grass in front of the player's feet is drawn again over them, so they wade through it.
-  const footRow = Math.floor(player.y);
+  drawGrassOver(world, player.x, player.y);
+}
+
+// Tall grass in front of someone's feet at (x, y) is drawn again over them, so they wade through
+// it, and something crouching in it is half hidden.
+function drawGrassOver(world, x, y) {
+  const footRow = Math.floor(y);
   for (let ty = footRow; ty <= footRow + 1; ty++) {
-    for (let tx = Math.floor(player.x - 1); tx <= Math.floor(player.x + 1); tx++) {
+    for (let tx = Math.floor(x - 1); tx <= Math.floor(x + 1); tx++) {
       const tile = groundAt(world, tx, ty);
       if (!tile || !tile.tall) continue;
       const v = world.variants[ty * world.width + tx];
@@ -900,11 +905,12 @@ function noteDrawn(x0, y0, x1, y1) {
 // ---- Creatures ----
 
 // A creature (see creatures.js) standing at its feet, like the player: faded in or out as it comes
-// out of the dark, and shaken for a moment when it's hit.
+// out of the dark, shaken for a moment when it's hit, and crouched low while it lurks.
 function drawCreature(game, creature) {
   const kind = CREATURES[creature.kind];
   const frame = Math.floor(creature.stride / CREATURE_FRAME_TILES) % kind.frames.length;
-  const image = spriteImage(SPRITES[kind.frames[frame]]);
+  const crouched = creature.state === 'lurk' && kind.crouched;
+  const image = spriteImage(SPRITES[crouched || kind.frames[frame]]);
   const hit = game.time - creature.hurtAt < 0.18;
   const shake = hit ? Math.round(Math.sin(game.time * 70) * view.cw * 0.2) : 0;
   const left = Math.round(screenX(creature.x) - image.width / 2) + shake;
@@ -913,6 +919,7 @@ function drawCreature(game, creature) {
   view.ctx.drawImage(image, left, top);
   view.ctx.globalAlpha = 1;
   noteDrawn(left, top, left + image.width, top + image.height);
+  drawGrassOver(game.world, creature.x, creature.y);
 
   // Where its eyes are, to draw them again above the dark (see drawEyes()).
   const cells = kind.eyes.cells;

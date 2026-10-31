@@ -179,9 +179,15 @@ health) and back off to come again.
   minutes old, something bigger comes: a great shaggy shadow with one amber eye. It's slow, but
   **your torch doesn't scare it**, only a campfire's light does. It bites hard, claws through
   walls quickly, and takes six hits (three with the axe). Outrun it to a fire, or the cottage.
+- **Lurkers.** On moonlit nights, something waits in the **long grass**: a low dark shape with
+  yellow-green eyes that never blink. It doesn't hunt you. It sits perfectly still, and when you
+  walk within a couple of steps it springs out and bites, then slinks off to wait in another patch
+  of grass. **A torch doesn't scare it**, so watch the grass for eyes and go round, or hit it (two
+  hits, one with the axe). It won't come into a campfire's light.
 - **The moon decides how many** can be out at once: two shades on the first night's half moon,
   three on a thin moon, three and a brute with no moon or the thin moon after it, one under a full
-  moon.
+  moon. Lurkers come on the brighter nights, when the fields feel safe: one on the first thin
+  moon, two on the half and bright moons, three under the full moon.
 - **At dawn** they back away and melt into what's left of the dark.
 
 If they get you, the screen says **The dark takes you.**
@@ -206,7 +212,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/sound.js` | Every sound, made by the browser on the spot, so there are no sound files. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
-| `js/creatures.js` | The shades and brutes: when they come out, how they find you, what scares them off. |
+| `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
 | `js/save.js` | What the game remembers between visits: your island, your pack, your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
@@ -258,7 +264,8 @@ run straight from the file.
   (`fear`), how hard it claws at walls. The numbers under it say when they come out and how far
   off. How many of each come out each night is `creatures` on each moon in `MOONS`
   (`js/night.js`). How many scratches a wall or door takes is `claws` in `OBJECTS`. Redraw them as
-  `shade`/`shade2` and `brute`/`brute2` in `js/sprites.js`.
+  `shade`/`shade2`, `brute`/`brute2` and `lurker`/`lurker2`/`lurkerLow` (sitting in the grass) in
+  `js/sprites.js`. `SPRING_RANGE` is how close you can get to a lurker before it springs.
 - **Walking speed.** `WALK_SPEED` at the top of `js/game.js`.
 - **Sounds.** `SOUNDS` in `js/sound.js` describes each one as a burst of hiss through a filter
   and/or a tone that slides in pitch. Change the numbers to make a chop deeper or a bite harsher;

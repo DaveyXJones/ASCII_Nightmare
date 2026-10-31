@@ -158,6 +158,20 @@ the constants at the top of js/weather.js:
   rain heavier than `QUIET_IN_RAIN` (so you lose the crickets' warning: lightning makes up for it).
 - **HUD**: by day the sky icon shows ☂ in rain and ☁ when overcast.
 
+## Lurkers (built 2026-10-31)
+
+Item 3 ("Lurkers that sit still in the tall grass, eyes open, and spring when you walk too close"),
+Claude's design: `CREATURES.lurker` with `lurks: true` comes out (`spawn: [7, 15]` tiles away) only
+on `tall` ground, in state `lurk`, drawn with its `crouched` sprite (2 rows; `drawGrassOver` puts
+the grass blades back over its lower row, and over every creature's and the player's feet). Its
+eyes are yellow-green and never blink (`eyes.stare`). Within `SPRING_RANGE` (2.4) and ≤ 4 steps it
+`spring`s: a `lunge` at 9 tiles/s with the `hiss` sound. After the bite and `run` it goes to `hide`:
+`findDen` picks the nearest tall grass within `DEN_REACH` that's at least `DEN_AWAY` from you; it
+walks there and lurks again, or fades out if there's none or it gets stuck (another may come out
+later). 2 hp, bite 10, `fear: { fire: 0.8, torch: 0 }` (the torch doesn't help; watch for eyes).
+Moons: none on the first half moon or the two brute nights; 1 on the first thin moon, 2 on the
+half and bright moons, 3 under the full moon, so bright nights have their own danger.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -194,7 +208,7 @@ the constants at the top of js/weather.js:
 | `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
-| `js/creatures.js` | `CREATURES` (shade, brute), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
+| `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
@@ -268,7 +282,8 @@ the constants at the top of js/weather.js:
   when off the map and a wall with `claws` is `CLAW_REACH` ahead), `lunge` (dart straight at you;
   bite within `BITE_REACH`, then `run`), `run` (away from you or the light that caught it, for a
   time), `claw` (scratch every `CLAW_SECONDS` until the wall breaks or a way opens), `fade` (dawn:
-  back away while fading, then removed).
+  back away while fading, then removed). Kinds that `lurks` use `lurk` (sit still; `spring` into a
+  lunge) and `hide` (walk to a `den` of tall grass) instead of `creep`, and never claw.
 - **The map of steps** (`field`) is a breadth-first flood from the player's tile over a square of
   `FIELD_RADIUS`, through tiles where `creatureCanStand` (not solid, not inside the house), no
   diagonal squeezing between corners. Recomputed every `FIELD_SECONDS`; ~0.3 ms. If a creature's

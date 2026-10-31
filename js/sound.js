@@ -89,6 +89,12 @@ const SOUNDS = {
     noise: { seconds: 1.5, filter: 'lowpass', hz: 240, to: 120 },
     tone: { seconds: 1.5, wave: 'sawtooth', hz: 52, to: 36 },
   },
+  hiss: {
+    volume: 2.4,
+    vary: 0.12,
+    noise: { seconds: 0.4, filter: 'bandpass', hz: 3200, q: 1.2, to: 5200 },
+    tone: { seconds: 0.25, wave: 'sawtooth', hz: 150, to: 240 },
+  },
   claw: { volume: 4.5, vary: 0.2, noise: { seconds: 0.2, filter: 'bandpass', hz: 2800, q: 3, to: 1700 } },
   crash: {
     volume: 1.4,

@@ -55,6 +55,15 @@ const BRUTE_INK = {
   l: ['#1e1528'], // legs
 };
 
+// A lurker's colors: the dark green-black of grass at night, with yellow-green eyes.
+const LURKER_INK = {
+  t: ['#2f4024'], // the ridge of its back, catching a little light
+  b: ['#18240f', '#0b1207'], // its body
+  d: ['#101a0a', '#0b1207'], // its shaded side
+  E: ['#c6ff3d', '#0b1207'], // eyes
+  l: ['#1c2a14'], // legs
+};
+
 // A shade's colors (see CREATURES in creatures.js), shared by both its pictures.
 const SHADE_INK = {
   w: ['#4a3a5a'], // ears
@@ -521,6 +530,45 @@ const SPRITES = {
       'll  ll',
     ],
     ink: BRUTE_INK,
+    shadow: 0,
+  },
+  // A lurker: something long and low that waits in the long grass. Crouched (lurkerLow), only its
+  // back and eyes show above the grass; leaping, its legs reach out front and back. The eyes are in
+  // the same cells in every picture (see `eyes` in CREATURES).
+  lurkerLow: {
+    art: [
+      '▗••▖',
+      '▐▓▓▌',
+    ],
+    paint: [
+      'tEEt',
+      'bbdd',
+    ],
+    ink: LURKER_INK,
+    shadow: 0,
+  },
+  lurker: {
+    art: [
+      '▄••▄',
+      '▘▀▀▝',
+    ],
+    paint: [
+      'bEEd',
+      'lbdl',
+    ],
+    ink: LURKER_INK,
+    shadow: 0,
+  },
+  lurker2: {
+    art: [
+      '▄••▄',
+      '▝▀▀▘',
+    ],
+    paint: [
+      'bEEd',
+      'lbdl',
+    ],
+    ink: LURKER_INK,
     shadow: 0,
   },
   // A shade: a hunched thing of shadow with pointed ears and red eyes. Its legs shift between the two

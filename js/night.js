@@ -30,7 +30,8 @@ const SUNRISE_COLOR = [100, 62, 76];
 //   glyph      how it looks next to the health bars
 //   light      how bright it is, from 0 (no moon) to 1 (full)
 //   creatures  how many of each kind of thing can be out in the dark at once that night (see
-//              CREATURES in creatures.js). Brutes only come on the darkest nights.
+//              CREATURES in creatures.js). Brutes only come on the darkest nights; lurkers on
+//              the moonlit ones, when you might otherwise feel safe crossing the fields.
 //   rises      what the game says as night falls
 const MOONS = [
   {
@@ -44,7 +45,7 @@ const MOONS = [
     name: 'Thin moon',
     glyph: '☾',
     light: 0.25,
-    creatures: { shade: 3 },
+    creatures: { shade: 3, lurker: 1 },
     rises: 'A thin sliver of moon tonight.',
   },
   {
@@ -65,28 +66,28 @@ const MOONS = [
     name: 'Half moon',
     glyph: '◑',
     light: 0.5,
-    creatures: { shade: 2 },
+    creatures: { shade: 2, lurker: 2 },
     rises: 'A half moon rises.',
   },
   {
     name: 'Bright moon',
     glyph: '◕',
     light: 0.75,
-    creatures: { shade: 2 },
+    creatures: { shade: 2, lurker: 2 },
     rises: 'A bright moon rises.',
   },
   {
     name: 'Full moon',
     glyph: '●',
     light: 1,
-    creatures: { shade: 1 },
+    creatures: { shade: 1, lurker: 3 },
     rises: 'A full moon lights up the island.',
   },
   {
     name: 'Bright moon',
     glyph: '◕',
     light: 0.75,
-    creatures: { shade: 2 },
+    creatures: { shade: 2, lurker: 2 },
     rises: 'A bright moon rises.',
   },
 ];
