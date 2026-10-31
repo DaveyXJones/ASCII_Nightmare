@@ -43,6 +43,9 @@ const STARVE_FLASH_EVERY = 1.5; // while hunger or thirst is hurting, a flash th
 const STARVE_FLASH_SECONDS = 0.16;
 const KNEEL_SECONDS = 0.35; // collapsing: how long the player sinks to their knees before falling
 const DOOR_OPEN_REACH = 1.4; // a door you've built stands open while you're this close, in tiles
+const OUTLINE_COLOR = 'rgba(6, 8, 6, 0.85)'; // the thin dark edge round the player (Outline in the menu)
+const OUTLINE_CSS = 1; // how thick it is, in CSS pixels
+const OUTLINE_KEY = 'ascii-nightmare-outline'; // where the Outline on/off choice is kept (see save.js)
 const GHOST_ALPHA = 0.55; // how solid the see-through copy in build mode looks
 const NIGHT_SCALE = 4; // the dark is drawn this many times smaller than the screen, then stretched
 const EYES_REACH = 2; // with no light at all you can still make out this far around you, in tiles
@@ -312,7 +315,9 @@ function drawFrame(game) {
   ctx.drawImage(groundCache.canvas, screenX(groundCache.left), screenY(groundCache.top));
 
   drawShadows(game, range, inside);
+  if (game.fishing) drawBobber(game);
   drawStanding(game, range, inside);
+  if (game.fishing) drawFishingLine(game);
   drawRain(world.house, inside);
 
   if (inside) dimOutside(world.house);
@@ -320,6 +325,7 @@ function drawFrame(game) {
   drawParticles(game.fx);
   drawNight(game, range, inside);
   drawEyes(game);
+  if (game.shot && game.time - game.shot.at < SHOT_SECONDS) drawShot(game);
   // Above the dark, so you can always see what the button will use and where you're building.
   if (game.target) drawTarget(game.target, game.time);
   if (game.buildSpot) drawBuildSpot(game);
@@ -524,7 +530,7 @@ function drawShadows(game, range, inside) {
     for (let tx = Math.max(0, range.left - 1); tx <= right; tx++) {
       const key = world.objects[ty * world.width + tx];
       if (!key) continue;
-      const shadow = SPRITES[OBJECTS[key].sprite].shadow;
+      const shadow = SPRITES[objectLook(world, OBJECTS[key], tx, ty).sprite].shadow;
       if (shadow) addShadow(tx + 0.5 + shadow * 0.08, ty + 0.75, shadow * 0.32, 0.42);
     }
   }
@@ -595,6 +601,8 @@ function drawStanding(game, range, inside) {
   const bottom = Math.min(world.height - 1, range.bottom + SPRITE_REACH_ROWS);
   let playerDrawn = false;
   view.playerBox = null;
+  view.rodTip = null;
+  view.heldAt = null;
   view.playerCovered = false;
   view.shades.length = 0;
   resetCover(left, top - SPRITE_REACH_ROWS, right, bottom);
@@ -650,16 +658,18 @@ function drawStanding(game, range, inside) {
 
 // The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
 // tile starts at a different point so two fires side by side don't flicker in step. A door stands
-// open while you're beside it or in it, and a wall clawed halfway through shows the marks.
+// open while you're beside it or in it, and a wall clawed halfway through shows the marks. Walls
+// and doors in a fence running up the screen use their side-on pictures (objectLook in world.js).
 function objectSprite(game, object, tx, ty) {
   const { player, world } = game;
-  if (object.opens && Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DOOR_OPEN_REACH) {
-    return SPRITES[object.opens];
+  const look = objectLook(world, object, tx, ty);
+  if (look.opens && Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DOOR_OPEN_REACH) {
+    return SPRITES[look.opens];
   }
-  if (object.scarred && (world.clawed.get(ty * world.width + tx) || 0) >= object.claws / 2) {
-    return SPRITES[object.scarred];
+  if (look.scarred && (world.clawed.get(ty * world.width + tx) || 0) >= object.claws / 2) {
+    return SPRITES[look.scarred];
   }
-  if (!object.frames) return SPRITES[object.sprite];
+  if (!object.frames) return SPRITES[look.sprite];
   return SPRITES[object.frames[(game.flameFrame + ty * world.width + tx) % object.frames.length]];
 }
 
@@ -773,8 +783,11 @@ function actionPose(action) {
 
 // What the player holds for an action: a crafted tool made for it (the axe, for Chop), or else
 // whatever ACTION_POSES says. Tools have a picture for facing left and one for every other way.
-function heldGlyph(action, facing, survivor) {
-  for (const key of Object.keys(survivor.tools)) {
+// `prefer` is the tool that was just used, when more than one could do it (the pistol or the rifle).
+function heldGlyph(action, facing, survivor, prefer) {
+  const keys = Object.keys(survivor.tools);
+  if (prefer && survivor.tools[prefer]) keys.unshift(prefer);
+  for (const key of keys) {
     const tool = TOOLS[key];
     if (tool.held && tool.power[action]) return facing === 'left' ? tool.held[0] : tool.held[1];
   }
@@ -788,7 +801,7 @@ function playerPose(game) {
   const set = PLAYER_SPRITES[player.facing];
   const pose = (name, action) => ({
     sprite: set[name],
-    held: action ? heldGlyph(action, player.facing, survivor) : null,
+    held: action ? heldGlyph(action, player.facing, survivor, player.act && player.act.tool) : null,
     spot: set.held[name],
     // Once you've made a torch, it's in your other hand whatever you're doing.
     torch: survivor.tools.torch ? set.torch[name] || set.torch.stand : null,
@@ -811,7 +824,7 @@ function playerPose(game) {
   // Holding the button between swings: tool raised (or still kneeling, for a drink).
   if (player.working) {
     const look = actionPose(player.working);
-    return pose(look.pose === 'strike' ? 'windup' : look.pose, player.working);
+    return pose(look.pose === 'strike' && !look.aim ? 'windup' : look.pose, player.working);
   }
   if (player.moving) {
     const step = Math.floor(player.stride / WALK_FRAME_TILES) % set.walk.length;
@@ -848,18 +861,82 @@ function drawPlayer(game, alpha) {
   const left = Math.round(screenX(player.x) - image.width / 2);
   const top = Math.round(screenY(player.y) + view.th * 0.25) - image.height - look.lift;
   view.ctx.globalAlpha = alpha;
-  view.ctx.drawImage(image, left, top);
-  if (look.held) {
-    const [col, row] = look.spot;
-    drawGlyph(view.ctx, look.held, TOOL_COLOR, left + col * view.cw, top + row * view.th, true);
+  // Where the thing in hand is: the top end of a rod (╱ leans right, ╲ left), where the fishing
+  // line starts, and the middle of a gun, where a shot starts.
+  if (look.held && alpha === 1) {
+    const lean = look.held === '╲' ? 0 : 1;
+    view.rodTip = { x: left + (look.spot[0] + lean) * view.cw, y: top + look.spot[1] * view.th };
+    view.heldAt = { x: left + (look.spot[0] + 0.5) * view.cw, y: top + (look.spot[1] + 0.5) * view.th };
   }
-  if (look.torch) drawTorch(game, left + look.torch[0] * view.cw, top + look.torch[1] * view.th);
+  if (outline.on) {
+    const { canvas, padX, padY } = outlinedFigure(game, look, image);
+    view.ctx.drawImage(canvas, left - padX, top - padY);
+  } else {
+    drawFigure(view.ctx, game, look, image, left, top);
+  }
   view.ctx.globalAlpha = 1;
   if (alpha < 1) return;
 
   view.playerBox = { x0: left, y0: top, x1: left + image.width, y1: top + image.height };
   markCover(left, top, left + image.width, top + image.height);
   drawGrassOver(world, player.x, player.y);
+}
+
+// The player as they stand this moment: their picture, what's in their hand, and the torch.
+function drawFigure(ctx, game, look, image, left, top) {
+  ctx.drawImage(image, left, top);
+  if (look.held) {
+    const [col, row] = look.spot;
+    drawGlyph(ctx, look.held, TOOL_COLOR, left + col * view.cw, top + row * view.th, true);
+  }
+  if (look.torch) drawTorch(ctx, game, left + look.torch[0] * view.cw, top + look.torch[1] * view.th);
+}
+
+// The player with a thin dark edge round them, so they stand out on busy ground. The figure is drawn
+// onto a spare canvas, then copied a pixel or so out in each of eight directions onto a second one,
+// turned dark (keeping only its shape), and the figure is put back on top. That's a dozen small
+// copies, and the torch and tool in hand get the edge too. It's only done again when the picture
+// changes (a step, a swing, the torch flickering). Returns the canvas and how far its top-left
+// corner sits out from the picture's.
+function outlinedFigure(game, look, image) {
+  const edge = Math.max(1, Math.round(view.dpr * OUTLINE_CSS));
+  const padX = view.cw + edge; // room for the torch beside the picture...
+  const padY = view.th + edge; // ...and its flame above it
+  const width = image.width + padX * 2;
+  const height = image.height + padY * 2;
+  const { figure, edged } = outline;
+  const lit = look.torch && game.survivor.torchLeft > 0 ? game.flameFrame % TORCH_LOOK.flames.length : -1;
+  const drawn = [image, look.held, look.spot, look.torch, lit, width, height];
+  if (outline.drawn && drawn.every((part, n) => part === outline.drawn[n])) {
+    return { canvas: edged.canvas, padX, padY };
+  }
+  outline.drawn = drawn;
+  for (const { canvas, ctx } of [figure, edged]) {
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    } else {
+      ctx.clearRect(0, 0, width, height);
+    }
+  }
+  drawFigure(figure.ctx, game, look, image, padX, padY);
+  const ctx = edged.ctx;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx || dy) ctx.drawImage(figure.canvas, dx * edge, dy * edge);
+    }
+  }
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.fillStyle = OUTLINE_COLOR;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(figure.canvas, 0, 0);
+  return { canvas: edged.canvas, padX, padY };
+}
+
+function setOutlineOn(on) {
+  outline.on = on;
+  remember(OUTLINE_KEY, on);
 }
 
 // Tall grass in front of someone's feet at (x, y) is drawn again over them, so they wade through
@@ -878,11 +955,11 @@ function drawGrassOver(world, x, y) {
 
 // The torch in the player's hand at (x, y): its stick, and above that the rag wrapped round its
 // top, or a flickering flame once it's lit.
-function drawTorch(game, x, y) {
+function drawTorch(ctx, game, x, y) {
   const flames = TORCH_LOOK.flames;
   const head = game.survivor.torchLeft > 0 ? flames[game.flameFrame % flames.length] : TORCH_LOOK.rag;
-  drawGlyph(view.ctx, TORCH_LOOK.stick[0], TORCH_LOOK.stick[1], x, y, true);
-  drawGlyph(view.ctx, head[0], head[1], x, y - view.th, true);
+  drawGlyph(ctx, TORCH_LOOK.stick[0], TORCH_LOOK.stick[1], x, y, true);
+  drawGlyph(ctx, head[0], head[1], x, y - view.th, true);
 }
 
 // Remembers what's been drawn over, so cliffs in front of it can be drawn again, and whether
@@ -1096,6 +1173,10 @@ function findLights(game, range, inside) {
   // night (but not through the grey of a cloudy day: that isn't dark enough to need it).
   const torch = torchReach(survivor);
   const sky = game.sky;
+  // A gunshot's flash lights everything round you for a moment (not with motion turned down).
+  if (game.shot && game.time - game.shot.at < MUZZLE_FLASH_SECONDS && !reducedMotion.matches) {
+    lights.push({ x: player.x, y: player.y - 1, reach: MUZZLE_FLASH_REACH, strength: 1, warm: true });
+  }
   if (torch > 0) {
     lights.push({ x: player.x, y: player.y - 1, reach: torch * flicker(game, 0), strength: 1, warm: true });
   } else if (sky.gloom > 0) {
@@ -1109,8 +1190,7 @@ function findLights(game, range, inside) {
   for (let ty = Math.max(0, range.top - LIGHT_REACH); ty <= bottom; ty++) {
     for (let tx = left; tx <= right; tx++) {
       const i = ty * world.width + tx;
-      const key = world.objects[i];
-      const light = key && OBJECTS[key].light;
+      const light = objectLight(world, i);
       if (!light) continue;
       // Lights indoors, like the candle, are hidden under the roof until you go in.
       if (!inside && insideHouse(world, tx, ty)) continue;
@@ -1142,6 +1222,10 @@ function flicker(game, seed) {
 // they stay put as the camera moves). One that lands might splash, and another starts falling
 // somewhere else. How many there are follows how hard it's raining (weatherAt() in weather.js).
 const rain = { drops: [] };
+
+// The player's outline: whether it's on, and two small canvases reused every frame to make it.
+// `drawn` says what's on them, so a frame where nothing about the player's picture changed reuses it.
+const outline = { on: true, figure: makeCanvas(1, 1), edged: makeCanvas(1, 1), drawn: null };
 
 // Moves the rain on by `dt` seconds. Called every frame before drawing.
 function stepRain(game, dt) {
@@ -1287,12 +1371,13 @@ function drawTarget(target, time, color = TARGET_COLOR) {
 }
 
 // In build mode: a see-through copy of what you're building, standing where it would go, with
-// red brackets instead of yellow if it can't go there.
+// red brackets instead of yellow if it can't go there. A wall shows the picture it would have there,
+// joined up with the walls beside it.
 function drawBuildSpot(game) {
   const spot = game.buildSpot;
   const object = OBJECTS[RECIPES[game.building].builds];
   view.ctx.globalAlpha = spot.problem ? GHOST_ALPHA / 2 : GHOST_ALPHA;
-  drawSprite(SPRITES[object.sprite], spot.x, spot.y);
+  drawSprite(SPRITES[objectLook(game.world, object, spot.x, spot.y).sprite], spot.x, spot.y);
   view.ctx.globalAlpha = 1;
   drawTarget(spot, game.time, spot.problem ? BLOCKED_COLOR : TARGET_COLOR);
 }
@@ -1305,6 +1390,62 @@ function drawParticles(fx) {
     const y = Math.round(screenY(p.y - p.z) - view.th / 2);
     drawGlyph(ctx, p.glyph, p.color, x, y);
   }
+  ctx.globalAlpha = 1;
+}
+
+// The bobber on the water while you fish: it bobs, and goes under when something bites.
+function drawBobber(game) {
+  const { fishing } = game;
+  const under = fishing.hookedAt !== null;
+  const bob = !reducedMotion.matches && game.flameFrame % 4 < 2;
+  const glyph = under ? (bob ? '°' : 'o') : bob ? '•' : '◦';
+  const x = Math.round(screenX(fishing.x) - view.cw / 2);
+  const y = screenY(fishing.y - 0.5) + (under ? Math.round(view.th * 0.25) : 0);
+  drawGlyph(view.ctx, glyph, under ? LINE_COLOR : BOBBER_COLOR, x, y, true);
+}
+
+// The line from the rod's tip (where drawPlayer drew it this frame) to the bobber, drawn as a row
+// of dots sagging a little.
+function drawFishingLine(game) {
+  const { fishing } = game;
+  const tip = view.rodTip;
+  if (!tip) return;
+  const endX = screenX(fishing.x);
+  const endY = screenY(fishing.y - 0.3);
+  const length = Math.hypot((endX - tip.x) / view.tw, (endY - tip.y) / view.th);
+  const dots = Math.max(1, Math.floor(length / FISH_LINE_STEP));
+  view.ctx.globalAlpha = 0.75;
+  for (let n = 1; n < dots; n++) {
+    const t = n / dots;
+    const x = tip.x + (endX - tip.x) * t;
+    const y = tip.y + (endY - tip.y) * t + Math.sin(t * Math.PI) * view.th * 0.4;
+    drawGlyph(view.ctx, '·', LINE_COLOR, Math.round(x - view.cw / 2), Math.round(y - view.th / 2));
+  }
+  view.ctx.globalAlpha = 1;
+}
+
+// A shot: a streak of light from the gun to what it hit, drawn in line characters that follow its
+// slant, fading fast, with a flash at the muzzle. Drawn above the dark: it's light itself.
+function drawShot(game) {
+  const { shot, player } = game;
+  const start = view.heldAt || { x: screenX(player.x), y: screenY(player.y - 1.5) };
+  const endX = screenX(shot.x);
+  const endY = screenY(shot.y);
+  const dx = (endX - start.x) / view.tw;
+  const dy = (endY - start.y) / view.th;
+  const length = Math.hypot(dx, dy);
+  let glyph = Math.abs(dx) > Math.abs(dy) * 2 ? '─' : Math.abs(dy) > Math.abs(dx) * 2 ? '│' : '╲';
+  if (glyph === '╲' && dx * dy < 0) glyph = '╱';
+  const ctx = view.ctx;
+  ctx.globalAlpha = 1 - (game.time - shot.at) / SHOT_SECONDS;
+  const dots = Math.max(1, Math.floor(length / 0.5));
+  for (let n = 1; n <= dots; n++) {
+    const t = n / dots;
+    const x = start.x + (endX - start.x) * t;
+    const y = start.y + (endY - start.y) * t;
+    drawGlyph(ctx, glyph, SHOT_COLOR, Math.round(x - view.cw / 2), Math.round(y - view.th / 2), true);
+  }
+  drawGlyph(ctx, '✶', SHOT_COLOR, Math.round(start.x - view.cw / 2), Math.round(start.y - view.th / 2), true);
   ctx.globalAlpha = 1;
 }
 

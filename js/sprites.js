@@ -42,7 +42,45 @@ const WOOD_INK = {
   l: ['#5e3d22', '#9c7048'],
   D: ['#4a2f1c', '#8b6239'], // the lower planks, in shade
   d: ['#4a2f1c', '#7a5230'],
-  P: ['#7a5230'], // a post seen edge-on
+  P: ['#7a5230'], // a post seen edge-on, or the shaded side of a stake
+  S: ['#b08458'], // the lit side of a stake seen from the side
+  s: ['#8b6239'], // ...lower down, in the shade of the stakes beside it
+  p: ['#5e3d22'],
+  k: ['#6b4528'], // a door seen edge-on
+  o: ['#4a2f1c'], // ...its latch side
+};
+
+// A lamp's colors: dark metal, glass lit from inside (two shades for the flicker), and a wooden post.
+const LAMP_INK = {
+  m: ['#4a4842'], // the cap and the base
+  g: ['#3a3226', '#ffd75e'], // the glass, glowing
+  G: ['#3a3226', '#f2b94a'],
+  h: ['#3a3226', '#ffe58a'],
+  H: ['#3a3226', '#ffcc55'],
+  d: ['#4a4842', '#2c2a24'], // the glass, gone out
+  D: ['#4a4842', '#24221d'],
+  p: ['#9c7048'], // the post, lit side
+  P: ['#6b4528'],
+};
+
+// The wreck's colors: grey, sun-bleached planks, darker below, and the black of the hole.
+const WRECK_INK = {
+  t: ['#c8b89a'], // the top edge, bleached by the sun
+  h: ['#7a6650'], // the bow and stern posts
+  L: ['#5a4a38', '#8a7458'], // planks, with dark seams
+  X: ['#000000', '#1c140c'], // the hole in its side
+  d: ['#4a3c2c'], // the bottom, sunk in the sand
+  m: ['#8a7660'], // the broken mast
+};
+
+// A washed-up crate's colors: pale planks with a darker cross brace.
+const CRATE_INK = {
+  t: ['#e0c896'], // the lid's edge, in the light
+  L: ['#6b4a2a', '#b8925e'], // planks with the brace across them
+  l: ['#6b4a2a', '#a8844f'],
+  D: ['#5a3e22', '#94714a'], // the lower planks, in shade
+  d: ['#5a3e22', '#86653f'],
+  X: ['#000000', '#2a1c10'], // the dark inside of an open crate
 };
 
 // A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
@@ -498,6 +536,262 @@ const SPRITES = {
     ink: WOOD_INK,
     shadow: 2,
   },
+  // A wall in a fence running up the screen, seen from the side (`side` in objects.js): one stake
+  // behind the next, so each tile shows the sharpened tip of its stake over the one behind it, and
+  // the nearest one shows all the way down. The lit side faces left, into the light.
+  woodWallSide: {
+    art: [
+      '▗▖',
+      '▐▌',
+      '▐▌',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  woodWallSideScarred: {
+    art: [
+      '▗▖',
+      '╱▌',
+      '▐╱',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  // A door in a fence running up the screen, seen edge-on: a crossbar over it, and the plank door
+  // below, darker than the stakes, with its latch. Open, it's swung back out of the way.
+  woodDoorSide: {
+    art: [
+      '▄▄',
+      '▐▌',
+      '▐▌',
+    ],
+    paint: [
+      'TP',
+      'ko',
+      'kk',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  woodDoorSideScarred: {
+    art: [
+      '▄▄',
+      '╱▌',
+      '▐╱',
+    ],
+    paint: [
+      'TP',
+      'ko',
+      'kk',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  woodDoorSideOpen: {
+    art: [
+      '▄▄',
+      '  ',
+      ' ▏',
+    ],
+    paint: [
+      'TP',
+      '  ',
+      ' k',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  // A lantern hanging from a post: a metal cap, glass with the flame glowing through it (the three
+  // pictures flicker), a base, and the post. Gone out, the glass is dark.
+  lamp: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'gG',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
+  lamp2: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'hH',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
+  lamp3: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'Gg',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
+  lampOut: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'dD',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
+  // The wrecked boat on the beach, in three pieces (bow, middle, stern), seen from the side, bow to
+  // the left: sun-bleached planks along the top, a hole stove in the side, a broken mast.
+  wreckBow: {
+    art: [
+      ' ▄',
+      '◥═',
+      ' ▀',
+    ],
+    paint: [
+      ' t',
+      'hL',
+      ' d',
+    ],
+    ink: WRECK_INK,
+    shadow: 1,
+  },
+  wreckMid: {
+    art: [
+      ' ╽',
+      '▄▄',
+      '╱ ',
+      '▀▀',
+    ],
+    paint: [
+      ' m',
+      'tt',
+      'LX',
+      'dd',
+    ],
+    ink: WRECK_INK,
+    shadow: 2,
+  },
+  wreckStern: {
+    art: [
+      '▄▖',
+      '═▌',
+      '▀ ',
+    ],
+    paint: [
+      'tt',
+      'Lh',
+      'd ',
+    ],
+    ink: WRECK_INK,
+    shadow: 1,
+  },
+  // A crate washed up from the wreck: pale planks with a cross brace. Opened, it's empty inside.
+  crate: {
+    art: [
+      '▗▄▄▖',
+      '▐╲╱▌',
+      '▐╱╲▌',
+    ],
+    paint: [
+      'tttt',
+      'LllL',
+      'DddD',
+    ],
+    ink: CRATE_INK,
+    shadow: 2,
+  },
+  crateOpen: {
+    art: [
+      '▗▄▄▖',
+      '▐  ▌',
+      '▐══▌',
+    ],
+    paint: [
+      'tttt',
+      'LXXL',
+      'DddD',
+    ],
+    ink: CRATE_INK,
+    shadow: 2,
+  },
+  // A little tin box of bullets on the sand.
+  bulletBox: {
+    art: [
+      '▗▖',
+    ],
+    paint: [
+      'bB',
+    ],
+    ink: { b: ['#c8d0c0'], B: ['#8a968a'] },
+    shadow: 0,
+  },
+  // A gun lying on the ground where you fell.
+  pistolDropped: {
+    art: [
+      ' ⌐',
+    ],
+    paint: [
+      ' g',
+    ],
+    ink: { g: ['#aab4bc'] },
+    shadow: 0,
+  },
+  rifleDropped: {
+    art: [
+      '╾─',
+    ],
+    paint: [
+      'wg',
+    ],
+    ink: { w: ['#9c7048'], g: ['#aab4bc'] },
+    shadow: 0,
+  },
   // A chest of planks with a lid, banded, with a clasp on the front.
   chest: {
     art: [
@@ -854,6 +1148,7 @@ function blendColor(a, b, share) {
 //   pose     which picture: 'strike', 'windup' or 'crouch' (see PLAYER_SPRITES)
 //   held     the character drawn in their hand, or null for an empty hand
 //   seconds  how long the pose is held
+//   aim      true to keep the pose (not the wind-up) while the button's held: a gun held out
 // Anything not listed uses `default`: a swing of the rough tool. A crafted tool with power for the
 // word (TOOLS in crafting.js) is drawn in place of `held`, so the axe shows when you chop.
 const ACTION_POSES = {
@@ -865,6 +1160,10 @@ const ACTION_POSES = {
   Hit: { held: null },
   Open: { pose: 'crouch', held: null, seconds: 0.3 },
   'Roll up': { pose: 'crouch', held: null, seconds: 0.4 },
+  Fill: { pose: 'windup', held: null, seconds: 0.4 },
+  Fish: { pose: 'crouch', held: null, seconds: 0.3 }, // kneeling at the water, rod held out
+  Shoot: { pose: 'strike', held: null, seconds: 0.35, aim: true }, // the gun held out, and kept there
+  'Pick up': { pose: 'crouch', held: null, seconds: 0.4 },
   Eat: { pose: 'windup', held: null, seconds: 0.4 },
 };
 

@@ -64,6 +64,8 @@ function generateWorld(seed) {
     clawed: new Map(), // tile index -> scratches taken, for walls things in the dark are clawing at
     soaked: new Map(), // tile index -> seconds of rain a campfire has taken (see weather.js)
     chests: new Map(), // tile index -> what's in the chest there, { items, tools } (see chest.js)
+    fuel: new Map(), // tile index -> seconds a lamp there will burn in the dark (see updateLamps)
+    seen: new Uint8Array(size), // 1 for each tile you've seen, for the map (see map.js)
     bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
     house: null,
@@ -83,6 +85,7 @@ function generateWorld(seed) {
   }
 
   placeCottage(world);
+  placeFinds(world);
   // What stood where before anyone touched it: saving only needs to keep what's changed since.
   world.original = world.objects.slice();
   return world;
@@ -245,6 +248,145 @@ function buildCottage(world, left, top) {
   world.spawn = { x: left + COTTAGE_SPAWN.x, y: top + COTTAGE_SPAWN.y };
 }
 
+// ---- Things to find ----
+
+const WRECK_STEPS = 40; // the wreck lies on a beach about this many steps' walk from the cottage door
+const WRECK = ['wreckBow', 'wreckMid', 'wreckStern']; // its pieces, west to east
+const SEA_REACH = 2; // a beach is sand within this many tiles of the sea
+
+// Puts the wrecked boat, with the pistol's crate beside it, on a beach (sand by the sea) a fair walk
+// from the cottage, and the rifle's crate on the beach furthest away. Only on tiles where nothing grew, so
+// the island's print stays as it was (see `found` in OBJECTS). Also keeps the list of beach tiles
+// you can walk to (world.beaches), where things wash up later (washUp in guns.js).
+function placeFinds(world) {
+  const { width } = world;
+  const steps = stepsFromDoor(world);
+  const open = (i) => world.objects[i] === null && world.ground[i] === 'sand' && steps[i] >= 0;
+  const sea = findSea(world);
+  const beach = (i) => open(i) && nearSea(world, sea, i);
+  world.beaches = [];
+  for (let i = 0; i < steps.length; i++) if (beach(i)) world.beaches.push(i);
+
+  // The wreck: three open tiles in a row on a beach, with room for the crate just below or above
+  // the middle, where you can walk up to it.
+  const wreckAt = (i) => {
+    const x = i % width;
+    if (x < 1 || x > width - 2 || !open(i - 1) || !open(i + 1)) return null;
+    const hull = [i - 1, i, i + 1];
+    for (const crate of [i + width, i - width]) {
+      const reachable = neighbours(world, crate).some((n) => !hull.includes(n) && steps[n] >= 0);
+      if (crate >= 0 && crate < steps.length && open(crate) && reachable) return { hull, crate };
+    }
+    return null;
+  };
+  let wreck = null;
+  let best = Infinity;
+  for (const i of world.beaches) {
+    const off = Math.abs(steps[i] - WRECK_STEPS);
+    if (off >= best) continue;
+    const site = wreckAt(i);
+    if (site) {
+      wreck = site;
+      best = off;
+    }
+  }
+  if (wreck) {
+    wreck.hull.forEach((i, n) => {
+      world.objects[i] = WRECK[n];
+    });
+    world.objects[wreck.crate] = 'pistolCrate';
+  } else {
+    // No room for a boat anywhere: just the crate, as near the right walk away as there's open sand.
+    const spot = pickTile(steps, (i) => open(i) && -Math.abs(steps[i] - WRECK_STEPS));
+    if (spot >= 0) world.objects[spot] = 'pistolCrate';
+  }
+  // The rifle: on the beach you'd have to walk furthest to reach (or the furthest open sand).
+  const far = pickTile(steps, (i) => beach(i) && steps[i]);
+  const rifle = far >= 0 ? far : pickTile(steps, (i) => open(i) && steps[i]);
+  if (rifle >= 0) world.objects[rifle] = 'rifleCrate';
+}
+
+// Which tiles are the sea: water joined up with the edge of the map (lakes and rivers inland aren't).
+function findSea(world) {
+  const sea = new Uint8Array(world.ground.length);
+  const queue = [];
+  for (let i = 0; i < sea.length; i++) {
+    const x = i % world.width;
+    const y = (i - x) / world.width;
+    const edge = x === 0 || y === 0 || x === world.width - 1 || y === world.height - 1;
+    if (edge && TILES[world.ground[i]].drink) {
+      sea[i] = 1;
+      queue.push(i);
+    }
+  }
+  for (let head = 0; head < queue.length; head++) {
+    for (const n of neighbours(world, queue[head])) {
+      if (sea[n] || !TILES[world.ground[n]].drink) continue;
+      sea[n] = 1;
+      queue.push(n);
+    }
+  }
+  return sea;
+}
+
+// Whether tile index `i` is within SEA_REACH tiles of the sea: a beach, not a riverbank.
+function nearSea(world, sea, i) {
+  const x = i % world.width;
+  const y = (i - x) / world.width;
+  for (let dy = -SEA_REACH; dy <= SEA_REACH; dy++) {
+    for (let dx = -SEA_REACH; dx <= SEA_REACH; dx++) {
+      if (inBounds(world, x + dx, y + dy) && sea[(y + dy) * world.width + x + dx]) return true;
+    }
+  }
+  return false;
+}
+
+// The tile with the highest score (false or a number), or -1 if none scores.
+function pickTile(steps, score) {
+  let best = -1;
+  let bestScore = -Infinity;
+  for (let i = 0; i < steps.length; i++) {
+    const value = score(i);
+    if (value !== false && value > bestScore) {
+      best = i;
+      bestScore = value;
+    }
+  }
+  return best;
+}
+
+// How many steps each tile is from the cottage door, walking (trees and rocks don't count, since
+// they can be cleared), or -1 where you can't walk to.
+function stepsFromDoor(world) {
+  const { width, house } = world;
+  const steps = new Int32Array(world.ground.length).fill(-1);
+  const start = (house.top + house.height) * width + house.doorX;
+  const queue = [start];
+  steps[start] = 0;
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head];
+    for (const n of neighbours(world, i)) {
+      if (steps[n] >= 0 || TILES[world.ground[n]].solid) continue;
+      steps[n] = steps[i] + 1;
+      queue.push(n);
+    }
+  }
+  return steps;
+}
+
+// The tiles beside tile index `i`, up, down, left and right, that are on the map.
+function neighbours(world, i) {
+  const { width, height } = world;
+  const x = i % width;
+  const y = (i - x) / width;
+  const out = [];
+  if (x > 0) out.push(i - 1);
+  if (x < width - 1) out.push(i + 1);
+  if (y > 0) out.push(i - width);
+  if (y < height - 1) out.push(i + width);
+  return out;
+}
+
 // ---- Looking things up ----
 
 function inBounds(world, x, y) {
@@ -262,6 +404,28 @@ function objectAt(world, x, y) {
   if (!inBounds(world, x, y)) return null;
   const key = world.objects[y * world.width + x];
   return key ? OBJECTS[key] : null;
+}
+
+// Walls and doors (`fence` in OBJECTS) join up with each other. A piece with others above or below
+// it, and none to its left or right, is part of a fence running up the screen: it's seen from the
+// side, so it's drawn with its `side` pictures instead.
+function fenceAt(world, x, y) {
+  const object = objectAt(world, x, y);
+  return Boolean(object && object.fence);
+}
+
+function runsUpAndDown(world, x, y) {
+  return (
+    (fenceAt(world, x, y - 1) || fenceAt(world, x, y + 1)) &&
+    !fenceAt(world, x - 1, y) &&
+    !fenceAt(world, x + 1, y)
+  );
+}
+
+// Which set of pictures an object at (x, y) uses: its own, or its `side` ones in a fence running up
+// the screen. Either way the set has `sprite`, and may have `opens` and `scarred`.
+function objectLook(world, object, x, y) {
+  return object.side && runsUpAndDown(world, x, y) ? object.side : object;
 }
 
 // What stops the player at a tile, or null if they can walk there.
@@ -292,6 +456,7 @@ function setObject(world, x, y, key) {
   world.clawed.delete(i);
   world.soaked.delete(i);
   world.chests.delete(i);
+  world.fuel.delete(i);
 }
 
 // Where you wake up after dying: on the bed you built last (an object with `bed`), or if that one's

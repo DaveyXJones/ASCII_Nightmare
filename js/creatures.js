@@ -297,7 +297,7 @@ function moveCreature(game, creature, dt, fears, night) {
     // there's no point clawing down fences on the way.)
     const indoors = insideHouse(game.world, Math.floor(player.x), Math.floor(player.y));
     const walledIn = steps < 0 && distance < FIELD_RADIUS && !indoors;
-    const wall = walledIn ? wallAhead(game, creature, way) : null;
+    const wall = walledIn && kind.claw ? wallAhead(game, creature, way) : null;
     if (wall) {
       creature.state = 'claw';
       creature.clawing = wall;
@@ -485,10 +485,17 @@ function bite(game, creature) {
 // You hit one (see useTarget in survival.js). It's knocked back and runs, or comes apart.
 function hitCreature(game, creature) {
   const { player, survivor } = game;
-  const kind = CREATURES[creature.kind];
   player.act = { action: 'Hit', at: player.clock };
   faceToward(player, creature.x, creature.y);
-  creature.hp -= toolPower(survivor, 'Hit');
+  woundCreature(game, creature, toolPower(survivor, 'Hit'));
+}
+
+// Takes `damage` off a creature: it's knocked back and runs, or comes apart if that was too much.
+// From a hit (above) or a shot (guns.js).
+function woundCreature(game, creature, damage) {
+  const { player } = game;
+  const kind = CREATURES[creature.kind];
+  creature.hp -= damage;
   creature.hurtAt = game.time;
   burst(game.fx, creature.x, creature.y - 1, 'shadow', 5);
   buzz(20);
@@ -607,8 +614,8 @@ function mapSteps(game) {
   field.lights.length = 0;
   for (let ty = field.top; ty < field.top + size; ty++) {
     for (let tx = field.left; tx < field.left + size; tx++) {
-      const object = objectAt(world, tx, ty);
-      if (object && object.light) field.lights.push({ x: tx + 0.5, y: ty + 0.5, reach: object.light });
+      const reach = inBounds(world, tx, ty) ? objectLight(world, ty * world.width + tx) : 0;
+      if (reach) field.lights.push({ x: tx + 0.5, y: ty + 0.5, reach });
     }
   }
 }

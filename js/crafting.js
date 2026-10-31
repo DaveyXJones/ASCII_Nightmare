@@ -30,12 +30,38 @@ const TOOLS = {
     power: { Mine: 2 },
   },
   torch: { name: 'Torch', short: 'torch', glyph: '¡', color: '#c49a62', burns: 300, light: 5 },
+  // The rod's `power` for Fish is only there so it's drawn in your hand while you fish.
+  rod: { name: 'Fishing rod', short: 'rod', glyph: '⌠', color: '#c49a62', held: ['╲', '╱'], power: { Fish: 1 } },
+  // The guns can't be made: they're found, in crates washed up on the beaches (see guns.js). `gun`
+  // says how far it shoots (tiles), how much each shot hurts, how many shots before it needs
+  // reloading, how long that takes (seconds), and its sound. `dropped` is what's left on the ground
+  // where you fell, if you die carrying it.
+  pistol: {
+    name: 'Pistol',
+    short: 'pistol',
+    glyph: '⌐',
+    color: '#aab4bc',
+    held: ['¬', '⌐'],
+    power: { Shoot: 1 },
+    gun: { range: 6, damage: 2, rounds: 6, reload: 1.5, sound: 'bang' },
+    dropped: 'pistolDropped',
+  },
+  rifle: {
+    name: 'Rifle',
+    short: 'rifle',
+    glyph: '╾',
+    color: '#b08458',
+    held: ['╼', '╾'],
+    power: { Shoot: 1 },
+    gun: { range: 14, damage: 3, rounds: 1, reload: 2.5, sound: 'boom' },
+    dropped: 'rifleDropped',
+  },
 };
 
 // Everything you can make, in the order the craft panel shows them.
 //
 //   name     what the panel calls it
-//   about    one line on what it's for
+//   about    one line on what it's for: two lines of about 16 characters, to fit a phone
 //   cost     what it takes from your pack, e.g. { wood: 3, stone: 2 }
 //   tool     a key in TOOLS: making it puts that tool in your pack (you only ever need one)
 //   builds   a key in OBJECTS: making it starts build mode, to put one on the map
@@ -49,35 +75,42 @@ const TOOLS = {
 const RECIPES = {
   axe: {
     name: 'Stone axe',
-    about: 'Halves the swings for trees and shades.',
+    about: 'Halves swings on trees and shades.',
     cost: { wood: 3, stone: 2 },
     tool: 'axe',
     done: 'You lash a sharp stone to a stick. Trees fall twice as fast now.',
   },
   pick: {
     name: 'Stone pick',
-    about: 'Breaks boulders in half the swings.',
+    about: 'Halves swings on boulders.',
     cost: { wood: 2, stone: 3 },
     tool: 'pick',
     done: 'You bind a pointed stone to a handle. Boulders break twice as fast now.',
   },
   torch: {
     name: 'Torch',
-    about: 'Light it at a fire to see in the dark.',
+    about: 'Light it at a fire, to see.',
     cost: { wood: 2, cloth: 1 },
     tool: 'torch',
     done: 'You wrap a rag round a stick. Light it at a campfire.',
   },
+  rod: {
+    name: 'Fishing rod',
+    about: 'Face water and hold to fish.',
+    cost: { wood: 2, cloth: 1 },
+    tool: 'rod',
+    done: 'You tie a line to a long stick. Face water and hold the button to fish.',
+  },
   campfire: {
     name: 'Campfire',
-    about: 'Rest beside it to heal faster.',
+    about: 'Rest by it to heal faster.',
     cost: { wood: 4, stone: 3 },
     builds: 'campfire',
     done: 'The fire catches. Rest beside it to heal faster.',
   },
   roof: {
     name: 'Roof',
-    about: 'Build over a campfire to keep rain off.',
+    about: 'Keeps rain off a campfire.',
     cost: { wood: 4 },
     builds: 'roofedFire',
     over: ['campfire', 'campfireOut'], // over a cold one, you light it again under the roof
@@ -85,21 +118,28 @@ const RECIPES = {
   },
   wall: {
     name: 'Wooden wall',
-    about: 'Build a row of them into a fence.',
+    about: 'Line them up into a fence.',
     cost: { wood: 2 },
     builds: 'woodWall',
     again: true,
   },
   door: {
     name: 'Wooden door',
-    about: 'Goes in a wall. Opens only for you.',
+    about: 'In a wall. Opens only for you.',
     cost: { wood: 3 },
     builds: 'woodDoor',
     done: 'You hang the door. It swings open as you come near.',
   },
+  lamp: {
+    name: 'Lamp',
+    about: 'Lights the dark. Fill with cloth.',
+    cost: { wood: 2, cloth: 2 },
+    builds: 'lamp',
+    done: 'You hang the lamp on its post. It burns through half a night.',
+  },
   chest: {
     name: 'Chest',
-    about: 'What you put in it is kept when you die.',
+    about: 'Keeps things when you die.',
     cost: { wood: 6 },
     builds: 'chest',
     indoors: true,
@@ -107,21 +147,28 @@ const RECIPES = {
   },
   bedroll: {
     name: 'Bedroll',
-    about: 'You wake up on it after you die.',
+    about: 'After you die, you wake on it.',
     cost: { cloth: 2, wood: 1 },
     builds: 'bedroll',
     done: 'You spread out the bedroll. If you die, you\'ll wake up here.',
   },
   cook: {
     name: 'Cooked berries',
-    about: 'More filling, and heals you a little.',
+    about: 'Fills more, and heals a little.',
     cost: { berries: 2 },
     gives: { cooked: 1 },
     byFire: true,
   },
+  cookFish: {
+    name: 'Cooked fish',
+    about: 'Fills you up, and heals.',
+    cost: { fish: 1 },
+    gives: { cookedFish: 1 },
+    byFire: true,
+  },
 };
 
-const BUILD_HINT = 'Face where it should go and press Build.';
+const BUILD_HINT = 'Press Build to place it. You keep facing this way: flick the stick to turn.';
 const RECIPE_PICTURE_ROWS = 3; // pictures on the craft cards are at most this many rows tall
 const RECIPE_PICTURE_ROWS_SHORT = 2; // ...and this many on a short screen, like a phone held sideways
 const shortScreen = window.matchMedia('(max-height: 460px)'); // the same as in style.css
@@ -261,6 +308,7 @@ function build(game) {
   const index = spot.y * game.world.width + spot.x;
   if (object.bed) game.world.bed = index; // the newest bed is where you'll wake up
   if (object.chest) game.world.chests.set(index, newChest());
+  if (object.fuel) game.world.fuel.set(index, object.fuel.burns);
   player.act = { action: 'Build', at: player.clock };
   if (object.burst) burst(game.fx, spot.x + 0.5, spot.y + 0.5, object.burst, 10);
   playSound('build');
@@ -308,7 +356,7 @@ function setupCrafting(elements) {
     name.className = 'recipe-name';
     name.textContent = recipe.name;
     const shortcut = document.createElement('kbd'); // the number key that makes it, on a keyboard
-    shortcut.textContent = String((n + 1) % 10); // the tenth is 0
+    shortcut.textContent = '1234567890-='[n] || ''; // the tenth is 0, then - and =
     name.append(' ', shortcut);
 
     const about = document.createElement('span');
@@ -328,7 +376,7 @@ function setupCrafting(elements) {
     if (recipe.byFire) {
       const need = document.createElement('span'); // shown while you're not beside a fire
       need.className = 'recipe-need';
-      need.textContent = 'Needs a fire';
+      need.textContent = 'At a fire';
       cost.append(need);
     }
     card.append(picture, name, about, cost);

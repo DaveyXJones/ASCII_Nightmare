@@ -58,10 +58,11 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Fish**, **Light**, **Fill**, **Hit**, **Shoot**, **Open**. Hold it to keep going (one shot per tap) | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
-| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9` and `0` |
-| Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
+| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9`, `0`, `-`, `=` |
+| Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
+| Map | **Map**, under ☰ in the top right | `M` |
 | Menu | ☰ in the top right | `Esc` |
 
 Yellow brackets `[ ]` on the map show what the action button will use.
@@ -73,6 +74,9 @@ and trousers. The game remembers them next time.
 day and crickets at night, a campfire crackling. Listen to the crickets: they go quiet when
 something from the dark is close, and growls come from the side the creature is on. **Sound on** /
 **Sound off** is in the menu. On an iPhone, the silent switch mutes the game too.
+
+**Outline.** A thin dark edge round you, so you stand out on busy ground and in the long grass.
+**Outline on** / **Outline off** in the menu switches it, to compare; the game remembers which.
 
 ## Staying alive
 
@@ -101,23 +105,54 @@ something you can afford.
 | **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings, and shades too. You lose it if you die. |
 | **Stone pick** | 2 wood, 3 stone | Boulders break in half the swings. You lose it if you die. |
 | **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
+| **Fishing rod** | 2 wood, 1 cloth | Face water and hold the button to fish (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
 | **Roof** | 4 wood | Build it over a campfire and rain can't put the fire out (see Weather, below). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
 | **Wooden door** | 3 wood | Set it in a line of wall. It swings open as you walk up and shuts behind you; shades can't open it. |
+| **Lamp** | 2 wood, 2 cloth | A lantern on a post. It keeps the dark back like a small fire, and rain can't put it out. It burns five minutes of dark, then needs filling (below). |
 | **Chest** | 6 wood | Keeps whatever you put in it, even when you die. It can go inside the cottage. |
 | **Bedroll** | 2 cloth, 1 wood | After you die, you wake up on it instead of in the cottage. |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
+| **Cooked fish** | 1 fish | Only beside a campfire. Fills you up the most (45), and heals 15. |
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
 front of you. Yellow brackets mean it can go there, red means it can't (the message says why).
-Tap **Build** to put it down. Walls stay in build mode so you can keep going: build, step
-sideways, build again. Tap **Done** when you've finished.
+Tap **Build** to put it down. Walls stay in build mode so you can keep going. Tap **Done** when
+you've finished.
+
+In build mode you keep facing the same way while you walk, so you can walk along a line and build
+beside you: flick the stick toward the side you want (push it and let go quickly) to turn without
+walking, then walk up, **Build**, walk up, **Build**. On a keyboard, tap an arrow key to turn and
+hold it to walk. Walls join up by themselves: a fence running up the screen is drawn from the side,
+one stake behind the next, and a door in it the same way.
 
 Changed your mind? Face the wall or door and **Break** it, or **Put out** the campfire, and you
 get the wood or stone back. Things you build stay in the world when you die.
 
 A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
+
+**Fishing.** With a fishing rod, face water (a lake, a river or the sea) and the button says
+**Fish** instead of **Drink** (unless you're thirsty: then it offers a drink first). Hold it: you
+kneel, the line goes out and a red bobber floats on the water. After a few seconds something
+bites, the bobber goes under, and a moment later you land a fish, or it gets away. Deep water
+(the darker blue) loses fewer. Keep holding to cast again; let go or walk off to reel in. Raw
+fish can't be eaten: cook it beside a campfire (**Cooked fish** on the craft panel).
+
+Fish and cooked food only show in the pack while you have some, so it fits across a phone.
+
+**The map.** Tap **Map** (under ☰, or `M`) to see the island, drawn in characters, one character
+for a few tiles. It only shows land you've seen: by day you take in about 11 tiles around you, at
+night only what your torch lights. You (`@`), the cottage and the things you've built (fires,
+lamps, chests, your bedroll, walls) are marked on it, with a key beside it. The game pauses while
+it's open. You keep what you've seen when you die, and it's saved with the world.
+
+**Lamps.** A lamp lights the ground around it at night, not as far as a campfire, and things in the
+dark keep away from it the way they do from firelight (brutes and lurkers too, which the torch
+doesn't stop). It doesn't warm you, and you can't light your torch at it. It burns only in the
+dark: a full lamp lasts five minutes of night, about half of one, and dims as it runs low. When it
+goes out, face it and tap **Fill** (1 cloth) to light it again; once it's half burnt, the button
+offers **Fill** instead of **Take down**, to top it up.
 
 **Chests.** Face a chest and tap **Open**. Your pack is on the left, the chest on the right: tap
 something to move all of it across, or **Put all in** (everything but your tools) and **Take all
@@ -206,6 +241,33 @@ health) and back off to come again.
 
 If they get you, the screen says **The dark takes you.**
 
+## Guns
+
+There's a **pistol** and a **rifle** on the island, but you can't make them: you have to find
+them.
+
+- **The wreck.** A wrecked boat lies on a beach a fair walk from the cottage, with a crate washed
+  up beside it. Face the crate and tap **Open**: inside are the pistol and 8 bullets. A second crate
+  has washed up on the beach furthest from the cottage, with the rifle and 6 bullets. Both show on
+  the map once you've seen them. The boat can be broken up for wood.
+- **Shooting.** With a gun, when something from the dark is in front of you, past arm's reach, and
+  nothing solid is in the way (trees, walls, rocks; water's fine), the big button says **Shoot**.
+  Each tap is one shot; holding the button doesn't keep firing. Up close it says **Hit** instead,
+  so you don't spend a bullet on what an axe can reach.
+- **Pistol:** reaches 6 tiles, six shots, then a second and a half to reload. Two shots put a shade
+  down, one a lurker, three a brute.
+- **Rifle:** reaches 14 tiles and hits harder (one shot for a shade or a lurker, two for a brute),
+  but it reloads after every shot, which takes two and a half seconds. Carrying both, the game uses
+  the pistol when it reaches and the rifle for things further off (or while the pistol reloads).
+- **Bullets are scarce.** Both guns take the same bullets (‣ in the pack) and you can't make
+  more. Some mornings a tin box with 3 bullets washes up somewhere on a beach, out of sight; never
+  more than two lying about at once.
+- **The bang carries.** Everything out in the dark nearby hears a shot: lurkers stop waiting in
+  the grass and come for you, the next thing comes out of the dark straight away, and the crickets
+  go quiet. A gun can get you out of trouble, and into more.
+- **If you die**, your guns drop where you fell (a red **!** on the map). Go back and **Pick up**
+  them. Bullets are lost with the rest of your pack, so keep spare ones in a chest.
+
 ## How it's put together
 
 Plain HTML, CSS and JavaScript, with nothing to install or build.
@@ -218,7 +280,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/tiles.js` | Every kind of ground: its characters, colors, and whether you can walk on it. |
 | `js/sprites.js` | The ASCII art for everything that stands up: trees, rocks, the well, the player. |
 | `js/objects.js` | The things standing on the map, and what the action button does to each one. |
-| `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage. |
+| `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage, the wreck and the crates. |
 | `js/night.js` | Day and night: how long each lasts, the moon, and how dark it gets. |
 | `js/weather.js` | Clouds, rain and storms: when they come, and rain putting out campfires. |
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
@@ -227,6 +289,9 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
+| `js/fishing.js` | Fishing: casting, the bite, and landing a fish (or losing it). |
+| `js/guns.js` | The pistol and rifle: aiming, shooting, reloading, the bang, and bullets washing up. |
+| `js/map.js` | The map: which tiles you've seen, and the map panel drawn in characters. |
 | `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
 | `js/save.js` | What the game remembers between visits: your island, your pack, your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
@@ -291,20 +356,13 @@ run straight from the file.
 
 ## What's next
 
-Done lately: weather (clouds, rain, storms, and roofs to keep campfires burning), lurkers in the
-long grass, chests, and bedrolls. Before that: your look, flashing when hurt and falling when you
-die, the stone pick, doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
+Done lately, your list of 2026-10-31: walls that join up (a fence running up the screen is seen
+from the side) and turning in place in build mode, an outline round the player, lamps, a map,
+fishing, and a pistol and a rifle to find. Before that: weather (clouds, rain, storms, and roofs to
+keep campfires burning), lurkers in the long grass, chests, and bedrolls; and before that, your
+look, flashing when hurt and falling when you die, the stone pick, doors, cooked berries, brutes,
+walls that get clawed down, saving, and sound.
 
-Roughly in order:
-
-1. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
-   rule that the map is drawn only in characters, so it's waiting for a yes or no.
-2. **A map.** The island is big. A map of where you've been, drawn in characters like everything
-   else, with your fires, chests and bedroll marked on it.
-3. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
-   berries to cook at the fire.
-4. **Lamps.** A light you can build that isn't a campfire: a lantern on a post, burning cloth, that
-   keeps the dark back from your fence and has to be filled now and then.
-5. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
-   and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a
-   small server running somewhere else.
+Later: **multiplayer**. Because the world is built from a seed, a server only has to share the seed
+and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a small
+server running somewhere else, and you to pick where.

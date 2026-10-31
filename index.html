@@ -35,12 +35,21 @@
             <div class="item stone"><dt aria-label="Stone">●</dt><dd id="count-stone">0</dd></div>
             <div class="item berries"><dt aria-label="Berries">•</dt><dd id="count-berries">0</dd></div>
             <div class="item cloth"><dt aria-label="Cloth">▦</dt><dd id="count-cloth">0</dd></div>
-            <div class="item cooked"><dt aria-label="Cooked berries">♨</dt><dd id="count-cooked">0</dd></div>
+            <div class="item cooked" hidden><dt aria-label="Cooked berries">♨</dt><dd id="count-cooked">0</dd></div>
+            <div class="item fish" hidden><dt aria-label="Fish">∝</dt><dd id="count-fish">0</dd></div>
+            <div class="item cookedFish" hidden><dt aria-label="Cooked fish">∝</dt><dd id="count-cookedFish">0</dd></div>
+            <div class="item bullets" hidden><dt aria-label="Bullets">‣</dt><dd id="count-bullets">0</dd></div>
             <div class="item tool axe" id="tool-axe" hidden><dt aria-hidden="true">┮</dt><dd>axe</dd></div>
             <div class="item tool pick" id="tool-pick" hidden><dt aria-hidden="true">ϒ</dt><dd>pick</dd></div>
             <div class="item tool torch" id="tool-torch" hidden><dt aria-hidden="true">¡</dt><dd>torch</dd></div>
+            <div class="item tool rod" id="tool-rod" hidden><dt aria-hidden="true">⌠</dt><dd>rod</dd></div>
+            <div class="item tool pistol" id="tool-pistol" hidden><dt aria-hidden="true">⌐</dt><dd>pistol</dd></div>
+            <div class="item tool rifle" id="tool-rifle" hidden><dt aria-hidden="true">╾</dt><dd>rifle</dd></div>
           </dl>
-          <button type="button" id="menu-button" class="menu-button" aria-label="Menu">☰</button>
+          <div class="corner-buttons">
+            <button type="button" id="menu-button" class="menu-button" aria-label="Menu">☰</button>
+            <button type="button" id="map-button" class="menu-button map-button">Map<kbd>M</kbd></button>
+          </div>
         </div>
 
         <p id="toast" class="toast" aria-live="polite"></p>
@@ -66,6 +75,7 @@
               <button type="button" id="look-button" class="button">Your look</button>
               <button type="button" id="new-world" class="button">New world</button>
               <button type="button" id="sound-button" class="button" aria-pressed="true">Sound on</button>
+              <button type="button" id="outline-button" class="button" aria-pressed="true">Outline on</button>
               <button type="button" id="fullscreen" class="button">Full screen</button>
             </div>
             <p class="seed">World <span id="seed"></span></p>
@@ -81,7 +91,7 @@
             <ul class="help key-help">
               <li><b>Walk:</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrow keys.</li>
               <li><b>Act:</b> <kbd>Space</kbd> or <kbd>E</kbd> chops, mines, picks, drinks, lights your torch and hits back. Hold to keep going.</li>
-              <li><b>Eat:</b> <kbd>F</kbd> eats the best food you have. <b>Menu:</b> <kbd>Esc</kbd></li>
+              <li><b>Eat:</b> <kbd>F</kbd> eats the best food you have. <b>Map:</b> <kbd>M</kbd> <b>Menu:</b> <kbd>Esc</kbd></li>
               <li><b>Craft:</b> <kbd>C</kbd>, then a number key to pick. When building, <kbd>Space</kbd> places it and <kbd>C</kbd> stops.</li>
             </ul>
             <p class="help-note">Food and water run down as you go. Run out of either and you start to lose health. Nights are dark, and things move in the dark: make a torch and light it at a campfire.</p>
@@ -97,6 +107,22 @@
           </div>
           <!-- One card per recipe, made from RECIPES in js/crafting.js. -->
           <div id="recipes" class="recipes"></div>
+        </div>
+      </section>
+
+      <section id="island-map" class="overlay" aria-labelledby="map-title" hidden>
+        <div class="panel map-panel">
+          <!-- Drawn by drawMap() in js/map.js when the panel opens. -->
+          <canvas id="map-picture" class="map-picture"></canvas>
+          <div class="map-side">
+            <div class="craft-head">
+              <h2 id="map-title" class="title">Map</h2>
+              <button type="button" id="map-close" class="button close" aria-label="Close">✕</button>
+            </div>
+            <!-- One line for each mark, made from OBJECTS in js/map.js. -->
+            <ul id="map-key" class="map-key"></ul>
+            <p class="map-note">Only the land you've seen.</p>
+          </div>
         </div>
       </section>
 
@@ -171,6 +197,9 @@
     <script src="js/survival.js"></script>
     <script src="js/crafting.js"></script>
     <script src="js/chest.js"></script>
+    <script src="js/fishing.js"></script>
+    <script src="js/guns.js"></script>
+    <script src="js/map.js"></script>
     <script src="js/creatures.js"></script>
     <script src="js/save.js"></script>
     <script src="js/game.js"></script>

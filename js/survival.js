@@ -2,13 +2,17 @@
 
 // Everything that goes in your pack. Each needs a counter in the pack in index.html, with the id
 // count-<item>. Things you can eat say how much `food` they give, and `heals` how much health.
-// The Eat button eats whatever fills you most.
+// The Eat button eats whatever fills you most. `hideEmpty` items only show in the pack while you
+// have some, so the pack fits across a phone.
 const ITEMS = {
   wood: { name: 'wood', glyph: '≡', color: '#d0a46a' },
   stone: { name: 'stone', glyph: '●', color: '#b4b8b0' },
   berries: { name: 'berries', glyph: '•', color: '#ff5a6e', food: 12 },
   cloth: { name: 'cloth', glyph: '▦', color: '#e6dcc4' },
-  cooked: { name: 'cooked berries', glyph: '♨', color: '#ec8a4a', food: 30, heals: 10 },
+  cooked: { name: 'cooked berries', glyph: '♨', color: '#ec8a4a', food: 30, heals: 10, hideEmpty: true },
+  fish: { name: 'fish', glyph: '∝', color: '#a8cfe6', hideEmpty: true }, // raw: cook it to eat it
+  cookedFish: { name: 'cooked fish', glyph: '∝', color: '#e8944e', food: 45, heals: 15, hideEmpty: true },
+  bullets: { name: 'bullets', glyph: '‣', color: '#e0c060', hideEmpty: true }, // for both guns (guns.js)
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -22,6 +26,10 @@ const REACH = 0.95; // how far the player can reach, in tiles, from their feet t
 const LOW = 25; // below this, a vital is running low and the game warns you
 const TORCH_LOW = 0.2; // share of its burn left when a torch starts to dim and the game warns you
 const TORCH_RELIGHT = 0.5; // a fire offers to light your torch again once this share of it is left
+const LAMP_LOW = 0.2; // share of its fuel left when a lamp starts to dim
+const LAMP_REFILL = 0.5; // a lamp offers Fill (instead of Take down) once this share of it is left
+const LAMP_BURNS_DARKER = 0.25; // a lamp only burns its fuel when the dark is deeper than this (0 to 1)
+const LAMP_NEWS_REACH = 16; // a lamp going out is news if you're within this many tiles of it
 
 const WARNINGS = {
   food: 'Your stomach growls. Find something to eat.',
@@ -36,11 +44,12 @@ function newSurvivor() {
     pack: Object.fromEntries(Object.keys(ITEMS).map((item) => [item, 0])),
     tools: {}, // tools you've made, by their key in TOOLS (crafting.js): { axe: true }
     torchLeft: 0, // seconds the torch will keep burning, or 0 when it isn't lit
+    guns: {}, // for each gun you carry, shots left and when it's ready (see gunState in guns.js)
     warm: false, // standing beside a campfire
     hurtBy: null, // what last hurt you: 'hunger' or 'dark', for the words when you die
     hurtAt: -Infinity, // when something last bit you, in seconds of play: you flash red for a moment
     starving: false, // true while hunger or thirst is taking your health
-    warned: { food: false, water: false, health: false, torch: false },
+    warned: { food: false, water: false, health: false, torch: false, fish: false },
     nextSwingAt: 0,
   };
 }
@@ -132,6 +141,60 @@ function torchReach(survivor) {
   return torch.light * (0.5 + 0.5 * Math.min(1, survivor.torchLeft / (torch.burns * TORCH_LOW)));
 }
 
+// How far the thing at tile index `i` lights the dark, in tiles (0 for nothing). A lamp dims as it
+// runs low, down to half, like the torch.
+function objectLight(world, i) {
+  const key = world.objects[i];
+  const object = key && OBJECTS[key];
+  if (!object || !object.light) return 0;
+  if (!object.fuel) return object.light;
+  const left = world.fuel.get(i) || 0;
+  return object.light * (0.5 + 0.5 * Math.min(1, left / (object.fuel.burns * LAMP_LOW)));
+}
+
+// Lamps burn their fuel in the dark (by day they're turned down, and use none), and go out when
+// it's gone.
+function updateLamps(game, dt) {
+  const { world, player } = game;
+  if (game.sky.darkness < LAMP_BURNS_DARKER) return;
+  for (const [i, left] of world.fuel) {
+    if (left > dt) {
+      world.fuel.set(i, left - dt);
+      continue;
+    }
+    const x = i % world.width;
+    const y = Math.floor(i / world.width);
+    setObject(world, x, y, OBJECTS[world.objects[i]].fuel.empty);
+    if (Math.hypot(x + 0.5 - player.x, y + 0.5 - player.y) < LAMP_NEWS_REACH) {
+      showMessage(game, 'A lamp flickers and goes out. Fill it with cloth.');
+      playSoundAt(game, 'snuff', x + 0.5, y + 0.5);
+    }
+  }
+}
+
+// Fills a lamp to the top, lighting it again if it had gone out.
+function fillLamp(game, target) {
+  const { world, survivor, fx } = game;
+  const { burns, cost, into } = target.object.fuel;
+  if (!canAfford(survivor.pack, cost)) {
+    showMessage(game, `You need ${shortfall(survivor.pack, cost)} to fill the lamp.`);
+    return;
+  }
+  spend(survivor.pack, cost);
+  const index = target.y * world.width + target.x;
+  if (world.objects[index] !== into) {
+    setObject(world, target.x, target.y, into);
+    playSound('ignite');
+  } else {
+    playSound('pick');
+  }
+  world.fuel.set(index, burns);
+  burst(fx, target.x + 0.5, target.y - 1, 'spark', 6);
+  floatText(fx, target.x + 0.5, target.y - 2, 'filled', '#ffd75e');
+  showMessage(game, `The lamp burns bright. It's good for ${Math.round(burns / 60)} minutes of dark.`);
+  buzz(30);
+}
+
 // Picked bushes grow their berries back after a while.
 function updateRegrowth(world, time) {
   for (let n = world.regrowing.length - 1; n >= 0; n--) {
@@ -163,8 +226,14 @@ function findTarget(game) {
       if (object && object.flame && wantsFire) {
         // Facing a fire with a torch that needs lighting, the button lights it instead of putting it out.
         candidate = { x: tx, y: ty, label: 'Light', object, light: true };
+      } else if (object && object.fuel && lampWantsFuel(world, tx, ty, object)) {
+        // A lamp burning low (or gone out) offers to be filled instead of taken down.
+        candidate = { x: tx, y: ty, label: 'Fill', object, fill: true };
       } else if (object && object.action) {
         candidate = { x: tx, y: ty, label: object.action, object };
+      } else if (!object && wantsToFish(survivor, ground)) {
+        // With a rod, and not thirsty, facing water fishes (see fishing.js).
+        candidate = { x: tx, y: ty, label: 'Fish', fish: true };
       } else if (!object && ground && ground.drink) {
         candidate = { x: tx, y: ty, label: 'Drink', drink: true };
       }
@@ -198,16 +267,27 @@ function findTarget(game) {
     if (distance > HIT_REACH || ahead < -0.2) continue;
     const score = distance - ahead * 0.6;
     if (score < bestCreatureScore) {
-      // Brackets round its face: as wide as its picture, on the row its eyes are on.
-      const kind = CREATURES[creature.kind];
-      const sprite = SPRITES[kind.frames[0]];
-      const w = sprite.width / 2;
-      const y = creature.y + 0.25 - sprite.cells.length + kind.eyes.cells[0][1];
-      best = { x: creature.x - w / 2, y, w, label: 'Hit', creature };
+      best = creatureTarget(creature, 'Hit');
       bestCreatureScore = score;
     }
   }
+  // Out past arm's reach, with a gun: something in the dark ahead to shoot (see guns.js).
+  if (!best || !best.creature) best = findShot(game) || best;
   return best;
+}
+
+// A creature as the action button's target, with brackets round its face: as wide as its picture,
+// on the row its eyes are on.
+function creatureTarget(creature, label) {
+  const kind = CREATURES[creature.kind];
+  const sprite = SPRITES[kind.frames[0]];
+  const w = sprite.width / 2;
+  const y = creature.y + 0.25 - sprite.cells.length + kind.eyes.cells[0][1];
+  return { x: creature.x - w / 2, y, w, label, creature };
+}
+
+function lampWantsFuel(world, x, y, object) {
+  return (world.fuel.get(y * world.width + x) || 0) < object.fuel.burns * LAMP_REFILL;
 }
 
 // One press (or one swing of a held button) of the action button.
@@ -216,18 +296,27 @@ function useTarget(game) {
   const target = game.target;
   if (!target) return;
   if (target.creature) {
-    hitCreature(game, target.creature);
+    if (target.gun) shoot(game, target);
+    else hitCreature(game, target.creature);
     return;
   }
   player.act = { action: target.label, at: player.clock };
   faceToward(player, target.x + 0.5, target.y + 0.5);
 
+  if (target.fish) {
+    castLine(game, target);
+    return;
+  }
   if (target.drink || (target.object && target.object.drink)) {
     drink(game, target);
     return;
   }
   if (target.light) {
     lightTorch(game, target);
+    return;
+  }
+  if (target.fill) {
+    fillLamp(game, target);
     return;
   }
   if (target.object.relight) {
@@ -241,7 +330,7 @@ function useTarget(game) {
 
   const object = target.object;
   const index = target.y * world.width + target.x;
-  if (!object.gives) {
+  if (!object.gives && !object.tool) {
     showMessage(game, object.empty || `Nothing to take from the ${object.name.toLowerCase()}.`);
     return;
   }
@@ -259,14 +348,19 @@ function useTarget(game) {
   }
   playSound(object.soundDone || object.sound);
 
-  // Done: into the pack it goes, and whatever's left takes its place.
+  // Done: into the pack it goes (and a tool into your hands), and whatever's left takes its place.
   const parts = [];
-  for (const [item, count] of Object.entries(object.gives)) {
+  if (object.tool) {
+    survivor.tools[object.tool] = true;
+    parts.push(TOOLS[object.tool].short);
+  }
+  for (const [item, count] of Object.entries(object.gives || {})) {
     survivor.pack[item] += count;
     parts.push(`+${count} ${ITEMS[item].name}`);
   }
-  const color = ITEMS[Object.keys(object.gives)[0]].color;
+  const color = object.tool ? TOOLS[object.tool].color : ITEMS[Object.keys(object.gives)[0]].color;
   floatText(game.fx, target.x + 0.5, target.y - 1, parts.join('  '), color);
+  if (object.says) showMessage(game, object.says);
   setObject(world, target.x, target.y, object.becomes);
   const regrow = object.becomes && OBJECTS[object.becomes].regrow;
   if (regrow) {

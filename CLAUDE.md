@@ -89,9 +89,10 @@ of which they may want changed:
 - **More to craft**: a stone pick (`TOOLS.pick`, `power: { Mine: 2 }`, held as `⌐`/`¬`); a wooden
   door (`woodDoor`, see below); cooked berries (`RECIPES.cook`, 2 berries → 1 `cooked`: 30 food and
   10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
-  `bestFood`). On short screens the craft cards are small and five to a row, with pictures capped
-  at `RECIPE_PICTURE_ROWS_SHORT` rows, so ten fit on a 667×375 phone; keep card texts to about 40
-  characters so they stay within three lines.
+  `bestFood`). On short screens (since fishing) the craft cards lie on their side, four to a row:
+  picture on the left, name, `about` and cost beside it, so up to sixteen fit on a 667×375 phone.
+  Each `about` must stay within two lines of about 16 characters there (thirteen cards fill the
+  panel to 370 of 375 px). The chest panel is full too: one more item or tool adds a row to it.
 - **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
   fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
@@ -193,9 +194,184 @@ design:
   under the finger, so the panel ignores clicks until a `pointerdown` lands on it (`chestArmed`).
 - **Bedroll** (2 cloth, 1 wood): not solid, `bed: true`, action **Roll up** (gives the cloth back).
   Building one sets `world.bed`; `wakeUp` puts you on `bedSpot(world)`: that tile if it still
-  holds a bed, else any other bed on the map, else the cottage. Nothing can be built over a bed. `world.bed` is saved.
+  holds a bed, else any other bed on the map, else the cottage. Nothing can be built over a bed.
+  `world.bed` is saved.
 - **Quick taps**: a press of the action button sets `state.tapped`, which counts as held for one
   update, so a tap shorter than a frame isn't lost (it was, before; Playwright's taps showed it).
+
+## Next: the owner's list (noted 2026-10-31)
+
+After merging PR #8 the owner said: "i want the outline for the player i think, i also like the
+fishing, map and lamps idea. Im also wondering about a pistol and a rifle, and i also notice that
+when im trying to build walls there is no way to turn them and place them on the right or left
+side, is that possible?" README's "What's next" lists these in this order; build them each as its
+own commit, like the lists before. **All six were built on 2026-10-31** (each in its own section
+below). For the guns the owner chose Claude's suggestions: found in crates (a wreck on a beach),
+bullets scarce and not craftable, a short-range six-shot pistol and a long-range one-shot rifle,
+and the bang drawing creatures in. Notes and suggestions (Claude's, not the owner's):
+
+1. **Walls.** (Built; see "Walls that join" below.) Two problems, both real (checked in a screenshot): a line of `woodWall` running up
+   the screen draws as a stack of `▲▲` spikes, and since walking turns you (`turnToward`), you
+   can't walk along a line building beside you. Suggested: (a) walls pick a picture from their
+   neighbours, like the cottage's `║`/`═` in `drawGroundTile`: a side-on fence (posts and rails)
+   when the walls join above or below, the front-on stakes when they join left or right, and
+   corners; doors the same, so a door in an up-and-down fence looks side-on. Keep it a field on
+   the object (e.g. sprites for each join) rather than special-casing `woodWall` in render.js.
+   (b) In build mode, walking keeps your facing (you strafe), and a quick flick of the stick
+   (pushed and let go within a moment, without walking far) turns you in place. Then: face right,
+   walk up, Build, walk up, Build. Check it one-thumbed on a phone size in Playwright.
+2. **The outline.** (Built; see "The outline" below.) The owner said yes ("i think"), so build it with an **Outline on/off** in the
+   menu (on by default, kept in localStorage like Sound) so they can compare. A thin dark edge
+   around the player's sprite only: e.g. a cached silhouette of each picture (a tint-like key in
+   `spriteImage`) drawn a device pixel or two out in each direction behind it. Update the "Draw
+   only characters" hard rule to name the outline as an exception.
+3. **Lamps.** (Built; see "Lamps" below.) A lantern on a post (wood and cloth, say): a `light` smaller than a campfire's, no
+   `warmth`, not put out by rain (it's behind glass), feared like firelight. It burns for a few
+   minutes of night and needs refilling (an action like **Fill**, costing cloth); the fuel left
+   per lamp needs a world Map that's saved.
+4. **The map.** (Built; see "The map" below.) A panel like the craft panel (pauses the game), the island drawn in characters at
+   one cell per few tiles (192×128 tiles won't fit a phone at one each), only what you've seen (a
+   saved bitmap of explored tiles, kept compact), with you, the cottage, fires, chests and the
+   bedroll marked. Needs a touch control that fits the HUD on 667×375 (and a key, e.g. `M`).
+5. **Fishing.** (Built; see "Fishing" below.) A rod (a tool, like the axe), **Fish** when facing water with it: hold, a bobber
+   glyph on the water, a bite after a few seconds, then a fish (a new item with a pack slot).
+   Cook fish at the fire (a `byFire` recipe) for more food than berries.
+6. **A pistol and a rifle.** (Built; see "Guns" below.) Ask the owner before building: these change how nights play. Points
+   to settle: found (a wreck on the beach? a crate?) or crafted (the game is stone tools so far),
+   how scarce bullets are, ranges (pistol short, rifle long and slow to reload), whether the bang
+   draws creatures toward you (a good horror trade-off). On a phone the action button would say
+   **Shoot** with a creature in line ahead; the shot is drawn in characters with a flash in the
+   night layer.
+
+Multiplayer still waits on the owner choosing a server host.
+
+## Walls that join, and turning in build mode (built 2026-10-31)
+
+Item 1 of the owner's list, built as the notes above suggested:
+
+- **Joins**: objects with `fence: true` (wall, door) join up. `runsUpAndDown` (world.js) is true
+  for a piece with a fence above or below and none left or right; `objectLook` then returns its
+  `side` set (`{ sprite, opens, scarred }`) instead of the object's own pictures. `objectSprite`,
+  the shadows and the build ghost all go through `objectLook`. Corners and T-joins keep the
+  front-on stakes: the side pieces above and below overlap them cleanly.
+- **Side pictures** (`woodWallSide`, `woodDoorSide`…): one cell wide, centered (`▗▖` over `▐▌`),
+  with see-through edges, so in a column only each piece's top row shows (the tip of each stake
+  over the one behind) and the nearest piece shows all the way down.
+- **Strafing**: in build mode `movePlayer` doesn't turn you. `flickOrWalk` holds a push back for
+  `FLICK_SECONDS` (0.22): let go before then and you turn that way without moving; hold longer and
+  you walk, still facing the same way. Checked one-thumbed at 667×375 with CDP touch events.
+
+## The outline (built 2026-10-31)
+
+Item 2. `drawPlayer` draws `outlinedFigure` when `outline.on`: the figure (sprite, tool in hand,
+torch; `drawFigure`) goes on a spare canvas, is copied `OUTLINE_CSS` (1 CSS px) out in eight
+directions onto a second, filled `OUTLINE_COLOR` with `source-in`, and the figure goes back on top.
+`outline.drawn` remembers what's on the canvases, so most frames reuse them (measured: no frame
+cost). The ghost behind trees gets the edge too. **Outline on/off** in the menu, kept under
+`OUTLINE_KEY`, on by default.
+
+## Lamps (built 2026-10-31)
+
+Item 3. `OBJECTS.lamp` (lit, with `frames` flickering the glass) and `lampOut`, both with `fuel:
+LAMP_FUEL` (`{ burns: 300, cost: { cloth: 1 }, into, empty }`). Recipe: 2 wood, 2 cloth. Light 4.5
+(campfire 6.5), no `warmth`, no `flame` (no lighting the torch at it), no `doused` (rain can't touch
+it). Choices that were Claude's:
+
+- **Fuel** lives in `world.fuel` (tile index → seconds; set by `build`, cleared by `setObject`,
+  saved as `fuel`; a lit lamp with nothing saved starts full). `updateLamps` burns it only while
+  `sky.darkness` is above `LAMP_BURNS_DARKER`, so a filling is five minutes of night whatever the
+  hour you fill it, and swaps in `lampOut` when it's gone (news within `LAMP_NEWS_REACH`).
+- **Light** goes through `objectLight(world, i)` (survival.js) everywhere a light's reach is read
+  (`findLights`, `mapSteps`): a lamp dims to half over its last `LAMP_LOW` share, like the torch.
+  Creatures fear it with `fear.fire`, so it holds back brutes and lurkers, which ignore the torch.
+- **Fill**: `findTarget` offers `{ label: 'Fill', fill: true }` on a lamp under `LAMP_REFILL` (half)
+  full (`lampWantsFuel`), else its `action` (**Take down**, gives back 2 wood and 1 cloth). An out
+  lamp's action is always Fill, like a cold campfire's Light. `fillLamp` tops it up for 1 cloth.
+
+## The map (built 2026-10-31)
+
+Item 4, in js/map.js. Choices that were Claude's:
+
+- **What you've seen**: `world.seen` (a `Uint8Array`, 1 per tile seen), filled by `markSeen` every
+  `MAP_MARK_SECONDS` within a circle of `MAP_SIGHT` (11) tiles by day, shrinking with
+  `sky.darkness` to `MAP_NIGHT_SIGHT` or the torch's reach. Saved as `seen`, packed to a bit per
+  tile in base64 (`packSeen`, about 4 KB), restored only on the same island. Kept when you die.
+- **The panel** (`#island-map`; the game's canvas already has `id="map"`) pauses like the craft
+  panel. `drawMap` picks the smallest block in `MAP_BLOCKS` (tiles across one character; twice as
+  many down, since a character is twice as tall as wide) that keeps characters at least
+  `MAP_MIN_GLYPH_CSS` wide: 3 on a 667×375 phone (64×22 characters), 2 on a desktop. It's drawn
+  once per opening with `fillText` (about 1,400 to 3,000 cells), not per frame.
+- **What a cell shows** (`readCell`): the most common seen ground, as its `map` field in `TILES`
+  (`[glyph, color, background]`, else its first glyph and colors); trees or rocks (`map` in
+  `OBJECTS`) if they cover at least half of it; a built thing's `mark` (from `MARKS` in
+  objects.js, highest `rank` wins) over either. The cottage (`MAP_COTTAGE`) and you (`MAP_YOU`) go
+  on last. The key is built from the marks, one line per `name`.
+- **Controls**: a **Map** button under ☰ (`.corner-buttons`) and `M`; Esc or ✕ or a tap outside
+  closes it.
+
+## Fishing (built 2026-10-31)
+
+Item 5, in js/fishing.js. Choices that were Claude's:
+
+- **The rod** (`TOOLS.rod`, 2 wood and 1 cloth) has `power: { Fish: 1 }` only so `heldGlyph`
+  draws it (`╲`/`╱`) in the `crouch` pose (`ACTION_POSES.Fish`: kneeling at the water).
+- **Fish or drink**: `findTarget` offers `{ label: 'Fish', fish: true }` on ground with `fish`
+  (`TILES`: the share of bites landed, 0.85 deep water, 0.6 shallow) when you have the rod and
+  water ≥ `FISH_THIRST` (75); otherwise Drink, as before.
+- **The line** (`state.fishing`): `castLine` (from `useTarget`) puts the bobber up to
+  `FISH_CAST_TILES` past the edge and picks a bite time in `FISH_BITE_SECONDS` (3 to 8).
+  `updateFishing` reels in as soon as `player.working` isn't Fish or you move (a tap shorter than
+  a second gets a hint to hold), dips the bobber at the bite (`plop`), and after
+  `FISH_HOOK_SECONDS` lands a fish or loses it; the next swing of a held button casts again.
+  `drawBobber` goes before the standing pass, `drawFishingLine` after it, from `view.rodTip`
+  (where `drawPlayer` drew the rod this frame). Sounds `cast`, `plop` and `catch` were levelled by
+  rendering them offline beside `drink`.
+- **Fish** can't be eaten raw (no `food`); `RECIPES.cookFish` (1 fish, by a fire) gives
+  `cookedFish` (45 food, 15 health), the best food. `fish`, `cookedFish` and `cooked` have
+  `hideEmpty`, so the pack fits across a 667-wide phone with everything in it (tools show only
+  their glyph on short screens).
+
+## Guns (built 2026-10-31)
+
+Item 6, in js/guns.js, to the owner's choice of Claude's suggestions. Choices beyond those:
+
+- **Finding them**: `placeFinds` (world.js, run in `generateWorld` before `world.original` is
+  taken) puts the wreck (`wreckBow`/`wreckMid`/`wreckStern`, breakable for wood) with the
+  `pistolCrate` beside it on the beach whose walk from the door (`stepsFromDoor`) is nearest
+  `WRECK_STEPS` (40), and the `rifleCrate` on the beach furthest away. A beach is open sand within
+  `SEA_REACH` of the sea (`findSea`: water joined to the map's edge), so never a riverbank. Crates
+  are objects with `tool` (the gun) and `gives` (8 or 6 bullets), `says` a message, and become
+  `crateOpen`. **Keeping old saves**: these objects have `found: true`, which `worldPrint` leaves
+  out, and only go on tiles where nothing was generated, so every island's print is unchanged
+  (checked against the previous commit on six seeds, and a save from it loads with its changes).
+  Change `placeFinds` and finds move on existing islands (old crates stay where saved).
+- **Guns** are `TOOLS.pistol`/`rifle` with `gun: { range, damage, rounds, reload, sound }` and
+  `power: { Shoot: 1 }` (only so `heldGlyph` draws them; `prefer` picks the one just fired).
+  Pistol: 6 tiles, 2 damage, 6 rounds, 1.5 s. Rifle: 14 tiles, 3 damage, 1 round, 2.5 s. Both use
+  `ITEMS.bullets`. `survivor.guns[key]` (`gunState`: shots `left`, `readyAt`, `reloading`) isn't
+  saved: a gun is loaded again on carrying on. `updateGuns` reloads an empty gun when there are
+  bullets.
+- **Shoot** (`findShot`, from `findTarget` when no creature is in `HIT_REACH`): the nearest
+  creature past arm's reach within `AIM_CONE` of the facing, in range of a ready gun (`gunFor`: the
+  shortest range that reaches), with `clearShot` (solid objects, doors and solid ground block;
+  water doesn't). One shot per press: `player.triggerHeld`, cleared when the button is let go.
+  `woundCreature` (creatures.js, shared with `hitCreature`) does the damage. Shots always hit.
+- **The bang** (`hearShot`): creatures within `BANG_REACH` that `lurk`/`hide` switch to `creep`;
+  at night `hunt.nextAt` comes within `BANG_SOONER`; `hushCrickets` (sound.js) holds the crickets
+  for `SHOT_HUSH`; a once-a-night message. The shot is drawn by `drawShot` (render.js) above the
+  dark, from `view.heldAt` (the gun's cell) to the target, for `SHOT_SECONDS`, with a muzzle
+  light in `findLights` (not under reduced motion). Sounds `bang`, `boom`, `click`, `reload`,
+  levelled offline (the pistol about a falling tree's peak, the rifle louder, thunder loudest).
+- **Death**: `collapse` calls `dropGuns`: each gun becomes `pistolDropped`/`rifleDropped` on the
+  nearest bare tile (action **Pick up**, `mark: MARKS.dropped`), and waking says where they are.
+  This was Claude's call: tools are lost on death, but these are one of a kind.
+- **Bullet tins**: on each change to day, `washUp` places a `bulletBox` (3 bullets, walk-over) on a
+  random beach in `world.beaches` at least `WASH_UP_AWAY` from you, with `WASH_UP_CHANCE`, never
+  more than `WASH_UP_MOST` at once. Saved as ordinary object changes.
+- **Room on a phone**: the pack wraps onto a second row on short screens when it would reach the
+  health bars (`max-width` on `.pack`); the chest panel shows five to a row there, tool names
+  hidden (`.thing-name`), and leaves out things neither side has. A gun dims in the pack while
+  reloading (`.tool.reloading`).
 
 ## Hard rules
 
@@ -207,14 +383,16 @@ design:
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  weather → render → input → sound → survival → crafting → chest → creatures → save → game`. A file may use globals from files
-  before it at load time, and from any file inside functions that run later.
+  weather → render → input → sound → survival → crafting → chest → fishing → guns → map → creatures →
+  save → game`. A file
+  may use globals from files before it at load time, and from any file inside functions that run
+  later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
   Keyboard controls are the desktop equivalent, not the primary design.
 - **Draw only characters on the map.** Everything in the world is a glyph from a monospace font,
-  optionally on a background-color cell. Shadows, dimming and the target brackets are the only
-  non-glyph drawing. Block and quadrant characters (`▀▄▌▐▗▖▝▘▙▟▛▜█`) are fine for silhouettes,
+  optionally on a background-color cell. Shadows, dimming, the target brackets and the player's
+  outline (which the owner asked for, with a switch) are the only non-glyph drawing. Block and quadrant characters (`▀▄▌▐▗▖▝▘▙▟▛▜█`) are fine for silhouettes,
   as long as they're mixed with ASCII texture.
 
 ## Files
@@ -224,16 +402,19 @@ design:
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`. |
-| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`. |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print). |
+| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
 | `js/weather.js` | `weatherAt(clock, seed)` (cloud, rain, storm, wind), `updateWeather` (rain messages, the torch in rain, lightning and thunder, `soakFires`), `relightFire`, `lightningAt`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
 | `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
-| `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
+| `js/guns.js` | Shooting (`findShot`, `clearShot`, `gunFor`, `shoot`, `hearShot`), reloading (`gunState`, `updateGuns`), `dropGuns` on death, `washUp` of bullet tins. Placement of the wreck and crates is `placeFinds` in world.js; the streak and flash are `drawShot` and `findLights` in render.js. |
+| `js/fishing.js` | `wantsToFish`, `castLine`, `updateFishing` (bite, hook, catch or lose). The bobber and line are drawn in render.js (`drawBobber`, `drawFishingLine`). |
+| `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat, `hideEmpty` for pack slots shown only while you have some), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
+| `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `drawMap`, `readCell`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
@@ -251,11 +432,14 @@ design:
   small foot box (`FOOT_HALF_WIDTH`, `FOOT_HALF_DEPTH`), moving one axis at a time with corner
   slipping so thumbstick movement slides through doorways.
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
-- `world.original` is `objects` as generated (saving keeps only the differences); `damage`,
-  `clawed` and `soaked` are Maps of tile index to swings, scratches or seconds of rain taken
-  (`setObject` clears all three, and `chests`; `soaked` isn't saved). `chests` holds what's in each
-  chest and `bed` the newest bedroll's tile; both are saved. **Anything new that should survive
-  a reload** (a survivor field, a world Map) needs adding to `saveGame` and `loadGame`.
+- `world.original` is `objects` as generated, including the wreck and crates (saving keeps only
+  the differences; `found` objects are left out of `worldPrint`). `damage`, `clawed` and `soaked`
+  are Maps of tile index to swings, scratches or seconds of rain taken; `fuel` holds each lamp's
+  seconds left; `seen` is the map's explored tiles (`setObject` clears `damage`, `clawed`, `soaked`,
+  `chests` and `fuel`; `soaked` isn't saved). `chests` holds what's in each chest and `bed` the
+  newest bedroll's tile. `beaches` (open sand by the sea you can walk to) is rebuilt with the
+  island, not saved. **Anything new that should survive a reload** (a survivor field, a world Map)
+  needs adding to `saveGame` and `loadGame`.
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
 
@@ -267,15 +451,17 @@ design:
   with `gives` adds items to the pack and keeps the panel open (`refreshCraft`). `byFire` recipes
   need `survivor.warm` (beside a campfire), checked in `canMake`. A `builds` recipe with `over` (the
   roof) must be built onto one of those objects and replaces it, instead of going on clear ground.
-  Number keys: `1`–`9` then `0` for the tenth (input.js).
+  Number keys: `1`–`9`, then `0`, `-` and `=` for the tenth to twelfth (`RECIPE_KEYS`, input.js);
+  the thirteenth (cooked fish) has none, and is clicked or reached with Tab.
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
 - The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not
   `pointerdown`, so the tap that opens a panel can't land on the panel as it appears.
 - Build mode is `state.building` (a recipe key) and `state.buildSpot` (`{ x, y, problem }`,
   recomputed each update). The spot is the tile one past the front edge of the feet, so it never
-  overlaps the player. While building, `findTarget` is skipped and the action button builds once
-  per press (the `'action'` press from `input.js`), not on hold. Anything built is an ordinary
+  overlaps the player. Walking doesn't turn you in build mode; a flick does (`flickOrWalk`). While
+  building, `findTarget` is skipped and the action button builds once per press (the `'action'`
+  press from `input.js`), not on hold. Anything built is an ordinary
   object with an `action` that takes it down again, so a misplaced wall is never a trap.
 - **Doors** are objects with `door: true` and no `solid`: the player walks through (`blockerAt`
   ignores them), creatures can't (`creatureCanStand`), and nothing can be built over one. While the

@@ -14,6 +14,7 @@ const WIND_DAY = 0.12; // how loud the wind is by day, and on the darkest night
 const WIND_NIGHT = 0.32;
 const WIND_INDOORS = 0.35; // indoors, the wind is this much as loud
 const CRICKET_EVERY = [0.3, 1.2]; // seconds between cricket chirps at night, picked at random in this range
+const SHOT_HUSH = 25; // seconds the crickets stay quiet after a gunshot
 const CRICKET_HUSH = [4, 14]; // crickets fall silent when something from the dark is this close, in
 // tiles (all of them at the first number, none at the second)
 const BIRD_EVERY = [4, 11]; // seconds between birdsong by day
@@ -63,6 +64,23 @@ const SOUNDS = {
     noise: { seconds: 0.08, filter: 'lowpass', hz: 700 },
     tone: { seconds: 0.12, wave: 'triangle', hz: 150, to: 70 },
   },
+  cast: { volume: 1.9, noise: { seconds: 0.3, filter: 'bandpass', hz: 1400, q: 1.2, to: 3200 } },
+  plop: { volume: 1.05, tone: { seconds: 0.12, wave: 'sine', hz: 900, to: 260 } },
+  catch: { volume: 2, noise: { seconds: 0.35, filter: 'bandpass', hz: 900, q: 0.8, to: 380 } },
+  // Guns (guns.js): a crack with a thump under it; the rifle's longer and deeper. Then the clicks of
+  // reloading.
+  bang: {
+    volume: 1,
+    noise: { seconds: 0.45, filter: 'lowpass', hz: 6000, to: 300 },
+    tone: { seconds: 0.25, wave: 'sine', hz: 150, to: 45 },
+  },
+  boom: {
+    volume: 1.25,
+    noise: { seconds: 0.9, filter: 'lowpass', hz: 4500, to: 120 },
+    tone: { seconds: 0.45, wave: 'sine', hz: 110, to: 35 },
+  },
+  click: { volume: 0.45, noise: { seconds: 0.05, filter: 'highpass', hz: 3000 } },
+  reload: { volume: 1.75, noise: { seconds: 0.09, filter: 'bandpass', hz: 1800, q: 2, to: 2600 } },
   craft: { volume: 0.85, tone: { seconds: 0.25, wave: 'triangle', hz: 660, to: 990 } },
   ignite: { volume: 2.7, noise: { seconds: 0.55, filter: 'bandpass', hz: 350, q: 0.7, to: 2400 } },
   snuff: { volume: 0.65, noise: { seconds: 0.4, filter: 'highpass', hz: 2500, to: 6000 } },
@@ -159,6 +177,11 @@ function wakeSound() {
     makeSoundParts();
   }
   if (audio.ctx.state !== 'running') audio.ctx.resume();
+}
+
+// After a gunshot the crickets stop singing for a while (see CRICKET_EVERY).
+function hushCrickets(game) {
+  audio.nextCricket = game.time + SHOT_HUSH;
 }
 
 function setSoundOn(on) {

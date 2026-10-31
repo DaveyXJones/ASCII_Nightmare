@@ -5,6 +5,9 @@ const WALK_SPEED = 4.5; // tiles per second with the stick pushed all the way
 const FOOT_HALF_WIDTH = 0.3; // the player's feet, in tiles: what bumps into trees and walls
 const FOOT_HALF_DEPTH = 0.2;
 const CORNER_SLIP = 0.4; // how far off-center you can be and still slide around a corner or into a doorway
+// In build mode, a push of the stick (or a tap of a key) let go within this many seconds turns you to
+// face that way without walking. Walking in build mode keeps the way you face.
+const FLICK_SECONDS = 0.22;
 const WATER_FRAME_SECONDS = 0.45; // how often the water ripples
 const FLAME_FRAME_SECONDS = 0.15; // how often campfire flames flicker
 const MESSAGE_SECONDS = 3.5;
@@ -46,6 +49,11 @@ const elements = {
   craftButton: document.getElementById('btn-craft'),
   craftLabel: document.getElementById('craft-label'),
   menuButton: document.getElementById('menu-button'),
+  mapButton: document.getElementById('map-button'),
+  map: document.getElementById('island-map'), // the map panel (the game's own canvas is #map)
+  mapPicture: document.getElementById('map-picture'),
+  mapKey: document.getElementById('map-key'),
+  mapClose: document.getElementById('map-close'),
   stickZone: document.getElementById('stick-zone'),
   stick: document.getElementById('stick'),
   knob: document.getElementById('knob'),
@@ -54,6 +62,7 @@ const elements = {
   newWorldButton: document.getElementById('new-world'),
   fullscreenButton: document.getElementById('fullscreen'),
   soundButton: document.getElementById('sound-button'),
+  outlineButton: document.getElementById('outline-button'), // the dark edge round the player, on or off
   seedLabel: document.getElementById('seed'),
   death: document.getElementById('death'),
   deathTitle: document.getElementById('death-title'),
@@ -92,6 +101,9 @@ const state = {
   building: null, // in build mode: the key in RECIPES being built, otherwise null
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
   chest: null, // while a chest is open, the tile it stands on (see chest.js)
+  fishing: null, // while your line is out, where the bobber is and when a fish bites (fishing.js)
+  shot: null, // the last gunshot: where it hit and when, { x, y, at }, for its streak and flash (guns.js)
+  dropped: 0, // guns dropped where you died, to mention when you wake
   tapped: false, // the action button went down since the last update (so even the quickest tap counts)
   time: 0, // seconds of play, paused while a menu is open
   dayClock: 0, // seconds since this world's first morning: the time of day and the moon come from it
@@ -129,7 +141,10 @@ function wakeUp() {
   state.lifeStarted = state.time;
   startLife(spot.x, spot.y, 'down');
   const where = bed ? 'on your bedroll' : 'in your cottage';
-  showMessage(state, `You wake up ${where}. Find food and water to survive.`);
+  const guns = state.dropped > 1 ? 'Your guns lie' : 'Your gun lies';
+  const after = state.dropped ? `${guns} where you fell.` : 'Find food and water to survive.';
+  state.dropped = 0;
+  showMessage(state, `You wake up ${where}. ${after}`);
   saveGame(state);
 }
 
@@ -147,6 +162,8 @@ function startLife(x, y, facing) {
     act: null, // the last thing they did, { action, at }, for the swing or kneel it shows
     working: null, // the action word while the action button is held on something
     holding: null, // the action word the button was held down for, while it's held
+    pushedAt: null, // in build mode, when the stick was pushed from standing still (for a flick)
+    pushed: null, // ...and which way, { x, y }
   };
   state.sky = skyAt(state.dayClock, state.world.seed);
   state.fx = { particles: [], floaters: [], shake: null };
@@ -155,6 +172,8 @@ function startLife(x, y, facing) {
   state.weather = newWeather();
   state.weather.raining = state.sky.weather.rain > 0.15; // waking up in the rain isn't news
   stopBuilding(state);
+  state.fishing = null;
+  state.shot = null;
   state.dying = null;
   elements.game.classList.remove('collapsing');
   state.dead = false;
@@ -170,7 +189,10 @@ function update(dt) {
   player.clock += dt;
 
   const sky = skyAt(state.dayClock, state.world.seed);
-  if (sky.phase !== state.sky.phase) showMessage(state, skyMessage(state, sky));
+  if (sky.phase !== state.sky.phase) {
+    showMessage(state, skyMessage(state, sky));
+    if (sky.phase === 'day') washUp(state); // some mornings the sea brings something in
+  }
   state.sky = sky;
 
   movePlayer(dt);
@@ -184,7 +206,10 @@ function update(dt) {
     const label = state.target ? state.target.label : null;
     // Holding the button keeps doing one thing. If the thing changes under your thumb (lighting a
     // torch turns the fire's button into Put out), it waits until you let go.
-    if (!actionHeld() && !state.tapped) player.holding = null;
+    if (!actionHeld() && !state.tapped) {
+      player.holding = null;
+      player.triggerHeld = false; // a gun fires once per press
+    }
     else if (!player.holding) player.holding = label;
     player.working = label && label === player.holding ? label : null;
     if (player.working && player.clock >= survivor.nextSwingAt) {
@@ -196,9 +221,13 @@ function update(dt) {
   state.tapped = false;
   updateVitals(state, dt);
   updateTorch(state, dt);
+  updateLamps(state, dt);
+  markSeen(state);
   updateWeather(state, dt);
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
+  updateFishing(state);
+  updateGuns(state);
   if (survivor.vitals.health <= 0) collapse();
   if (state.time - state.savedAt >= SAVE_EVERY) saveGame(state);
 }
@@ -206,10 +235,15 @@ function update(dt) {
 function movePlayer(dt) {
   const player = state.player;
   const move = moveVector();
+  if (!state.building) player.pushedAt = null;
+  else if (!flickOrWalk(player, move)) {
+    player.moving = false;
+    return;
+  }
   player.moving = move.length > 0;
   if (!player.moving) return;
 
-  turnToward(player, move.x, move.y);
+  if (!state.building) turnToward(player, move.x, move.y);
   const step = WALK_SPEED * move.length * dt;
   const dx = move.x * step;
   const dy = move.y * step;
@@ -235,6 +269,22 @@ function movePlayer(dt) {
     state.bumpedInto = blocker;
     if (blocker.blocked) showMessage(state, blocker.blocked);
   }
+}
+
+// In build mode you keep facing the same way as you walk (you step sideways), so you can walk along
+// a line building beside you. To turn, flick the stick: push it and let go quickly. A push is held
+// back for FLICK_SECONDS to see which it is; returns true once it's a walk.
+function flickOrWalk(player, move) {
+  if (move.length > 0) {
+    if (player.pushedAt === null) player.pushedAt = player.clock;
+    player.pushed = { x: move.x, y: move.y };
+    return player.clock - player.pushedAt >= FLICK_SECONDS;
+  }
+  if (player.pushedAt !== null && player.clock - player.pushedAt < FLICK_SECONDS) {
+    turnToward(player, player.pushed.x, player.pushed.y);
+  }
+  player.pushedAt = null;
+  return false;
 }
 
 // Moves along one axis if the way is clear, and returns what's in the way if not. When this is the
@@ -302,6 +352,7 @@ function faceToward(player, x, y) {
 // Health has run out. The player sinks to their knees and falls (see playerPose() in render.js)
 // while the screen darkens, and then the death screen comes up.
 function collapse() {
+  state.dropped = dropGuns(state);
   state.dying = { seconds: 0 };
   state.player.moving = false;
   state.player.working = null;
@@ -404,6 +455,16 @@ elements.soundButton.addEventListener('click', () => {
   showSoundButton();
 });
 
+elements.outlineButton.addEventListener('click', () => {
+  setOutlineOn(!outline.on);
+  showOutlineButton();
+});
+
+function showOutlineButton() {
+  elements.outlineButton.textContent = outline.on ? 'Outline on' : 'Outline off';
+  elements.outlineButton.setAttribute('aria-pressed', String(outline.on));
+}
+
 function showSoundButton() {
   elements.soundButton.textContent = audio.on ? 'Sound on' : 'Sound off';
   elements.soundButton.setAttribute('aria-pressed', String(audio.on));
@@ -498,6 +559,8 @@ function updateHud() {
     if (hud[item] === pack[item]) continue;
     hud[item] = pack[item];
     elements.counts[item].textContent = String(pack[item]);
+    // Things you only have now and then only take up room in the pack while you have some.
+    if (ITEMS[item].hideEmpty) elements.counts[item].parentElement.hidden = pack[item] === 0;
   }
   for (const tool of Object.keys(TOOLS)) {
     const has = Boolean(state.survivor.tools[tool]);
@@ -527,6 +590,14 @@ function updateHud() {
     hud.torch = torch;
     elements.tools.torch.classList.toggle('lit', torch !== 'out');
     elements.tools.torch.classList.toggle('low', torch === 'low');
+  }
+  // A gun dims in the pack while it's reloading.
+  for (const key of Object.keys(TOOLS)) {
+    if (!TOOLS[key].gun) continue;
+    const reloading = gunReloading(state.survivor, key);
+    if (hud[`reload-${key}`] === reloading) continue;
+    hud[`reload-${key}`] = reloading;
+    elements.tools[key].classList.toggle('reloading', reloading);
   }
 
   // By day: the sun (or a cloud, or an umbrella in the rain), and how much daylight is left. By night:
@@ -600,6 +671,7 @@ function frame(now) {
       // Esc backs out of one thing at a time (the craft panel, a chest, the look panel, the menu,
       // build mode) before it opens the menu. The ☰ button and P go straight to the menu.
       if (crafting) closeCraft();
+      else if (!elements.map.hidden) closeMap();
       else if (!elements.chest.hidden) closeChest();
       else if (!elements.look.hidden) closeLook();
       else if (!elements.menu.hidden && state.started) closeMenu();
@@ -609,6 +681,9 @@ function frame(now) {
       if (crafting) closeCraft();
       else if (state.building) stopBuilding(state);
       else openCraft();
+    } else if (press === 'map' && (playing || !elements.map.hidden)) {
+      if (!elements.map.hidden) closeMap();
+      else openMap();
     } else if (press.startsWith('recipe:') && crafting) {
       craft(state, Object.keys(RECIPES)[Number(press.slice(7))]);
     } else if (press === 'action' && playing && state.building) {
@@ -654,9 +729,12 @@ setupView(elements.canvas);
 setupInput(elements);
 setupCrafting(elements);
 setupChest(elements);
+setupMap(elements);
 setupLook();
 setupSound();
 showSoundButton();
+outline.on = recall(OUTLINE_KEY) !== false;
+showOutlineButton();
 // Carry on from last time if there's a saved world; otherwise the first island.
 state.resumed = loadGame(state);
 if (!state.resumed) newGame(DEFAULT_SEED);

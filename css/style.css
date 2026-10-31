@@ -275,9 +275,20 @@ button:focus-visible {
 .berries dt { color: #ff5a6e; }
 .cloth dt { color: #e6dcc4; }
 .cooked dt { color: #ec8a4a; }
+.fish dt { color: #a8cfe6; }
+.cookedFish dt { color: #e8944e; }
 .axe dt { color: #c9ccc4; }
 .pick dt { color: #c9ccc4; }
 .torch dt { color: #c49a62; }
+.rod dt { color: #c49a62; }
+.bullets dt { color: #e0c060; }
+.pistol dt { color: #aab4bc; }
+.rifle dt { color: #b08458; }
+
+/* A gun dims while it's being reloaded. */
+.tool.reloading dt {
+  opacity: 0.35;
+}
 
 /* A lit torch glows in the pack, and turns red as it burns low. */
 .torch.lit dt {
@@ -305,6 +316,30 @@ button:focus-visible {
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
+}
+
+/* The ☰ menu button, with the Map button under it. */
+.corner-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-button {
+  width: auto;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 6px;
+  color: var(--moss);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.map-button kbd {
+  display: none;
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 400;
 }
 
 /* ---- Messages ---- */
@@ -575,6 +610,55 @@ button:focus-visible {
   display: none;
 }
 
+/* ---- Map panel ---- */
+
+/* The map on the left, the title and the key beside it. */
+.map-panel {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  width: auto;
+  max-width: 100%;
+  padding: 12px 14px;
+}
+
+.map-picture {
+  display: block;
+  border: 1px solid var(--rule);
+  image-rendering: pixelated;
+}
+
+.map-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 136px;
+}
+
+.map-key {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  color: var(--fog);
+  font-size: 13px;
+  list-style: none;
+}
+
+.map-glyph {
+  display: inline-block;
+  width: 1.4em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.map-note {
+  margin: 0;
+  color: var(--fog);
+  font-size: 12px;
+}
+
 /* ---- Craft panel ---- */
 
 .craft-panel {
@@ -665,6 +749,9 @@ button:focus-visible {
 .cost.berries { color: #ff5a6e; }
 .cost.cloth { color: #e6dcc4; }
 .cost.cooked { color: #ec8a4a; }
+.cost.fish { color: #a8cfe6; }
+.cost.cookedFish { color: #e8944e; }
+.cost.bullets { color: #e0c060; }
 .cost.short { color: var(--health); }
 
 /* A tool you already carry: no cost to show, just a note. */
@@ -889,6 +976,10 @@ button:focus-visible {
     display: none;
   }
 
+  .map-button kbd {
+    display: inline-block;
+  }
+
   .btn kbd {
     display: block;
   }
@@ -932,7 +1023,24 @@ button:focus-visible {
   }
 }
 
-/* Phones held sideways: smaller cards, five to a row, so every recipe fits on the screen at once. */
+/* Phones held sideways: the pack a little tighter, and tools shown by their picture alone, so it
+   fits beside the health bars; with almost everything in it, it wraps onto a second row. */
+@media (max-height: 460px) {
+  .pack {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 2px 9px;
+    max-width: calc(100vw - 250px); /* past this, it goes onto a second row instead of over the bars */
+    padding: 6px 10px;
+  }
+
+  .tool dd {
+    display: none;
+  }
+}
+
+/* Phones held sideways: smaller cards laid on their side (the picture on the left, the words
+   beside it), four to a row, so every recipe fits on the screen at once (up to sixteen). */
 @media (max-height: 460px) {
   .craft-panel {
     gap: 8px;
@@ -945,40 +1053,65 @@ button:focus-visible {
   }
 
   .craft-head .button.close {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
   }
 
   .recipes {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
   }
 
   .recipe {
-    gap: 3px;
-    padding: 6px 5px;
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    grid-template-areas:
+      "picture name"
+      "picture about"
+      "picture cost";
+    align-content: start;
+    align-items: start;
+    gap: 1px 6px;
+    padding: 4px 6px 4px 4px;
+    text-align: left;
   }
 
   .recipe-picture {
-    min-height: 30px;
-    font-size: 28px;
+    grid-area: picture;
+    align-self: center;
+    justify-self: center;
+    min-height: 0;
+    font-size: 26px;
+  }
+
+  canvas.recipe-picture {
+    max-width: 26px;
+    object-fit: contain;
   }
 
   .recipe-name {
+    grid-area: name;
     font-size: 12px;
-    line-height: 1.2;
-  }
-
-  .recipe-about {
-    font-size: 10.5px;
     line-height: 1.25;
   }
 
+  .recipe-about {
+    grid-area: about;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
   .recipe-cost {
+    grid-area: cost;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0 8px;
-    font-size: 13px;
+    margin-top: 2px;
+    font-size: 12px;
+  }
+
+  .recipe.owned::after {
+    grid-area: cost;
   }
 
   .recipe.owned::after,
@@ -989,6 +1122,14 @@ button:focus-visible {
 
 /* Phones held sideways: the chest panel a little tighter. */
 @media (max-height: 460px) {
+  .thing-name {
+    display: none;
+  }
+
+  .chest-things {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
   .chest-panel {
     gap: 8px;
     padding: 10px 14px 12px;

@@ -82,6 +82,8 @@ function saveGame(game) {
     clawed: [...world.clawed],
     regrowing: world.regrowing,
     chests: [...world.chests],
+    fuel: [...world.fuel],
+    seen: packSeen(world),
     bed: world.bed,
   });
   game.savedAt = game.time;
@@ -141,7 +143,18 @@ function restoreWorld(world, save) {
     const key = valid(i) && world.objects[i];
     if (key && OBJECTS[key].chest) world.chests.set(i, restoreChest(chest));
   }
+  // What's left in each lamp, for lamps still standing. A lit lamp with nothing saved for it (from
+  // an older save) starts full.
+  for (const [i, left] of save.fuel || []) {
+    const key = valid(i) && world.objects[i];
+    if (key && OBJECTS[key].fuel && OBJECTS[key].light) world.fuel.set(i, Math.max(0, finite(left, 0)));
+  }
+  for (let i = 0; i < world.objects.length; i++) {
+    const object = world.objects[i] && OBJECTS[world.objects[i]];
+    if (object && object.fuel && object.light && !world.fuel.has(i)) world.fuel.set(i, object.fuel.burns);
+  }
   if (valid(save.bed)) world.bed = save.bed;
+  unpackSeen(world, save.seen);
 }
 
 // A chest's contents as saved, keeping only whole numbers of items and tools that still exist.
@@ -178,7 +191,8 @@ function restoreSurvivor(saved) {
 }
 
 // A number standing for the island as it was built: its ground and what stood on it. Two islands
-// with the same print are (all but certainly) the same island.
+// with the same print are (all but certainly) the same island. Things placed for you to find
+// (`found` in OBJECTS) are left out, so adding them didn't change the print of islands already saved.
 function worldPrint(world) {
   let hash = 2166136261;
   const mix = (text) => {
@@ -186,7 +200,8 @@ function worldPrint(world) {
   };
   for (let i = 0; i < world.ground.length; i++) {
     mix(world.ground[i]);
-    mix(world.original[i] || '-');
+    const key = world.original[i];
+    mix(key && !OBJECTS[key].found ? key : '-');
   }
   return hash >>> 0;
 }
