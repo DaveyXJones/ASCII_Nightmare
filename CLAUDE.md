@@ -114,9 +114,8 @@ of which they may want changed:
   10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
   `bestFood`). On short screens (since fishing) the craft cards lie on their side, four to a row:
   picture on the left, name, `about` and cost beside it, so up to sixteen fit on a 667×375 phone.
-  Each `about` must stay within two lines of about 16 characters there (thirteen cards fill the
-  panel to 370 of 375 px). The chest panel is full too: with tins it holds fifteen things, three
-  rows of five at 667×375; one more item or tool adds a row to it.
+  Each `about` must stay within two lines of about 16 characters there. (Since building and
+  gardening the cards are on tabs, and the chest panel is six to a row; see that section.)
 - **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
   fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
@@ -473,7 +472,73 @@ creative with it." Everything below beyond that is Claude's design, all in js/pl
   zoom-out may be choppy on a slow phone.
 - **Sounds**: `creak` (searching a cupboard), levelled offline against `pick` and `drink`.
 - **Ideas the README offers next**: lighting the lighthouse (the notes hint at it), a book of
-  found notes, and a Repair action on fallen logs.
+  found notes, and a Repair action on fallen logs (built since; see below).
+
+## Building and gardening (built 2026-10-31, on the owner's PC)
+
+After Places to find the owner asked: "Id like to add to the crafting for some base building action
+and i was also wondering if we could add gardening and the ability to uproot a bush or tree so the
+player can build there". Offered choices, they picked all four building ideas (stone wall and gate,
+wooden floor, spiked barricade, a Repair action), digging up **only with a spade**, gardening with
+**both** replanted cuttings and new crops from seeds, and plants that **need watering**. Each part is
+its own commit. Everything beyond those answers is Claude's design:
+
+- **Craft tabs**: each recipe has a `tab` (`CRAFT_TABS`: tools, build, garden, cook). `setupCrafting`
+  makes a tab button for each tab that has recipes; `showCraftTab` hides the other cards; number keys
+  pick within the tab (`tabRecipes()`), and ←/→ (A/D) switch tabs (`side:` presses from input.js,
+  `turnCraftTab`). A tab with something you can make has a dot (`.ready`). `openCraft` sets
+  `.recipes` to the fullest tab's height so the tabs don't jump; the grid is `auto-fill`, so a tab
+  with few cards keeps them card-sized. The Build tab (11 cards, three rows) is the fullest: the
+  panel takes 298 of 375 px at 667×375.
+- **The spade** (`TOOLS.spade`, `power: { 'Dig up': 1 }` only so it's drawn in the hand): objects
+  with `dig: { hits, gives, becomes }` (`bushBare` → a berry cutting, `cottonBare` → a cotton
+  cutting, `stump` → 1 wood, `soil` → 1 wood) say **Dig up** with the spade when they have no
+  `gives` of their own, so a full bush still says Pick. `useTarget` lays `DIGGING` and `dig` over
+  the object. Without the spade nothing digs; the bare bush's `empty` message hints at it.
+- **Stone wall, gate, spikes**: `stoneWall` (3 stone, `claws: 45`, a `fence` with `side`
+  pictures), `stoneGate` (a `door`, `claws: 45`), `spikes` (3 wood, `claws: 12`, `thorns: 1`, not a
+  fence). `prick` (creatures.js) wounds a creature on each scratch at something with `thorns`, and
+  when its lunge is stopped dead by one; `woundCreature` takes a `from` point to knock it away from.
+- **Repair**: things with `claws` have `repair` (a cost). While `world.clawed` has marks on one,
+  `findTarget` offers Repair (`repairWall`, survival.js), which clears them. `logPile` is now
+  `action: 'Repair'` and becomes a `logWall` for nothing (`gives: {}`; `useTarget` skips the
+  floating text when nothing's given). `useTarget` won't turn something you're standing on solid
+  (`feetOn`).
+- **Floors**: `RECIPES.floor` has `floor: 'planks'` (a key in TILES) instead of `builds`.
+  `buildFloor` lays it as the ground, keeping what was there in `world.floors` (saved as tile
+  indexes; on loading, what was there is read from the regenerated island). Facing your own board,
+  `findBuildSpot` returns `lift: true, label: 'Take up'`. A floor goes under things you've built
+  (anything with a `mark`) and things you walk over, not under natural solid things or the garden,
+  and not in the cottage. `redrawGround` (render.js) redraws the one tile in the ground cache.
+  `build()` now works out its spot again on each press, so two presses before an update can't
+  build twice on one tile.
+- **The garden** (js/garden.js): a garden bed is `soil` (`plot`; the recipe `needs` the spade).
+  Plants have `crop: { grows, into, says }`: `potatoSprout` → `potatoPlant` → `potatoRipe` (Harvest:
+  3 potatoes, back to soil); `pumpkinSprout` → `pumpkinVine` → `pumpkinRipe` (a pumpkin and 2
+  seeds); `bushSprout` → `bush`; `cottonSprout` → `cotton`; and `wilted` (Clear: back to soil).
+  `world.crops` (tile index → `{ grown, water, dry }`, seconds) is saved. A plant grows only while
+  `water` > 0; a watering is `WET_SECONDS` (240); dry for `WILT_SECONDS` (300) it wilts; rain over
+  `RAIN_WATERS` waters everything. A stage that's solid (a bush) waits until your feet are off the
+  tile. Dry plants are drawn with `cropTint` (`DRY_TINT`, through `drawSprite`'s `tint`).
+  Everything in a garden has `garden`, so building (and floors) won't go over it, and
+  `MARKS.garden` on the map. News (`gardenNews`) only within `GARDEN_NEWS_REACH`; "drying out" at
+  most every `GARDEN_NEWS_EVERY` seconds.
+- **Planting**: facing a bed, Plant uses `plantFor(survivor)`: what you planted last
+  (`survivor.planting`) if you still have some, else the first on the Garden tab you have. The
+  Garden tab's cards (`plants: true`, `over: ['soil']`, `again`, and `picture` to show the grown
+  plant) plant rows in build mode, where the button says Plant.
+- **The bucket** (`TOOLS.bucket`, `holds: 4`): `survivor.bucket` counts waterings left (saved;
+  emptied when it goes in a chest; gone with the tool when you die). Facing water or the well, not
+  thirsty (`FILL_THIRST`) and not full: **Fill** (a `bucket: true` target). Its pack slot shows the
+  count even on a phone (`#bucket-water`) and turns blue with water in it.
+- **Items**: `bushCutting`, `cottonCutting`, `potato` (planted, or baked: `RECIPES.bakePotato`),
+  `bakedPotato` (35 food, 10 health), `pumpkinSeeds`, `pumpkin` (30, 5), all `hideEmpty`. Potatoes
+  and pumpkin seeds were added to `LOOT` (cupboard, tent, dropped pack). Adding finds shifts what
+  cupboards not yet searched give on existing islands.
+- **Sounds**: `dig` (about `chop`'s peak) and `pour` (about `drink`'s), levelled offline.
+- **Room on a phone**: with nearly everything the pack wraps onto three rows; game.js keeps
+  `--pack-bottom` up to date (a ResizeObserver) and `.toast` sits below it. The chest panel on short
+  screens is six to a row, each count under its glyph, so 23 things fit (357 of 375 px).
 
 ## Hard rules
 
@@ -485,8 +550,8 @@ creative with it." Everything below beyond that is Claude's design, all in js/pl
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → places →
-  night → weather → render → input → sound → survival → crafting → chest → fishing → guns → map →
-  creatures → save → game`. A file
+  night → weather → render → input → sound → survival → crafting → chest → fishing → garden → guns →
+  map → creatures → save → game`. A file
   may use globals from files before it at load time, and from any file inside functions that run
   later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
@@ -504,7 +569,7 @@ creative with it." Everything below beyond that is Claude's design, all in js/pl
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print), `loot` (searched: a table in `LOOT`, places.js) and `epitaph` (a grave). |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print), `loot` (searched: a table in `LOOT`, places.js), `epitaph` (a grave), `repair` and `thorns` (mending claw marks; spikes), `dig` (with the spade), and `plot`, `crop` and `garden` (the garden). |
 | `js/world.js` | `WORLD_SIZE` and `FIRST_WORLD_SIZE`, `generateWorld(seed, island)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
 | `js/places.js` | Places to find on islands with `places`: `PLACES` (layouts as text, how many, where), `PLACE_LEGEND`, `LOOT`, `NOTES`, `PLACE_NOTES`, `EPITAPHS`; `placePlaces` (and `placeLighthouse`, `siteFits`, `buildPlace`, `handOutNotes`), `searchLoot`, `readScrap`, `epitaphNear`, the note panel (`setupNote`, `openNote`, `closeNote`). |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
@@ -514,8 +579,9 @@ creative with it." Everything below beyond that is Claude's design, all in js/pl
 | `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
 | `js/guns.js` | Shooting (`findShot`, `clearShot`, `gunFor`, `shoot`, `hearShot`), reloading (`gunState`, `updateGuns`), `dropGuns` on death, `washUp` of bullet tins. Placement of the wreck and crates is `placeFinds` in world.js; the streak and flash are `drawShot` and `findLights` in render.js. |
 | `js/fishing.js` | `wantsToFish`, `castLine`, `updateFishing` (bite, hook, catch or lose). The bobber and line are drawn in render.js (`drawBobber`, `drawFishingLine`). |
+| `js/garden.js` | The garden: `plantFor`, `plant`, `plantHere`, the bucket (`wantsToFill`, `fillBucket`, `waterPlant`), `cropWantsWater`, `cropTint`, `updateGarden` (growing, drying, wilting) and `grow`. |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat, `hideEmpty` for pack slots shown only while you have some), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
-| `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
+| `js/crafting.js` | `TOOLS`, `CRAFT_TABS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`, `recipeNeed`), build mode (`findBuildSpot`, `build`, `buildFloor`, `keepClear`), the craft panel and its tabs. |
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
 | `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `layoutMap`, `centreMap`, `zoomMap`, `panMap`, `setupMapGestures`, `drawMap`, `readCell`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
@@ -541,8 +607,10 @@ creative with it." Everything below beyond that is Claude's design, all in js/pl
   islands losing their changes (`found` objects are also left out, since prints were once taken
   after the wreck). `damage`, `clawed` and `soaked` are Maps of tile index to swings, scratches or
   seconds of rain taken; `fuel` holds each lamp's seconds left; `seen` is the map's explored tiles
-  (`setObject` clears `damage`, `clawed`, `soaked`, `chests` and `fuel`; `soaked` isn't saved).
-  `chests` holds what's in each chest and `bed` the newest bedroll's tile. `beaches` (open sand by
+  (`setObject` clears `damage`, `clawed`, `soaked`, `chests`, `fuel` and `crops`; `soaked` isn't
+  saved). `chests` holds what's in each chest and `bed` the newest bedroll's tile. `crops` holds how
+  each plant in the garden is getting on, and `floors` the ground under each board you've laid (the
+  only ground that changes in play; the floor itself is `planks` in `ground`). `beaches` (open sand by
   the sea you can walk to) is rebuilt with the island, not saved; so are `places` (`{ kind, x, y,
   search }`) and `notes` (tile index → note), and `hasPlaces` comes from the save's `places` flag.
   **Anything new that should survive a reload** (a survivor field, a world Map) needs adding to
@@ -553,13 +621,17 @@ creative with it." Everything below beyond that is Claude's design, all in js/pl
 ## Crafting and build mode (js/crafting.js)
 
 - `RECIPES` drives everything: the craft panel makes one card per recipe at startup
-  (`setupCrafting`), in table order, and number keys pick by that order. A recipe with `tool` puts
-  a key in `survivor.tools` (lost on death, like the pack); one with `builds` starts build mode; one
+  (`setupCrafting`), in table order, on the tab its `tab` names, and number keys pick by that order
+  within the tab showing. A recipe with `tool` puts
+  a key in `survivor.tools` (lost on death, like the pack); one with `builds` (or `floor`) starts
+  build mode; one
   with `gives` adds items to the pack and keeps the panel open (`refreshCraft`). `byFire` recipes
-  need `survivor.warm` (beside a campfire), checked in `canMake`. A `builds` recipe with `over` (the
-  roof) must be built onto one of those objects and replaces it, instead of going on clear ground.
-  Number keys: `1`–`9`, then `0`, `-` and `=` for the tenth to twelfth (`RECIPE_KEYS`, input.js);
-  the thirteenth (cooked fish) has none, and is clicked or reached with Tab.
+  need `survivor.warm` (beside a campfire), and `needs` recipes a tool, checked in `canMake`; the
+  card says which (`recipeNeed`). A `builds` recipe with `over` (the
+  roof, a planting) must be built onto one of those objects and replaces it, instead of going on
+  clear ground.
+  Number keys: `1`–`9`, then `0`, `-` and `=` for the tenth to twelfth (`RECIPE_KEYS`, input.js),
+  so a tab can hold twelve with a key each (the fullest, Build, has eleven).
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
 - The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not
@@ -635,8 +707,8 @@ creative with it." Everything below beyond that is Claude's design, all in js/pl
     margin. When the camera moves, the old image is shifted and only the newly exposed strips are
     drawn (`drawGroundRegion`). Water tiles are redrawn when `waterFrame` ticks.
 - **If you change ground or mountains during play, invalidate the cache** (`groundCache.world =
-  null`) or it will keep showing the old tiles. Objects are not in the cache, so `setObject` needs
-  nothing extra.
+  null`, or `redrawGround(world, x, y)` for one tile, as floors do) or it will keep showing the old
+  tiles. Objects are not in the cache, so `setObject` needs nothing extra.
 - **Draw order** (`drawStanding`) is row by row from top to bottom of the screen. Within a row:
   cliffs, then the player if their feet are above the row's middle, then objects, then the
   cottage, then the player if not drawn yet. Mountains already sit in the ground cache underneath;

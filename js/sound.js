@@ -65,7 +65,7 @@ const SOUNDS = {
     tone: { seconds: 0.12, wave: 'triangle', hz: 150, to: 70 },
   },
   // Water poured from the bucket onto the earth: a splashing hiss, falling.
-  pour: { volume: 1.6, vary: 0.1, noise: { seconds: 0.4, filter: 'bandpass', hz: 2200, q: 1.2, to: 900 } },
+  pour: { volume: 1.75, vary: 0.1, noise: { seconds: 0.4, filter: 'bandpass', hz: 2200, q: 1.2, to: 900 } },
   // The spade biting into earth: a gritty scrape falling away, with a dull thud under it.
   dig: {
     volume: 1.6,

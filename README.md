@@ -63,10 +63,10 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Fish**, **Light**, **Fill**, **Hit**, **Shoot**, **Open**. Hold it to keep going (one shot per tap) | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Fish**, **Light**, **Fill**, **Dig up**, **Plant**, **Water**, **Harvest**, **Repair**, **Hit**, **Shoot**, **Open**. Hold it to keep going (one shot per tap) | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
-| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9`, `0`, `-`, `=` |
-| Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
+| Craft | **Craft**, the button above the big one, then a tab (**Tools**, **Build**, **Garden**, **Cook**) and what to make | `C`, then `←` `→` for the tabs and `1` to `9`, `0`, `-`, `=` |
+| Build | Face the spot and tap **Build** (or **Plant**, or **Take up** on a floor you laid); tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
 | Map | **Map**, under ☰ in the top right; drag to look around, pinch or **−**/**+** to zoom, **@** to find yourself | `M`; arrow keys, `+`/`-`, mouse wheel |
 | Menu | ☰ in the top right | `Esc` |
 
@@ -101,25 +101,35 @@ something from the dark is close, and growls come from the side the creature is 
 
 ## Crafting and building
 
-Tap **Craft** to see what you can make. Each card shows what it costs; numbers in red are what
-you're short of. The game pauses while the panel is open. The Craft button lights up when there's
-something you can afford.
+Tap **Craft** to see what you can make. It's on four tabs along the top: **Tools**, **Build**,
+**Garden** and **Cook**; a dot on a tab means there's something on it you can make right now. Each
+card shows what it costs; numbers in red are what you're short of. The game pauses while the panel
+is open. The Craft button lights up when there's something you can afford.
 
 | Make | Costs | What it does |
 | --- | --- | --- |
 | **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings, and shades too. You lose it if you die. |
 | **Stone pick** | 2 wood, 3 stone | Boulders break in half the swings. You lose it if you die. |
+| **Stone spade** | 2 wood, 2 stone | Digs up picked bushes, picked cotton and tree stumps, and digs garden beds (below). You lose it if you die. |
+| **Bucket** | 3 wood | Carries water for the garden: fill it at the water or the well, and it waters four plants. You lose it if you die. |
 | **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
 | **Fishing rod** | 2 wood, 1 cloth | Face water and hold the button to fish (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
 | **Roof** | 4 wood | Build it over a campfire and rain can't put the fire out (see Weather, below). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
 | **Wooden door** | 3 wood | Set it in a line of wall. It swings open as you walk up and shuts behind you; shades can't open it. |
+| **Stone wall** | 3 stone each | Takes things in the dark three times as long to claw through as wood. Joins up with wooden walls and doors. |
+| **Gate** | 3 wood, 2 stone | A door between stone posts that holds out as long as the stone wall. |
+| **Spiked barricade** | 3 wood each | Crossed, sharpened stakes. Anything that claws at them, or runs onto them, gets cut. |
+| **Wooden floor** | 1 wood a board | Boards laid as the ground itself, so walls and chests stand on it. No grass grows through, so nothing lurks there. |
 | **Lamp** | 2 wood, 2 cloth | A lantern on a post. It keeps the dark back like a small fire, and rain can't put it out. It burns five minutes of dark, then needs filling (below). |
 | **Chest** | 6 wood | Keeps whatever you put in it, even when you die. It can go inside the cottage. |
 | **Bedroll** | 2 cloth, 1 wood | After you die, you wake up on it instead of in the cottage. |
+| **Garden bed** | 1 wood | Needs the spade. Dug earth to plant in (see The garden, below). |
+| **Plant potato**, **pumpkin**, **berry bush**, **cotton** | 1 potato, pumpkin seed, or cutting | Plants a row of them in garden beds, in build mode. |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
 | **Cooked fish** | 1 fish | Only beside a campfire. Fills you up the most (45), and heals 15. |
+| **Baked potato** | 1 potato | Only beside a campfire. Fills you up (35), and heals 10. |
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
 front of you. Yellow brackets mean it can go there, red means it can't (the message says why).
@@ -136,6 +146,24 @@ Changed your mind? Face the wall or door and **Break** it, or **Put out** the ca
 get the wood or stone back. Things you build stay in the world when you die.
 
 A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
+
+**Floors.** Pick **Wooden floor** and lay boards in front of you like walls. Walls, doors, chests
+and the rest can be built on top. Facing a board you laid, the button says **Take up** instead, and
+gives the wood back. Floors don't go inside the cottage (it has one) or under trees and rocks.
+
+**Clearing ground.** Chopping a tree leaves a stump, which you can build over as it is. With a
+**spade** you can also **Dig up** a stump (1 wood), a berry bush you've picked bare, or a picked
+cotton plant: the tile is clear, and a bush or cotton plant leaves a **cutting** to plant in your
+garden. Pick a bush first; a full one says **Pick**. Without a spade nothing can be dug up.
+
+**Repair.** When something in the dark has been clawing at a wall, door, gate or barricade, the
+button says **Repair** as you face it: 1 wood (1 stone for a stone wall) wipes out the claw marks,
+so it holds out as long again. The fallen heaps of logs in the old cabins say **Repair** too, and
+stack back up into the wall for nothing (step off them first). Break the wall again if it's the
+wood you want.
+
+**Spikes.** A creature that claws at a spiked barricade cuts itself on every scratch: a shade is
+gone after three. Ring your camp with them, or put them where things try to get in.
 
 **Fishing.** With a fishing rod, face water (a lake, a river or the sea) and the button says
 **Fish** instead of **Drink** (unless you're thirsty: then it offers a drink first). Hold it: you
@@ -176,6 +204,28 @@ move it, empty it and tap **Take down** for some of the wood back.
 **Bedrolls.** You walk over a bedroll, and wake up on it after you die, so build one inside your
 fence by the fire. If you've made more than one, you wake on the newest (or another, if you've rolled that one up). Face it and **Roll up**
 to take it back.
+
+## The garden
+
+1. Make a **spade** (Tools tab), then a **garden bed** (Garden tab) where you want it: dug earth, 1
+   wood a bed. Beds stay in build mode, so dig a row.
+2. Get something to plant. **Potatoes** and **pumpkin seeds** turn up in the cupboards of the old
+   cabins, in tents and in dropped packs. **Cuttings** come from digging up a picked berry bush or
+   cotton plant with the spade.
+3. Face a bed and tap **Plant**: it plants the same as last time, or whatever you have. To choose,
+   or to plant a whole row, use the cards on the Garden tab.
+4. **Water it.** A plant only grows while it has water in it. Make a **bucket**, face the water's
+   edge or the well and tap **Fill** (if you're thirsty, the button offers a drink first); the
+   bucket waters four plants, and the number beside it in the pack says how many are left. Face a
+   plant that needs it and tap **Water**. A watering lasts four minutes. **Rain waters everything.**
+   A plant that's run dry looks pale and straw-colored, and stops growing; left dry for five minutes,
+   it **wilts** and dies (**Clear** it to use the bed again).
+5. **Harvest.** Potatoes are ready in about six minutes of watered growing: **Harvest** gives three
+   (bake them at a fire to eat them). A pumpkin takes a little longer, and gives a pumpkin to eat and
+   two seeds to plant again. A cutting grows into a berry bush or a cotton plant like the wild ones,
+   right there in your garden. The game tells you when something's ready, if you're nearby.
+
+You walk through your garden, and nothing gets built over it by mistake. The map marks it `ψ`.
 
 ## Night
 
@@ -338,6 +388,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
 | `js/fishing.js` | Fishing: casting, the bite, and landing a fish (or losing it). |
+| `js/garden.js` | The garden: planting, the bucket, watering, plants growing, and wilting. |
 | `js/guns.js` | The pistol and rifle: aiming, shooting, reloading, the bang, and bullets washing up. |
 | `js/map.js` | The map: which tiles you've seen, and the map panel drawn in characters. |
 | `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
@@ -347,7 +398,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `.nojekyll` | An empty file that tells GitHub Pages to publish everything exactly as it is. |
 
 The scripts are plain `<script>` files loaded in order (no modules), which is what lets the game
-run straight from the file. Each one (and the stylesheet) ends in a version number, `?v=11`: raise
+run straight from the file. Each one (and the stylesheet) ends in a version number, `?v=12`: raise
 it in `index.html` whenever you change the code, so browsers fetch the new files instead of using
 old copies they've kept.
 
@@ -414,7 +465,11 @@ old copies they've kept.
 
 ## What's next
 
-Done lately: an island four times bigger again, with places to find: ruined cabins, an old
+Done lately, your list of 2026-10-31 evening: building and gardening. The craft panel on tabs; a
+stone wall, a gate, a spiked barricade and wooden floors; **Repair** for clawed walls and fallen
+cabin logs; a spade to dig up bushes and stumps; and a garden of potatoes, pumpkins, berry bushes
+and cotton that needs watering from a bucket. Before that: an island four times bigger again, with
+places to find: ruined cabins, an old
 village with a graveyard, camps, standing stones with candles nobody lights, and a lighthouse, with
 tins of food, scraps of map and notes in them. Before that: a bigger island and a map you can zoom
 and drag. Before that, your list of 2026-10-31: walls that join up (a fence running up the screen is seen
@@ -430,8 +485,10 @@ Ideas for next (Claude's suggestions):
   wreck) and carry it up to the lamp. Lit, it could keep the dark back across a whole stretch of
   coast, or change what comes out at night.
 - **A book of notes.** Keep the notes you've found, to read again from the menu.
-- **Mend an old cabin.** A **Repair** on a fallen heap of logs, to stand the wall up again for a
-  little wood, instead of building your own wall in the gap.
+- **Jack-o'-lanterns.** Carve a pumpkin from the garden into a little lantern with a candle in it:
+  a lamp that needs no filling, but goes soft and rots after a few nights.
+- **A rain barrel.** Fills itself when it rains, so the garden by your camp can be watered without
+  a walk to the water.
 
 Later: **multiplayer**. Because the world is built from a seed, a server only has to share the seed
 and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a small

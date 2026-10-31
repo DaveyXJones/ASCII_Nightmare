@@ -1261,14 +1261,31 @@ button:focus-visible {
   }
 }
 
-/* Phones held sideways: the chest panel a little tighter. */
+/* Phones held sideways: the chest panel a little tighter, six things to a row with each one's count
+   under it, so a pack with nearly everything in it still fits (four rows). */
 @media (max-height: 460px) {
   .thing-name {
     display: none;
   }
 
   .chest-things {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .thing {
+    flex-direction: column;
+    gap: 1px;
+    min-height: 38px;
+    padding: 2px;
+  }
+
+  .thing-glyph {
+    font-size: 17px;
+  }
+
+  .thing-count {
+    font-size: 12px;
   }
 
   .chest-panel {
