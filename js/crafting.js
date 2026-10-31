@@ -30,6 +30,16 @@ const TOOLS = {
     held: ['⌐', '¬'],
     power: { Mine: 2 },
   },
+  // Nothing can be dug up without the spade: with it, the action button says Dig up on a picked bush,
+  // a picked cotton plant or a tree stump (`dig` in OBJECTS).
+  spade: {
+    name: 'Stone spade',
+    short: 'spade',
+    glyph: '♤',
+    color: '#c9ccc4',
+    held: ['↧', '↧'],
+    power: { 'Dig up': 1 },
+  },
   torch: { name: 'Torch', short: 'torch', glyph: '¡', color: '#c49a62', burns: 300, light: 5 },
   // The rod's `power` for Fish is only there so it's drawn in your hand while you fish.
   rod: { name: 'Fishing rod', short: 'rod', glyph: '⌠', color: '#c49a62', held: ['╲', '╱'], power: { Fish: 1 } },
@@ -94,6 +104,14 @@ const RECIPES = {
     cost: { wood: 2, stone: 3 },
     tool: 'pick',
     done: 'You bind a pointed stone to a handle. Boulders break twice as fast now.',
+  },
+  spade: {
+    tab: 'tools',
+    name: 'Stone spade',
+    about: 'Digs up bushes and stumps.',
+    cost: { wood: 2, stone: 2 },
+    tool: 'spade',
+    done: 'You bind a flat stone to a handle. Face a picked bush or a stump to dig it up.',
   },
   torch: {
     tab: 'tools',

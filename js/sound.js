@@ -64,6 +64,13 @@ const SOUNDS = {
     noise: { seconds: 0.08, filter: 'lowpass', hz: 700 },
     tone: { seconds: 0.12, wave: 'triangle', hz: 150, to: 70 },
   },
+  // The spade biting into earth: a gritty scrape falling away, with a dull thud under it.
+  dig: {
+    volume: 1.6,
+    vary: 0.12,
+    noise: { seconds: 0.18, filter: 'bandpass', hz: 650, q: 1, to: 260 },
+    tone: { seconds: 0.1, wave: 'triangle', hz: 110, to: 60 },
+  },
   // An old cupboard door swinging open on rusty hinges (places.js): a buzzy note sliding down, with a
   // scrape of wood under it.
   creak: {

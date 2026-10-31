@@ -47,6 +47,9 @@
 //            table of what you might find in it. What you find is worked out from the island's seed
 //            and the tile, so it's the same however many times you load the game.
 //   epitaph  true for a grave: walking into it reads its stone, a line from EPITAPHS (places.js)
+//   dig      { hits, gives, becomes }: with a spade (TOOLS.spade), the action button says Dig up on
+//            it, once there's nothing else to take from it, and these replace its own `hits`,
+//            `gives` and `becomes`
 
 // How a lamp burns (see `fuel` below): a filling lasts five minutes of dark, half a night.
 const LAMP_FUEL = { burns: 300, cost: { cloth: 1 }, into: 'lamp', empty: 'lampOut' };
@@ -190,8 +193,10 @@ const OBJECTS = {
     solid: true,
     blocked: 'A thick bush.',
     action: 'Pick',
-    empty: 'No berries left. They will grow back.',
+    empty: 'No berries left. They will grow back, or a spade would dig it up.',
     regrow: { after: 90, into: 'bush' },
+    // Dug up, it leaves a cutting to plant in a garden bed (see garden.js).
+    dig: { hits: 3, gives: { bushCutting: 1 }, becomes: null },
   },
   cotton: {
     name: 'Cotton plant',
@@ -211,13 +216,15 @@ const OBJECTS = {
     solid: true,
     blocked: 'A cotton plant, picked bare.',
     action: 'Pick',
-    empty: 'Nothing left to pick. The cotton will grow back.',
+    empty: 'Nothing left to pick. The cotton will grow back, or a spade would dig it up.',
     regrow: { after: 120, into: 'cotton' },
+    dig: { hits: 2, gives: { cottonCutting: 1 }, becomes: null },
   },
   stump: {
     name: 'Tree stump',
     sprite: 'stump',
     solid: false,
+    dig: { hits: 3, gives: { wood: 1 }, becomes: null },
   },
   well: {
     name: 'Well',

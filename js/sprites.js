@@ -1596,6 +1596,7 @@ const ACTION_POSES = {
   'Pick up': { pose: 'crouch', held: null, seconds: 0.4 },
   Search: { pose: 'crouch', held: null, seconds: 0.5 }, // rummaging through a cupboard or a pack
   'Cut up': { pose: 'crouch', held: null, seconds: 0.3 },
+  'Dig up': { seconds: 0.25 }, // a swing of the spade (drawn in place of the rough tool)
   Eat:{ pose: 'windup', held: null, seconds: 0.4 },
 };
 

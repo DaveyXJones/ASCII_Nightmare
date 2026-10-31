@@ -15,6 +15,9 @@ const ITEMS = {
   bullets: { name: 'bullets', glyph: '‣', color: '#e0c060', hideEmpty: true }, // for both guns (guns.js)
   // Tinned food, found in the ruins (see LOOT in places.js). Eat it anywhere, no fire needed.
   tins: { name: 'tins', glyph: '◘', color: '#b8c4c8', food: 35, heals: 5, hideEmpty: true },
+  // Dug up with the spade, to plant again in a garden bed (see garden.js).
+  bushCutting: { name: 'berry cuttings', glyph: 'ψ', color: '#e0475a', hideEmpty: true },
+  cottonCutting: { name: 'cotton cuttings', glyph: 'ψ', color: '#e6dcc4', hideEmpty: true },
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -32,6 +35,9 @@ const LAMP_LOW = 0.2; // share of its fuel left when a lamp starts to dim
 const LAMP_REFILL = 0.5; // a lamp offers Fill (instead of Take down) once this share of it is left
 const LAMP_BURNS_DARKER = 0.25; // a lamp only burns its fuel when the dark is deeper than this (0 to 1)
 const LAMP_NEWS_REACH = 16; // a lamp going out is news if you're within this many tiles of it
+
+// How digging something up with the spade goes, whatever it is (see `dig` in OBJECTS).
+const DIGGING = { action: 'Dig up', burst: 'dust', sound: 'dig', soundDone: 'dig', says: null };
 
 const WARNINGS = {
   food: 'Your stomach growls. Find something to eat.',
@@ -231,6 +237,9 @@ function findTarget(game) {
       } else if (object && object.fuel && lampWantsFuel(world, tx, ty, object)) {
         // A lamp burning low (or gone out) offers to be filled instead of taken down.
         candidate = { x: tx, y: ty, label: 'Fill', object, fill: true };
+      } else if (object && object.dig && survivor.tools.spade && !object.gives) {
+        // With the spade, something with nothing left to take (a picked bush, a stump) is dug up.
+        candidate = { x: tx, y: ty, label: 'Dig up', object, dig: true };
       } else if (object && object.action) {
         candidate = { x: tx, y: ty, label: object.action, object };
       } else if (!object && wantsToFish(survivor, ground)) {
@@ -330,7 +339,8 @@ function useTarget(game) {
     return;
   }
 
-  const object = target.object;
+  // Digging something up works like any other job, with its `dig` numbers in place of its own.
+  const object = target.dig ? { ...target.object, ...DIGGING, ...target.object.dig } : target.object;
   const index = target.y * world.width + target.x;
   if (!object.gives && !object.tool && !object.loot) {
     showMessage(game, object.empty || `Nothing to take from the ${object.name.toLowerCase()}.`);

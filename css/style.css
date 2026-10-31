@@ -283,6 +283,9 @@ button:focus-visible {
 .rod dt { color: #c49a62; }
 .bullets dt { color: #e0c060; }
 .tins dt { color: #b8c4c8; }
+.bushCutting dt { color: #e0475a; }
+.cottonCutting dt { color: #e6dcc4; }
+.spade dt { color: #c9ccc4; }
 .pistol dt { color: #aab4bc; }
 .rifle dt { color: #b08458; }
 
