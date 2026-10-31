@@ -117,9 +117,12 @@ const audio = {
 // Called once at startup: remembers whether sound was on, and listens for the first tap.
 function setupSound() {
   audio.on = recall(SOUND_KEY) !== false;
+  // Some browsers (Safari on iPhone) only count the finger lifting as a tap that may start sound,
+  // so listen for both. Waking it when it's already awake does nothing.
   const wake = () => wakeSound();
-  window.addEventListener('pointerdown', wake, true);
-  window.addEventListener('keydown', wake, true);
+  for (const type of ['pointerdown', 'pointerup', 'touchend', 'keydown']) {
+    window.addEventListener(type, wake, true);
+  }
   document.addEventListener('visibilitychange', () => {
     if (!audio.ctx) return;
     if (document.visibilityState === 'hidden') audio.ctx.suspend();
