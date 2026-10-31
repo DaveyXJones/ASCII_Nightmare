@@ -307,6 +307,30 @@ button:focus-visible {
   cursor: pointer;
 }
 
+/* The ☰ menu button, with the Map button under it. */
+.corner-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-button {
+  width: auto;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 6px;
+  color: var(--moss);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.map-button kbd {
+  display: none;
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 400;
+}
+
 /* ---- Messages ---- */
 
 .toast {
@@ -573,6 +597,55 @@ button:focus-visible {
 
 .touch-help {
   display: none;
+}
+
+/* ---- Map panel ---- */
+
+/* The map on the left, the title and the key beside it. */
+.map-panel {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  width: auto;
+  max-width: 100%;
+  padding: 12px 14px;
+}
+
+.map-picture {
+  display: block;
+  border: 1px solid var(--rule);
+  image-rendering: pixelated;
+}
+
+.map-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 136px;
+}
+
+.map-key {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  color: var(--fog);
+  font-size: 13px;
+  list-style: none;
+}
+
+.map-glyph {
+  display: inline-block;
+  width: 1.4em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.map-note {
+  margin: 0;
+  color: var(--fog);
+  font-size: 12px;
 }
 
 /* ---- Craft panel ---- */
@@ -887,6 +960,10 @@ button:focus-visible {
 @media (pointer: fine) {
   .stick-zone {
     display: none;
+  }
+
+  .map-button kbd {
+    display: inline-block;
   }
 
   .btn kbd {

@@ -13,11 +13,13 @@
 //   drink    true if the player can drink from it
 //   tall     the glyphs stand up and are drawn over the player's feet (grass you wade through)
 //   raised   drawn as a raised block with a cliff face (mountains), see drawMountain() in render.js
+//   map      [glyph, color, background] for the map (js/map.js); if left out, the first of each
 //   step     what a footstep kicks up: a style in BURSTS (survival.js), like 'dust' or 'grass'
 
 const TILES = {
   deepWater: {
     name: 'Deep water',
+    map: ['≈', '#2f5f9e', '#0a1930'],
     glyphs: ['≈', '~', '≈', '∼'],
     colors: ['#3a6fb0', '#2f5f9e'],
     bgs: ['#0b1b33', '#0a1930'],
@@ -28,6 +30,7 @@ const TILES = {
   },
   water: {
     name: 'Shallow water',
+    map: ['~', '#7ab4e8', '#163a5e'],
     glyphs: ['~', '∼', '~', '≈'],
     colors: ['#7ab4e8', '#62a2dc'],
     bgs: ['#163a5e', '#143758'],
@@ -38,6 +41,7 @@ const TILES = {
   },
   sand: {
     name: 'Sand',
+    map: ['·', '#c4ad74', '#5e5132'],
     glyphs: ['.', '·', ' ', ':', ' ', '.'],
     colors: ['#a8915c', '#b59e68', '#968150'],
     bgs: ['#5e5132', '#655736', '#584c2f'],
@@ -45,6 +49,7 @@ const TILES = {
   },
   grass: {
     name: 'Grass',
+    map: ['.', '#5d9a45', '#284f1f'],
     glyphs: ['.', ',', ' ', '\'', '`', ' ', '.', ' '],
     colors: ['#5d9a45', '#6aa84f', '#4f8a3b'],
     bgs: ['#23461b', '#284f1f', '#2c5622', '#1f3f18'],
@@ -52,6 +57,7 @@ const TILES = {
   },
   tallGrass: {
     name: 'Tall grass',
+    map: ['"', '#86c460', '#284f1f'],
     glyphs: ['"', 'ʷ', '"', ';', '\''],
     colors: ['#86c460', '#79b85a', '#93cf6b'],
     bgs: ['#23461b', '#284f1f', '#2c5622', '#1f3f18'],
@@ -60,6 +66,7 @@ const TILES = {
   },
   flowers: {
     name: 'Wildflowers',
+    map: ['*', '#e889b0', '#284f1f'],
     glyphs: ['✿', '*', ',', '❀', '.'],
     colors: ['#e889b0', '#efd25a', '#c3a0f0', '#f4f1e4'],
     bgs: ['#23461b', '#284f1f', '#2c5622'],
@@ -67,6 +74,7 @@ const TILES = {
   },
   hills: {
     name: 'Rocky hills',
+    map: ['^', '#a49f8a', '#4f4a3a'],
     glyphs: ['.', ' ', '\'', ' ', '^', ' ', ',', '.'],
     colors: ['#a49f8a', '#8f8a76'],
     bgs: ['#4f4a3a', '#55503f', '#4a4536'],
@@ -74,6 +82,7 @@ const TILES = {
   },
   mountain: {
     name: 'Mountain',
+    map: ['▲', '#e3e0d6', '#6f6b60'],
     glyphs: ['.', ' ', '\'', ' ', '`', ' ', ',', ' '],
     colors: ['#c4c0b2', '#aeaa9c'],
     bgs: ['#7c786d', '#8b877b', '#9a968a'], // tops of the lowest, middle and highest steps

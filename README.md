@@ -62,6 +62,7 @@ font from a file, so some characters may look a little different.
 | Eat | The small button: eats the best food you have | `F` |
 | Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9`, `0`, `-`, `=` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
+| Map | **Map**, under ☰ in the top right | `M` |
 | Menu | ☰ in the top right | `Esc` |
 
 Yellow brackets `[ ]` on the map show what the action button will use.
@@ -128,6 +129,12 @@ Changed your mind? Face the wall or door and **Break** it, or **Put out** the ca
 get the wood or stone back. Things you build stay in the world when you die.
 
 A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
+
+**The map.** Tap **Map** (under ☰, or `M`) to see the island, drawn in characters, one character
+for a few tiles. It only shows land you've seen: by day you take in about 11 tiles around you, at
+night only what your torch lights. You (`@`), the cottage and the things you've built (fires,
+lamps, chests, your bedroll, walls) are marked on it, with a key beside it. The game pauses while
+it's open. You keep what you've seen when you die, and it's saved with the world.
 
 **Lamps.** A lamp lights the ground around it at night, not as far as a campfire, and things in the
 dark keep away from it the way they do from firelight (brutes and lurkers too, which the torch
@@ -244,6 +251,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
+| `js/map.js` | The map: which tiles you've seen, and the map panel drawn in characters. |
 | `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
 | `js/save.js` | What the game remembers between visits: your island, your pack, your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
@@ -309,18 +317,16 @@ run straight from the file.
 ## What's next
 
 Done lately: walls that join up (a fence running up the screen is seen from the side), turning
-in place in build mode, an outline round the player, and lamps. Before that: weather (clouds, rain, storms, and roofs to keep campfires
+in place in build mode, an outline round the player, lamps, and a map. Before that: weather (clouds, rain, storms, and roofs to keep campfires
 burning), lurkers in the long grass, chests, and bedrolls; and before that, your look, flashing
 when hurt and falling when you die, the stone pick, doors, cooked berries, brutes, walls that get
 clawed down, saving, and sound.
 
 Next, the list you picked (2026-10-31), roughly in this order:
 
-1. **A map.** The island is big. A map of where you've been, drawn in characters like everything
-   else, with your fires, chests and bedroll marked on it.
-2. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
+1. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
    berries to cook at the fire.
-3. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
+2. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
    the nights play, so there are questions to settle first: found or crafted, how scarce the
    bullets are, and whether the bang draws things toward you.
 

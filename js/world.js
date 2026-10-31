@@ -65,6 +65,7 @@ function generateWorld(seed) {
     soaked: new Map(), // tile index -> seconds of rain a campfire has taken (see weather.js)
     chests: new Map(), // tile index -> what's in the chest there, { items, tools } (see chest.js)
     fuel: new Map(), // tile index -> seconds a lamp there will burn in the dark (see updateLamps)
+    seen: new Uint8Array(size), // 1 for each tile you've seen, for the map (see map.js)
     bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
     house: null,

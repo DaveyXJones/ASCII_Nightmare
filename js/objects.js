@@ -32,15 +32,31 @@
 //   fuel     for a lamp: { burns, cost, into, empty }. It burns `burns` seconds of dark on a filling
 //            (world.fuel keeps what's left), then turns into `empty`; Fill (`cost`) turns it back
 //            `into` the lit lamp. Its light dims as it runs low.
+//   map      [glyph, color]: how it shows on the map (js/map.js) where it covers most of the land,
+//            like trees
+//   mark     { glyph, color, name, rank }: something you built, always shown on the map (the
+//            highest `rank` wins where two share a spot) and listed in the map's key by `name`
 //   side     { sprite, opens, scarred }: the pictures to use instead in a fence running up the
 //            screen (see runsUpAndDown in world.js), where it's seen from the side
 
 // How a lamp burns (see `fuel` below): a filling lasts five minutes of dark, half a night.
 const LAMP_FUEL = { burns: 300, cost: { cloth: 1 }, into: 'lamp', empty: 'lampOut' };
 
+// How things you've built show on the map (see `mark` below).
+const MARKS = {
+  fire: { glyph: '♦', color: '#ff9a3a', name: 'campfire', rank: 3 },
+  coldFire: { glyph: '♦', color: '#8a8478', name: 'campfire', rank: 3 },
+  lamp: { glyph: '¡', color: '#ffd75e', name: 'lamp', rank: 2 },
+  coldLamp: { glyph: '¡', color: '#8a8478', name: 'lamp', rank: 2 },
+  chest: { glyph: '■', color: '#e0b070', name: 'chest', rank: 4 },
+  bed: { glyph: '▬', color: '#ff8a70', name: 'bedroll', rank: 5 },
+  wall: { glyph: '#', color: '#c49a62', name: 'wall', rank: 1 },
+};
+
 const OBJECTS = {
   oak: {
     name: 'Oak tree',
+    map: ['♣', '#6aa84f'],
     sprite: 'oak',
     solid: true,
     blocked: 'A broad oak blocks your way.',
@@ -54,6 +70,7 @@ const OBJECTS = {
   },
   pine: {
     name: 'Pine tree',
+    map: ['♠', '#4f9a5a'],
     sprite: 'pine',
     solid: true,
     blocked: 'A pine tree blocks your way.',
@@ -67,6 +84,7 @@ const OBJECTS = {
   },
   boulder: {
     name: 'Boulder',
+    map: ['●', '#b4b8b0'],
     sprite: 'boulder',
     solid: true,
     blocked: 'A boulder is in the way.',
@@ -156,6 +174,7 @@ const OBJECTS = {
   // Things you build (see RECIPES in crafting.js). Taking them down gives some of the cost back.
   campfire: {
     name: 'Campfire',
+    mark: MARKS.fire,
     sprite: 'campfire',
     frames: ['campfire', 'campfire2', 'campfire', 'campfire3'],
     solid: true,
@@ -174,6 +193,7 @@ const OBJECTS = {
   // A campfire the rain has put out. Light it again with a piece of wood once the rain stops.
   campfireOut: {
     name: 'Cold campfire',
+    mark: MARKS.coldFire,
     sprite: 'campfireOut',
     solid: true,
     blocked: 'A ring of stones round wet ashes.',
@@ -183,6 +203,7 @@ const OBJECTS = {
   // A campfire with a roof built over it (the Roof in RECIPES): the rain can't put it out.
   roofedFire: {
     name: 'Campfire under a roof',
+    mark: MARKS.fire,
     sprite: 'roofedFire',
     frames: ['roofedFire', 'roofedFire2', 'roofedFire', 'roofedFire3'],
     solid: true,
@@ -199,6 +220,7 @@ const OBJECTS = {
   },
   woodWall: {
     name: 'Wooden wall',
+    mark: MARKS.wall,
     sprite: 'woodWall',
     solid: true,
     blocked: 'Your wall. Break it to get through.',
@@ -218,6 +240,7 @@ const OBJECTS = {
   // it's empty.
   chest: {
     name: 'Chest',
+    mark: MARKS.chest,
     sprite: 'chest',
     solid: true,
     blocked: 'Your chest. Open it to put things in.',
@@ -228,6 +251,7 @@ const OBJECTS = {
   // A bedroll on the ground: you walk over it, and wake up on it after you die.
   bedroll: {
     name: 'Bedroll',
+    mark: MARKS.bed,
     sprite: 'bedroll',
     bed: true,
     action: 'Roll up',
@@ -242,6 +266,7 @@ const OBJECTS = {
   // in it, really: cloth), and goes out when it's used up, until you fill it again.
   lamp: {
     name: 'Lamp',
+    mark: MARKS.lamp,
     sprite: 'lamp',
     frames: ['lamp', 'lamp2', 'lamp', 'lamp3'],
     solid: true,
@@ -258,6 +283,7 @@ const OBJECTS = {
   },
   lampOut: {
     name: 'Lamp',
+    mark: MARKS.coldLamp,
     sprite: 'lampOut',
     solid: true,
     blocked: 'Your lamp. It has gone out.',
@@ -266,6 +292,7 @@ const OBJECTS = {
   },
   woodDoor: {
     name: 'Wooden door',
+    mark: MARKS.wall,
     sprite: 'woodDoor',
     opens: 'woodDoorOpen',
     door: true,

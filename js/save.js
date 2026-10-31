@@ -83,6 +83,7 @@ function saveGame(game) {
     regrowing: world.regrowing,
     chests: [...world.chests],
     fuel: [...world.fuel],
+    seen: packSeen(world),
     bed: world.bed,
   });
   game.savedAt = game.time;
@@ -153,6 +154,7 @@ function restoreWorld(world, save) {
     if (object && object.fuel && object.light && !world.fuel.has(i)) world.fuel.set(i, object.fuel.burns);
   }
   if (valid(save.bed)) world.bed = save.bed;
+  unpackSeen(world, save.seen);
 }
 
 // A chest's contents as saved, keeping only whole numbers of items and tools that still exist.

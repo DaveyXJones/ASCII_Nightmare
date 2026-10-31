@@ -225,7 +225,7 @@ own commit, like the lists before. Notes and suggestions (Claude's, not the owne
    `warmth`, not put out by rain (it's behind glass), feared like firelight. It burns for a few
    minutes of night and needs refilling (an action like **Fill**, costing cloth); the fuel left
    per lamp needs a world Map that's saved.
-4. **The map.** A panel like the craft panel (pauses the game), the island drawn in characters at
+4. **The map.** (Built; see "The map" below.) A panel like the craft panel (pauses the game), the island drawn in characters at
    one cell per few tiles (192×128 tiles won't fit a phone at one each), only what you've seen (a
    saved bitmap of explored tiles, kept compact), with you, the cottage, fires, chests and the
    bedroll marked. Needs a touch control that fits the HUD on 667×375 (and a key, e.g. `M`).
@@ -284,6 +284,27 @@ it). Choices that were Claude's:
   full (`lampWantsFuel`), else its `action` (**Take down**, gives back 2 wood and 1 cloth). An out
   lamp's action is always Fill, like a cold campfire's Light. `fillLamp` tops it up for 1 cloth.
 
+## The map (built 2026-10-31)
+
+Item 4, in js/map.js. Choices that were Claude's:
+
+- **What you've seen**: `world.seen` (a `Uint8Array`, 1 per tile seen), filled by `markSeen` every
+  `MAP_MARK_SECONDS` within a circle of `MAP_SIGHT` (11) tiles by day, shrinking with
+  `sky.darkness` to `MAP_NIGHT_SIGHT` or the torch's reach. Saved as `seen`, packed to a bit per
+  tile in base64 (`packSeen`, about 4 KB), restored only on the same island. Kept when you die.
+- **The panel** (`#island-map`; the game's canvas already has `id="map"`) pauses like the craft
+  panel. `drawMap` picks the smallest block in `MAP_BLOCKS` (tiles across one character; twice as
+  many down, since a character is twice as tall as wide) that keeps characters at least
+  `MAP_MIN_GLYPH_CSS` wide: 3 on a 667×375 phone (64×22 characters), 2 on a desktop. It's drawn
+  once per opening with `fillText` (about 1,400 to 3,000 cells), not per frame.
+- **What a cell shows** (`readCell`): the most common seen ground, as its `map` field in `TILES`
+  (`[glyph, color, background]`, else its first glyph and colors); trees or rocks (`map` in
+  `OBJECTS`) if they cover at least half of it; a built thing's `mark` (from `MARKS` in
+  objects.js, highest `rank` wins) over either. The cottage (`MAP_COTTAGE`) and you (`MAP_YOU`) go
+  on last. The key is built from the marks, one line per `name`.
+- **Controls**: a **Map** button under ☰ (`.corner-buttons`) and `M`; Esc or ✕ or a tap outside
+  closes it.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -294,7 +315,7 @@ it). Choices that were Claude's:
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  weather → render → input → sound → survival → crafting → chest → creatures → save → game`. A file
+  weather → render → input → sound → survival → crafting → chest → map → creatures → save → game`. A file
   may use globals from files before it at load time, and from any file inside functions that run
   later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
@@ -322,6 +343,7 @@ it). Choices that were Claude's:
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
+| `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `drawMap`, `readCell`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |

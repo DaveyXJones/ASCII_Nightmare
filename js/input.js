@@ -22,6 +22,7 @@ const ACTION_KEYS = new Set(['Space', 'KeyE', 'Enter']);
 const EAT_KEYS = new Set(['KeyF']);
 const CRAFT_KEYS = new Set(['KeyC']);
 const MENU_KEYS = new Set(['KeyP']);
+const MAP_KEYS = new Set(['KeyM']);
 const RECIPE_KEYS = [
   ...'1234567890'.split('').map((digit) => `Digit${digit}`),
   'Minus',
@@ -36,7 +37,7 @@ const input = {
   actionKey: false,
   actionButton: false,
   // One-off presses for the game to handle: 'action' (the moment the action button goes down),
-  // 'eat', 'craft', 'menu', 'back' (Esc), and 'recipe:0', 'recipe:1'… for the number keys.
+  // 'eat', 'craft', 'menu', 'map', 'back' (Esc), and 'recipe:0', 'recipe:1'… for the number keys.
   presses: [],
 };
 
@@ -70,7 +71,7 @@ function releaseAll() {
   input.stickY = 0;
 }
 
-function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButton, menuButton }) {
+function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButton, menuButton, mapButton }) {
   window.addEventListener('keydown', (event) => {
     // Leave browser shortcuts like Ctrl+W alone.
     if (event.ctrlKey || event.metaKey || event.altKey) return;
@@ -85,6 +86,8 @@ function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButt
       if (!event.repeat) input.presses.push('craft');
     } else if (MENU_KEYS.has(code)) {
       if (!event.repeat) input.presses.push('menu');
+    } else if (MAP_KEYS.has(code)) {
+      if (!event.repeat) input.presses.push('map');
     } else if (BACK_KEYS.has(code)) {
       if (!event.repeat) input.presses.push('back');
     } else if (RECIPE_KEYS.includes(code)) {
@@ -112,6 +115,7 @@ function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButt
   // panel as it appears.
   craftButton.addEventListener('click', () => input.presses.push('craft'));
   menuButton.addEventListener('click', () => input.presses.push('menu'));
+  mapButton.addEventListener('click', () => input.presses.push('map'));
 
   // Stop iOS from zooming on a pinch or a double tap while playing.
   document.addEventListener('gesturestart', (event) => event.preventDefault());

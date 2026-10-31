@@ -49,6 +49,11 @@ const elements = {
   craftButton: document.getElementById('btn-craft'),
   craftLabel: document.getElementById('craft-label'),
   menuButton: document.getElementById('menu-button'),
+  mapButton: document.getElementById('map-button'),
+  map: document.getElementById('island-map'), // the map panel (the game's own canvas is #map)
+  mapPicture: document.getElementById('map-picture'),
+  mapKey: document.getElementById('map-key'),
+  mapClose: document.getElementById('map-close'),
   stickZone: document.getElementById('stick-zone'),
   stick: document.getElementById('stick'),
   knob: document.getElementById('knob'),
@@ -203,6 +208,7 @@ function update(dt) {
   updateVitals(state, dt);
   updateTorch(state, dt);
   updateLamps(state, dt);
+  markSeen(state);
   updateWeather(state, dt);
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
@@ -638,6 +644,7 @@ function frame(now) {
       // Esc backs out of one thing at a time (the craft panel, a chest, the look panel, the menu,
       // build mode) before it opens the menu. The ☰ button and P go straight to the menu.
       if (crafting) closeCraft();
+      else if (!elements.map.hidden) closeMap();
       else if (!elements.chest.hidden) closeChest();
       else if (!elements.look.hidden) closeLook();
       else if (!elements.menu.hidden && state.started) closeMenu();
@@ -647,6 +654,9 @@ function frame(now) {
       if (crafting) closeCraft();
       else if (state.building) stopBuilding(state);
       else openCraft();
+    } else if (press === 'map' && (playing || !elements.map.hidden)) {
+      if (!elements.map.hidden) closeMap();
+      else openMap();
     } else if (press.startsWith('recipe:') && crafting) {
       craft(state, Object.keys(RECIPES)[Number(press.slice(7))]);
     } else if (press === 'action' && playing && state.building) {
@@ -692,6 +702,7 @@ setupView(elements.canvas);
 setupInput(elements);
 setupCrafting(elements);
 setupChest(elements);
+setupMap(elements);
 setupLook();
 setupSound();
 showSoundButton();
