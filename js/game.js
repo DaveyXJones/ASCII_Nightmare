@@ -202,6 +202,7 @@ function update(dt) {
   state.tapped = false;
   updateVitals(state, dt);
   updateTorch(state, dt);
+  updateLamps(state, dt);
   updateWeather(state, dt);
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);

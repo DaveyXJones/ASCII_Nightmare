@@ -3,7 +3,7 @@
 // Touch: put your left thumb down anywhere on the left half of the screen and a thumbstick
 // appears under it; the buttons on the right do things. Hold the action button to keep chopping.
 // Keyboard: WASD or the arrow keys to walk, Space or E for the action button, F to eat, C to craft
-// (and 1, 2, 3… 0 to pick from the craft panel).
+// (and 1, 2, 3… 0, -, = to pick from the craft panel).
 
 const STICK_RADIUS = 48; // CSS pixels the knob can travel from the middle of the stick
 const STICK_DEADZONE = 0.15; // ignore tiny thumb wobbles
@@ -22,6 +22,11 @@ const ACTION_KEYS = new Set(['Space', 'KeyE', 'Enter']);
 const EAT_KEYS = new Set(['KeyF']);
 const CRAFT_KEYS = new Set(['KeyC']);
 const MENU_KEYS = new Set(['KeyP']);
+const RECIPE_KEYS = [
+  ...'1234567890'.split('').map((digit) => `Digit${digit}`),
+  'Minus',
+  'Equal',
+];
 const BACK_KEYS = new Set(['Escape']); // closes whatever's open, or opens the menu if nothing is
 
 const input = {
@@ -82,9 +87,9 @@ function setupInput({ stickZone, stick, knob, actionButton, eatButton, craftButt
       if (!event.repeat) input.presses.push('menu');
     } else if (BACK_KEYS.has(code)) {
       if (!event.repeat) input.presses.push('back');
-    } else if (/^Digit[0-9]$/.test(code)) {
-      // 1 is the first recipe, 9 the ninth, and 0 the tenth, like the keys along the keyboard.
-      if (!event.repeat) input.presses.push(`recipe:${(Number(code.slice(5)) + 9) % 10}`);
+    } else if (RECIPE_KEYS.includes(code)) {
+      // 1 is the first recipe, 9 the ninth, then 0, - and =, along the top row of the keyboard.
+      if (!event.repeat) input.presses.push(`recipe:${RECIPE_KEYS.indexOf(code)}`);
     } else return;
     event.preventDefault(); // stop the arrow keys and space bar from scrolling the page
   });

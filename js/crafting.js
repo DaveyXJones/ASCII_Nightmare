@@ -49,14 +49,14 @@ const TOOLS = {
 const RECIPES = {
   axe: {
     name: 'Stone axe',
-    about: 'Halves the swings for trees and shades.',
+    about: 'Twice as fast on trees and shades.',
     cost: { wood: 3, stone: 2 },
     tool: 'axe',
     done: 'You lash a sharp stone to a stick. Trees fall twice as fast now.',
   },
   pick: {
     name: 'Stone pick',
-    about: 'Breaks boulders in half the swings.',
+    about: 'Twice as fast on boulders.',
     cost: { wood: 2, stone: 3 },
     tool: 'pick',
     done: 'You bind a pointed stone to a handle. Boulders break twice as fast now.',
@@ -77,7 +77,7 @@ const RECIPES = {
   },
   roof: {
     name: 'Roof',
-    about: 'Build over a campfire to keep rain off.',
+    about: 'Keeps rain off a campfire.',
     cost: { wood: 4 },
     builds: 'roofedFire',
     over: ['campfire', 'campfireOut'], // over a cold one, you light it again under the roof
@@ -97,6 +97,13 @@ const RECIPES = {
     builds: 'woodDoor',
     done: 'You hang the door. It swings open as you come near.',
   },
+  lamp: {
+    name: 'Lamp',
+    about: 'Keeps the dark back. Burns cloth.',
+    cost: { wood: 2, cloth: 2 },
+    builds: 'lamp',
+    done: 'You hang the lamp on its post. It burns through half a night.',
+  },
   chest: {
     name: 'Chest',
     about: 'What you put in it is kept when you die.',
@@ -114,7 +121,7 @@ const RECIPES = {
   },
   cook: {
     name: 'Cooked berries',
-    about: 'More filling, and heals you a little.',
+    about: 'Fills more, and heals a little.',
     cost: { berries: 2 },
     gives: { cooked: 1 },
     byFire: true,
@@ -261,6 +268,7 @@ function build(game) {
   const index = spot.y * game.world.width + spot.x;
   if (object.bed) game.world.bed = index; // the newest bed is where you'll wake up
   if (object.chest) game.world.chests.set(index, newChest());
+  if (object.fuel) game.world.fuel.set(index, object.fuel.burns);
   player.act = { action: 'Build', at: player.clock };
   if (object.burst) burst(game.fx, spot.x + 0.5, spot.y + 0.5, object.burst, 10);
   playSound('build');
@@ -308,7 +316,7 @@ function setupCrafting(elements) {
     name.className = 'recipe-name';
     name.textContent = recipe.name;
     const shortcut = document.createElement('kbd'); // the number key that makes it, on a keyboard
-    shortcut.textContent = String((n + 1) % 10); // the tenth is 0
+    shortcut.textContent = '1234567890-='[n] || ''; // the tenth is 0, then - and =
     name.append(' ', shortcut);
 
     const about = document.createElement('span');

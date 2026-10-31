@@ -932,7 +932,7 @@ button:focus-visible {
   }
 }
 
-/* Phones held sideways: smaller cards, five to a row, so every recipe fits on the screen at once. */
+/* Phones held sideways: smaller cards, six to a row, so every recipe fits on the screen at once. */
 @media (max-height: 460px) {
   .craft-panel {
     gap: 8px;
@@ -950,7 +950,7 @@ button:focus-visible {
   }
 
   .recipes {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 6px;
   }
 

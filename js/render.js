@@ -1171,8 +1171,7 @@ function findLights(game, range, inside) {
   for (let ty = Math.max(0, range.top - LIGHT_REACH); ty <= bottom; ty++) {
     for (let tx = left; tx <= right; tx++) {
       const i = ty * world.width + tx;
-      const key = world.objects[i];
-      const light = key && OBJECTS[key].light;
+      const light = objectLight(world, i);
       if (!light) continue;
       // Lights indoors, like the candle, are hidden under the roof until you go in.
       if (!inside && insideHouse(world, tx, ty)) continue;

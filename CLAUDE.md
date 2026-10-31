@@ -89,9 +89,9 @@ of which they may want changed:
 - **More to craft**: a stone pick (`TOOLS.pick`, `power: { Mine: 2 }`, held as `⌐`/`¬`); a wooden
   door (`woodDoor`, see below); cooked berries (`RECIPES.cook`, 2 berries → 1 `cooked`: 30 food and
   10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
-  `bestFood`). On short screens the craft cards are small and five to a row, with pictures capped
-  at `RECIPE_PICTURE_ROWS_SHORT` rows, so ten fit on a 667×375 phone; keep card texts to about 40
-  characters so they stay within three lines.
+  `bestFood`). On short screens the craft cards are small and six to a row (since the lamp), with
+  pictures capped at `RECIPE_PICTURE_ROWS_SHORT` rows, so twelve fit on a 667×375 phone; keep card
+  texts to about 32 characters (lines of about 13) so they stay within three lines.
 - **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
   fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
@@ -221,7 +221,7 @@ own commit, like the lists before. Notes and suggestions (Claude's, not the owne
    around the player's sprite only: e.g. a cached silhouette of each picture (a tint-like key in
    `spriteImage`) drawn a device pixel or two out in each direction behind it. Update the "Draw
    only characters" hard rule to name the outline as an exception.
-3. **Lamps.** A lantern on a post (wood and cloth, say): a `light` smaller than a campfire's, no
+3. **Lamps.** (Built; see "Lamps" below.) A lantern on a post (wood and cloth, say): a `light` smaller than a campfire's, no
    `warmth`, not put out by rain (it's behind glass), feared like firelight. It burns for a few
    minutes of night and needs refilling (an action like **Fill**, costing cloth); the fuel left
    per lamp needs a world Map that's saved.
@@ -265,6 +265,24 @@ directions onto a second, filled `OUTLINE_COLOR` with `source-in`, and the figur
 `outline.drawn` remembers what's on the canvases, so most frames reuse them (measured: no frame
 cost). The ghost behind trees gets the edge too. **Outline on/off** in the menu, kept under
 `OUTLINE_KEY`, on by default.
+
+## Lamps (built 2026-10-31)
+
+Item 3. `OBJECTS.lamp` (lit, with `frames` flickering the glass) and `lampOut`, both with `fuel:
+LAMP_FUEL` (`{ burns: 300, cost: { cloth: 1 }, into, empty }`). Recipe: 2 wood, 2 cloth. Light 4.5
+(campfire 6.5), no `warmth`, no `flame` (no lighting the torch at it), no `doused` (rain can't touch
+it). Choices that were Claude's:
+
+- **Fuel** lives in `world.fuel` (tile index → seconds; set by `build`, cleared by `setObject`,
+  saved as `fuel`; a lit lamp with nothing saved starts full). `updateLamps` burns it only while
+  `sky.darkness` is above `LAMP_BURNS_DARKER`, so a filling is five minutes of night whatever the
+  hour you fill it, and swaps in `lampOut` when it's gone (news within `LAMP_NEWS_REACH`).
+- **Light** goes through `objectLight(world, i)` (survival.js) everywhere a light's reach is read
+  (`findLights`, `mapSteps`): a lamp dims to half over its last `LAMP_LOW` share, like the torch.
+  Creatures fear it with `fear.fire`, so it holds back brutes and lurkers, which ignore the torch.
+- **Fill**: `findTarget` offers `{ label: 'Fill', fill: true }` on a lamp under `LAMP_REFILL` (half)
+  full (`lampWantsFuel`), else its `action` (**Take down**, gives back 2 wood and 1 cloth). An out
+  lamp's action is always Fill, like a cold campfire's Light. `fillLamp` tops it up for 1 cloth.
 
 ## Hard rules
 
@@ -337,7 +355,7 @@ cost). The ghost behind trees gets the edge too. **Outline on/off** in the menu,
   with `gives` adds items to the pack and keeps the panel open (`refreshCraft`). `byFire` recipes
   need `survivor.warm` (beside a campfire), checked in `canMake`. A `builds` recipe with `over` (the
   roof) must be built onto one of those objects and replaces it, instead of going on clear ground.
-  Number keys: `1`–`9` then `0` for the tenth (input.js).
+  Number keys: `1`–`9`, then `0`, `-` and `=` for the tenth to twelfth (`RECIPE_KEYS`, input.js).
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
 - The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not

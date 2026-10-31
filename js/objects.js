@@ -29,8 +29,14 @@
 //   bed      true for a bed you've built: you wake up on the newest one after you die (world.bed)
 //   chest    true for a chest: the action opens it, to keep things in (see chest.js)
 //   fence    true for walls and doors: pieces side by side join up into one fence
+//   fuel     for a lamp: { burns, cost, into, empty }. It burns `burns` seconds of dark on a filling
+//            (world.fuel keeps what's left), then turns into `empty`; Fill (`cost`) turns it back
+//            `into` the lit lamp. Its light dims as it runs low.
 //   side     { sprite, opens, scarred }: the pictures to use instead in a fence running up the
 //            screen (see runsUpAndDown in world.js), where it's seen from the side
+
+// How a lamp burns (see `fuel` below): a filling lasts five minutes of dark, half a night.
+const LAMP_FUEL = { burns: 300, cost: { cloth: 1 }, into: 'lamp', empty: 'lampOut' };
 
 const OBJECTS = {
   oak: {
@@ -230,6 +236,33 @@ const OBJECTS = {
     becomes: null,
     burst: 'fluff',
     sound: 'pick',
+  },
+  // A lantern on a post (see LAMP_FUEL in survival.js): it lights the dark around it like a small
+  // fire, and the rain can't put it out, since the flame's behind glass. It burns oil (a rag soaked
+  // in it, really: cloth), and goes out when it's used up, until you fill it again.
+  lamp: {
+    name: 'Lamp',
+    sprite: 'lamp',
+    frames: ['lamp', 'lamp2', 'lamp', 'lamp3'],
+    solid: true,
+    blocked: 'Your lamp, on its post.',
+    action: 'Take down',
+    hits: 2,
+    gives: { wood: 2, cloth: 1 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+    soundDone: 'build',
+    light: 4.5,
+    fuel: LAMP_FUEL,
+  },
+  lampOut: {
+    name: 'Lamp',
+    sprite: 'lampOut',
+    solid: true,
+    blocked: 'Your lamp. It has gone out.',
+    action: 'Fill',
+    fuel: LAMP_FUEL,
   },
   woodDoor: {
     name: 'Wooden door',

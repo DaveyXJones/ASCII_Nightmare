@@ -50,6 +50,19 @@ const WOOD_INK = {
   o: ['#4a2f1c'], // ...its latch side
 };
 
+// A lamp's colors: dark metal, glass lit from inside (two shades for the flicker), and a wooden post.
+const LAMP_INK = {
+  m: ['#4a4842'], // the cap and the base
+  g: ['#3a3226', '#ffd75e'], // the glass, glowing
+  G: ['#3a3226', '#f2b94a'],
+  h: ['#3a3226', '#ffe58a'],
+  H: ['#3a3226', '#ffcc55'],
+  d: ['#4a4842', '#2c2a24'], // the glass, gone out
+  D: ['#4a4842', '#24221d'],
+  p: ['#9c7048'], // the post, lit side
+  P: ['#6b4528'],
+};
+
 // A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
 const BRUTE_INK = {
   t: ['#3e3050'], // the top of its back, catching a little light
@@ -578,6 +591,80 @@ const SPRITES = {
     ink: WOOD_INK,
     shadow: 1,
   },
+  // A lantern hanging from a post: a metal cap, glass with the flame glowing through it (the three
+  // pictures flicker), a base, and the post. Gone out, the glass is dark.
+  lamp: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'gG',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
+  lamp2: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'hH',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
+  lamp3: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'Gg',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
+  lampOut: {
+    art: [
+      '▗▖',
+      '[]',
+      '▀▀',
+      '▕▏',
+      '▕▏',
+    ],
+    paint: [
+      'mm',
+      'dD',
+      'mm',
+      'pP',
+      'pP',
+    ],
+    ink: LAMP_INK,
+    shadow: 1,
+  },
   // A chest of planks with a lid, banded, with a clasp on the front.
   chest: {
     art: [
@@ -945,6 +1032,7 @@ const ACTION_POSES = {
   Hit: { held: null },
   Open: { pose: 'crouch', held: null, seconds: 0.3 },
   'Roll up': { pose: 'crouch', held: null, seconds: 0.4 },
+  Fill: { pose: 'windup', held: null, seconds: 0.4 },
   Eat: { pose: 'windup', held: null, seconds: 0.4 },
 };
 

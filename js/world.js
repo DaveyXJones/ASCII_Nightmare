@@ -64,6 +64,7 @@ function generateWorld(seed) {
     clawed: new Map(), // tile index -> scratches taken, for walls things in the dark are clawing at
     soaked: new Map(), // tile index -> seconds of rain a campfire has taken (see weather.js)
     chests: new Map(), // tile index -> what's in the chest there, { items, tools } (see chest.js)
+    fuel: new Map(), // tile index -> seconds a lamp there will burn in the dark (see updateLamps)
     bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
     house: null,
@@ -314,6 +315,7 @@ function setObject(world, x, y, key) {
   world.clawed.delete(i);
   world.soaked.delete(i);
   world.chests.delete(i);
+  world.fuel.delete(i);
 }
 
 // Where you wake up after dying: on the bed you built last (an object with `bed`), or if that one's

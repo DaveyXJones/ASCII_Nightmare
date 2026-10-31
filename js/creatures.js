@@ -607,8 +607,8 @@ function mapSteps(game) {
   field.lights.length = 0;
   for (let ty = field.top; ty < field.top + size; ty++) {
     for (let tx = field.left; tx < field.left + size; tx++) {
-      const object = objectAt(world, tx, ty);
-      if (object && object.light) field.lights.push({ x: tx + 0.5, y: ty + 0.5, reach: object.light });
+      const reach = inBounds(world, tx, ty) ? objectLight(world, ty * world.width + tx) : 0;
+      if (reach) field.lights.push({ x: tx + 0.5, y: ty + 0.5, reach });
     }
   }
 }

@@ -22,6 +22,10 @@ const REACH = 0.95; // how far the player can reach, in tiles, from their feet t
 const LOW = 25; // below this, a vital is running low and the game warns you
 const TORCH_LOW = 0.2; // share of its burn left when a torch starts to dim and the game warns you
 const TORCH_RELIGHT = 0.5; // a fire offers to light your torch again once this share of it is left
+const LAMP_LOW = 0.2; // share of its fuel left when a lamp starts to dim
+const LAMP_REFILL = 0.5; // a lamp offers Fill (instead of Take down) once this share of it is left
+const LAMP_BURNS_DARKER = 0.25; // a lamp only burns its fuel when the dark is deeper than this (0 to 1)
+const LAMP_NEWS_REACH = 16; // a lamp going out is news if you're within this many tiles of it
 
 const WARNINGS = {
   food: 'Your stomach growls. Find something to eat.',
@@ -132,6 +136,60 @@ function torchReach(survivor) {
   return torch.light * (0.5 + 0.5 * Math.min(1, survivor.torchLeft / (torch.burns * TORCH_LOW)));
 }
 
+// How far the thing at tile index `i` lights the dark, in tiles (0 for nothing). A lamp dims as it
+// runs low, down to half, like the torch.
+function objectLight(world, i) {
+  const key = world.objects[i];
+  const object = key && OBJECTS[key];
+  if (!object || !object.light) return 0;
+  if (!object.fuel) return object.light;
+  const left = world.fuel.get(i) || 0;
+  return object.light * (0.5 + 0.5 * Math.min(1, left / (object.fuel.burns * LAMP_LOW)));
+}
+
+// Lamps burn their fuel in the dark (by day they're turned down, and use none), and go out when
+// it's gone.
+function updateLamps(game, dt) {
+  const { world, player } = game;
+  if (game.sky.darkness < LAMP_BURNS_DARKER) return;
+  for (const [i, left] of world.fuel) {
+    if (left > dt) {
+      world.fuel.set(i, left - dt);
+      continue;
+    }
+    const x = i % world.width;
+    const y = Math.floor(i / world.width);
+    setObject(world, x, y, OBJECTS[world.objects[i]].fuel.empty);
+    if (Math.hypot(x + 0.5 - player.x, y + 0.5 - player.y) < LAMP_NEWS_REACH) {
+      showMessage(game, 'A lamp flickers and goes out. Fill it with cloth.');
+      playSoundAt(game, 'snuff', x + 0.5, y + 0.5);
+    }
+  }
+}
+
+// Fills a lamp to the top, lighting it again if it had gone out.
+function fillLamp(game, target) {
+  const { world, survivor, fx } = game;
+  const { burns, cost, into } = target.object.fuel;
+  if (!canAfford(survivor.pack, cost)) {
+    showMessage(game, `You need ${shortfall(survivor.pack, cost)} to fill the lamp.`);
+    return;
+  }
+  spend(survivor.pack, cost);
+  const index = target.y * world.width + target.x;
+  if (world.objects[index] !== into) {
+    setObject(world, target.x, target.y, into);
+    playSound('ignite');
+  } else {
+    playSound('pick');
+  }
+  world.fuel.set(index, burns);
+  burst(fx, target.x + 0.5, target.y - 1, 'spark', 6);
+  floatText(fx, target.x + 0.5, target.y - 2, 'filled', '#ffd75e');
+  showMessage(game, `The lamp burns bright. It's good for ${Math.round(burns / 60)} minutes of dark.`);
+  buzz(30);
+}
+
 // Picked bushes grow their berries back after a while.
 function updateRegrowth(world, time) {
   for (let n = world.regrowing.length - 1; n >= 0; n--) {
@@ -163,6 +221,9 @@ function findTarget(game) {
       if (object && object.flame && wantsFire) {
         // Facing a fire with a torch that needs lighting, the button lights it instead of putting it out.
         candidate = { x: tx, y: ty, label: 'Light', object, light: true };
+      } else if (object && object.fuel && lampWantsFuel(world, tx, ty, object)) {
+        // A lamp burning low (or gone out) offers to be filled instead of taken down.
+        candidate = { x: tx, y: ty, label: 'Fill', object, fill: true };
       } else if (object && object.action) {
         candidate = { x: tx, y: ty, label: object.action, object };
       } else if (!object && ground && ground.drink) {
@@ -210,6 +271,10 @@ function findTarget(game) {
   return best;
 }
 
+function lampWantsFuel(world, x, y, object) {
+  return (world.fuel.get(y * world.width + x) || 0) < object.fuel.burns * LAMP_REFILL;
+}
+
 // One press (or one swing of a held button) of the action button.
 function useTarget(game) {
   const { world, player, survivor } = game;
@@ -228,6 +293,10 @@ function useTarget(game) {
   }
   if (target.light) {
     lightTorch(game, target);
+    return;
+  }
+  if (target.fill) {
+    fillLamp(game, target);
     return;
   }
   if (target.object.relight) {

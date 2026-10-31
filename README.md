@@ -60,7 +60,7 @@ font from a file, so some characters may look a little different.
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
 | Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
-| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9` and `0` |
+| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9`, `0`, `-`, `=` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
 | Menu | ☰ in the top right | `Esc` |
 
@@ -108,6 +108,7 @@ something you can afford.
 | **Roof** | 4 wood | Build it over a campfire and rain can't put the fire out (see Weather, below). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
 | **Wooden door** | 3 wood | Set it in a line of wall. It swings open as you walk up and shuts behind you; shades can't open it. |
+| **Lamp** | 2 wood, 2 cloth | A lantern on a post. It keeps the dark back like a small fire, and rain can't put it out. It burns five minutes of dark, then needs filling (below). |
 | **Chest** | 6 wood | Keeps whatever you put in it, even when you die. It can go inside the cottage. |
 | **Bedroll** | 2 cloth, 1 wood | After you die, you wake up on it instead of in the cottage. |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
@@ -127,6 +128,13 @@ Changed your mind? Face the wall or door and **Break** it, or **Put out** the ca
 get the wood or stone back. Things you build stay in the world when you die.
 
 A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
+
+**Lamps.** A lamp lights the ground around it at night, not as far as a campfire, and things in the
+dark keep away from it the way they do from firelight (brutes and lurkers too, which the torch
+doesn't stop). It doesn't warm you, and you can't light your torch at it. It burns only in the
+dark: a full lamp lasts five minutes of night, about half of one, and dims as it runs low. When it
+goes out, face it and tap **Fill** (1 cloth) to light it again; once it's half burnt, the button
+offers **Fill** instead of **Take down**, to top it up.
 
 **Chests.** Face a chest and tap **Open**. Your pack is on the left, the chest on the right: tap
 something to move all of it across, or **Put all in** (everything but your tools) and **Take all
@@ -301,20 +309,18 @@ run straight from the file.
 ## What's next
 
 Done lately: walls that join up (a fence running up the screen is seen from the side), turning
-in place in build mode, and an outline round the player. Before that: weather (clouds, rain, storms, and roofs to keep campfires
+in place in build mode, an outline round the player, and lamps. Before that: weather (clouds, rain, storms, and roofs to keep campfires
 burning), lurkers in the long grass, chests, and bedrolls; and before that, your look, flashing
 when hurt and falling when you die, the stone pick, doors, cooked berries, brutes, walls that get
 clawed down, saving, and sound.
 
 Next, the list you picked (2026-10-31), roughly in this order:
 
-1. **Lamps.** A lantern on a post that keeps the dark back without a campfire, and has to be
-   filled now and then.
-2. **A map.** The island is big. A map of where you've been, drawn in characters like everything
+1. **A map.** The island is big. A map of where you've been, drawn in characters like everything
    else, with your fires, chests and bedroll marked on it.
-3. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
+2. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
    berries to cook at the fire.
-4. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
+3. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
    the nights play, so there are questions to settle first: found or crafted, how scarce the
    bullets are, and whether the bang draws things toward you.
 
