@@ -625,7 +625,22 @@ button:focus-visible {
 .map-picture {
   display: block;
   border: 1px solid var(--rule);
-  image-rendering: pixelated;
+  touch-action: none; /* dragging and pinching move the map, not the page */
+  cursor: grab;
+}
+
+/* − + @ under the title: zoom out, zoom in, back to you. */
+.map-zoom {
+  display: flex;
+  gap: 6px;
+}
+
+.map-zoom .button {
+  flex: 1;
+  min-height: 40px;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .map-side {
@@ -1116,6 +1131,32 @@ button:focus-visible {
 
   .recipe.owned::after,
   .recipe-need {
+    font-size: 11px;
+  }
+}
+
+/* Phones held sideways: the map panel's side column tighter, so the key fits beside the map. */
+@media (max-height: 460px) {
+  .map-panel {
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .map-side {
+    gap: 7px;
+  }
+
+  .map-zoom .button {
+    min-height: 36px;
+  }
+
+  .map-key {
+    gap: 1px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .map-note {
     font-size: 11px;
   }
 }

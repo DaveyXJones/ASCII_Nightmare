@@ -7,7 +7,7 @@ and overlap whatever is behind them. The owner is building toward a fuller survi
 (crafting, a day and night cycle with things that come out at night, saving, maybe multiplayer);
 see "What's next" in README.md.
 
-## Where things stand: the game is online (last updated 2026-10-31)
+## Where things stand: the game is online (last updated 2026-11-01)
 
 The game is live at **https://daveyxjones.github.io/ASCII_Nightmare/**. The repository
 (`DaveyXJones/ASCII_Nightmare`) is public, its default branch is `main`, and GitHub Pages deploys
@@ -292,15 +292,13 @@ it). Choices that were Claude's:
 
 Item 4, in js/map.js. Choices that were Claude's:
 
+- (Since 2026-11-01 the panel zooms and drags; see "A bigger island" below. `MAP_BLOCKS` is gone.)
 - **What you've seen**: `world.seen` (a `Uint8Array`, 1 per tile seen), filled by `markSeen` every
   `MAP_MARK_SECONDS` within a circle of `MAP_SIGHT` (11) tiles by day, shrinking with
   `sky.darkness` to `MAP_NIGHT_SIGHT` or the torch's reach. Saved as `seen`, packed to a bit per
   tile in base64 (`packSeen`, about 4 KB), restored only on the same island. Kept when you die.
 - **The panel** (`#island-map`; the game's canvas already has `id="map"`) pauses like the craft
-  panel. `drawMap` picks the smallest block in `MAP_BLOCKS` (tiles across one character; twice as
-  many down, since a character is twice as tall as wide) that keeps characters at least
-  `MAP_MIN_GLYPH_CSS` wide: 3 on a 667×375 phone (64×22 characters), 2 on a desktop. It's drawn
-  once per opening with `fillText` (about 1,400 to 3,000 cells), not per frame.
+  panel. It's drawn with `fillText`, only when it opens or moves, never per game frame.
 - **What a cell shows** (`readCell`): the most common seen ground, as its `map` field in `TILES`
   (`[glyph, color, background]`, else its first glyph and colors); trees or rocks (`map` in
   `OBJECTS`) if they cover at least half of it; a built thing's `mark` (from `MARKS` in
@@ -373,6 +371,30 @@ Item 6, in js/guns.js, to the owner's choice of Claude's suggestions. Choices be
   hidden (`.thing-name`), and leaves out things neither side has. A gun dims in the pack while
   reloading (`.tool.reloading`).
 
+## A bigger island, and a map to zoom (built 2026-11-01)
+
+After merging PR #9 the owner asked "Can we make the map a lot bigger?", and when asked which, chose
+both: a bigger island and a bigger map picture.
+
+- **The island**: new worlds are `WORLD_SIZE` (384×256, four times the land; `pickTerrain` shapes
+  the island relative to the size while the noise keeps its scale, so features are the same size
+  and there are more of them). `generateWorld(seed, island)` takes the size; `saveGame` stores it
+  as `size`, and `loadGame` rebuilds with `savedSize(save.size)`, which is `FIRST_WORLD_SIZE`
+  (192×128) for saves without it, so every world saved before keeps its size, print and changes
+  (checked with a save made by `main`'s code). Generation takes about 50 ms; a save is about 17 KB.
+  Everything else reads `world.width`/`world.height`; don't use a fixed size anywhere.
+- **The map panel** is now a window (`mapView`: `scale` in CSS px per tile, `cx`/`cy` the tile in
+  the middle, `width`/`height` of the window). `drawMap` draws only the characters in the window,
+  each standing for `block` tiles across and twice that down, `block` being the fewest that keeps
+  characters `MAP_MIN_GLYPH_CSS` wide at that zoom (about 0.3 to 4.5 ms a draw). Zoom runs from
+  `mapView.fit` (the whole island) to `MAP_MOST_ZOOM`; `centreMap` keeps the window inside the
+  island. Gestures (`setupMapGestures`): one pointer drags, two pinch (zooming about the point
+  between them), the wheel zooms about the cursor; redraws are coalesced to one per frame
+  (`drawMapSoon`). Buttons **−**, **+** (`zoomMapAboutYou`: about you when you're in view) and
+  **@** (`centreMap` on you); keys `+`/`-` and the arrows (`mapKey`). It opens centred on you at
+  the last zoom (`MAP_FIRST_ZOOM` the first time on an island). On short screens the side column
+  is tightened to fit 667×375.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -403,7 +425,7 @@ Item 6, in js/guns.js, to the owner's choice of Claude's suggestions. Choices be
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
 | `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print). |
-| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
+| `js/world.js` | `WORLD_SIZE` and `FIRST_WORLD_SIZE`, `generateWorld(seed, island)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
 | `js/weather.js` | `weatherAt(clock, seed)` (cloud, rain, storm, wind), `updateWeather` (rain messages, the torch in rain, lightning and thunder, `soakFires`), `relightFire`, `lightningAt`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
@@ -414,7 +436,7 @@ Item 6, in js/guns.js, to the owner's choice of Claude's suggestions. Choices be
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat, `hideEmpty` for pack slots shown only while you have some), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
-| `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `drawMap`, `readCell`). |
+| `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `layoutMap`, `centreMap`, `zoomMap`, `panMap`, `setupMapGestures`, `drawMap`, `readCell`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
@@ -425,7 +447,7 @@ Item 6, in js/guns.js, to the owner's choice of Claude's suggestions. Choices be
 
 ## World model
 
-- A grid of `WORLD_WIDTH × WORLD_HEIGHT` tiles in parallel arrays on `world`: `ground` (keys into
+- A grid of `world.width × world.height` tiles in parallel arrays on `world`: `ground` (keys into
   `TILES`), `objects` (keys into `OBJECTS` or `null`), `heights` (rows of cliff for mountains),
   `shades` (background patch index), `variants` (random byte per tile for glyph and color picks).
 - Positions are in tile units. The player's `x, y` is the middle of their feet; collision uses a
