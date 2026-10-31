@@ -68,6 +68,11 @@ Yellow brackets `[ ]` on the map show what the action button will use.
 **Your look.** In the menu, **Your look** lets you pick the colors of your hat, hair, skin, shirt
 and trousers. The game remembers them next time.
 
+**Sound.** Chops, footsteps (different on grass, sand, dirt and floorboards), the wind, birds by
+day and crickets at night, a campfire crackling. Listen to the crickets: they go quiet when
+something from the dark is close, and growls come from the side the creature is on. **Sound on** /
+**Sound off** is in the menu. On an iPhone, the silent switch mutes the game too.
+
 ## Staying alive
 
 - **Food** (orange) and **water** (blue) run down as you go: a full stomach lasts about seven
@@ -174,6 +179,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/night.js` | Day and night: how long each lasts, the moon, and how dark it gets. |
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
 | `js/input.js` | The thumbstick, the buttons, and the keyboard. |
+| `js/sound.js` | Every sound, made by the browser on the spot, so there are no sound files. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/creatures.js` | The shades and brutes: when they come out, how they find you, what scares them off. |
@@ -226,6 +232,10 @@ run straight from the file.
   (`js/night.js`). How many scratches a wall or door takes is `claws` in `OBJECTS`. Redraw them as
   `shade`/`shade2` and `brute`/`brute2` in `js/sprites.js`.
 - **Walking speed.** `WALK_SPEED` at the top of `js/game.js`.
+- **Sounds.** `SOUNDS` in `js/sound.js` describes each one as a burst of hiss through a filter
+  and/or a tone that slides in pitch. Change the numbers to make a chop deeper or a bite harsher;
+  `SOUND_VOLUME` is everything at once. Which sound each thing makes is `sound` and `soundDone` in
+  `OBJECTS`, and `sound` in `CREATURES`.
 
 ## What's next
 
@@ -238,6 +248,7 @@ Roughly in order:
    claws). Maybe next: lurkers that sit still in the tall grass, eyes open, and spring when you
    walk too close.
 4. ~~**Saving.** Keep the world and your pack between visits.~~ (done)
-5. **Sound.** Chops, footsteps, rain.
+5. ~~**Sound.** Chops, footsteps~~ (done). Rain needs weather first: clouds that roll in, rain
+   drawn as falling characters, and its sound.
 6. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
    and what's changed, not the whole map.

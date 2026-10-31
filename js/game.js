@@ -53,6 +53,7 @@ const elements = {
   startButton: document.getElementById('start'),
   newWorldButton: document.getElementById('new-world'),
   fullscreenButton: document.getElementById('fullscreen'),
+  soundButton: document.getElementById('sound-button'),
   seedLabel: document.getElementById('seed'),
   death: document.getElementById('death'),
   deathTitle: document.getElementById('death-title'),
@@ -291,6 +292,7 @@ function collapse() {
   stopBuilding(state);
   releaseAll();
   elements.game.classList.add('collapsing');
+  playSound('collapse');
   buzz(120);
 }
 
@@ -380,6 +382,15 @@ elements.newWorldButton.addEventListener('click', () => {
   closeMenu();
 });
 elements.fullscreenButton.addEventListener('click', toggleFullscreen);
+elements.soundButton.addEventListener('click', () => {
+  setSoundOn(!audio.on);
+  showSoundButton();
+});
+
+function showSoundButton() {
+  elements.soundButton.textContent = audio.on ? 'Sound on' : 'Sound off';
+  elements.soundButton.setAttribute('aria-pressed', String(audio.on));
+}
 elements.fullscreenButton.hidden = !document.fullscreenEnabled;
 elements.againButton.addEventListener('click', () => {
   elements.death.hidden = true;
@@ -605,6 +616,7 @@ function frame(now) {
     }
   }
 
+  updateSound(state, playing);
   followCamera(state.world, state.player, dt);
   drawFrame(state);
   updateHud();
@@ -617,6 +629,8 @@ setupView(elements.canvas);
 setupInput(elements);
 setupCrafting(elements);
 setupLook();
+setupSound();
+showSoundButton();
 // Carry on from last time if there's a saved world; otherwise the first island.
 state.resumed = loadGame(state);
 if (!state.resumed) newGame(DEFAULT_SEED);

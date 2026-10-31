@@ -103,6 +103,7 @@ function lightTorch(game, target) {
   survivor.torchLeft = TOOLS.torch.burns;
   survivor.warned.torch = false;
   burst(game.fx, target.x + 0.5, target.y + 0.5, 'spark', 8);
+  playSound('ignite');
   floatText(game.fx, game.player.x, game.player.y - 3, relit ? 'torch relit' : 'torch lit', '#ffb347');
   const minutes = Math.round(TOOLS.torch.burns / 60);
   showMessage(game, `Your torch catches. It will burn for about ${minutes} minutes.`);
@@ -116,6 +117,7 @@ function updateTorch(game, dt) {
   survivor.torchLeft = Math.max(0, survivor.torchLeft - dt);
   if (survivor.torchLeft === 0) {
     showMessage(game, 'Your torch gutters out. Light it again at a campfire.');
+    playSound('snuff');
   } else if (!survivor.warned.torch && survivor.torchLeft < TOOLS.torch.burns * TORCH_LOW) {
     survivor.warned.torch = true;
     showMessage(game, WARNINGS.torch);
@@ -241,8 +243,10 @@ function useTarget(game) {
 
   if (swings < object.hits) {
     world.damage.set(index, swings);
+    playSound(object.sound);
     return;
   }
+  playSound(object.soundDone || object.sound);
 
   // Done: into the pack it goes, and whatever's left takes its place.
   const parts = [];
@@ -269,6 +273,7 @@ function drink(game, target) {
   }
   vitals.water = Math.min(100, vitals.water + SIP_WATER);
   burst(game.fx, target.x + 0.5, target.y + 0.5, 'water', 6);
+  playSound('drink');
   floatText(game.fx, target.x + 0.5, target.y - 0.5, '+water', '#7ab4e8');
 }
 
@@ -297,6 +302,7 @@ function eat(game) {
   vitals.food = Math.min(100, vitals.food + food);
   if (heals) vitals.health = Math.min(100, vitals.health + heals);
   game.player.act = { action: 'Eat', at: game.player.clock };
+  playSound('eat');
   floatText(game.fx, game.player.x, game.player.y - 3, heals ? '+food +health' : '+food', color);
 }
 
@@ -334,11 +340,14 @@ function burst(fx, x, y, kind, count) {
   }
 }
 
-// One speck kicked up from the ground where the player's foot lands, if the ground has a `step`.
+// A footstep: its sound, and one speck kicked up from the ground where the player's foot lands, if
+// the ground has a `step`. Ground without one (the cottage floor) sounds like floorboards.
 function footstep(game) {
   const { world, player, fx } = game;
   const ground = groundAt(world, Math.floor(player.x), Math.floor(player.y));
-  if (!ground || !ground.step) return;
+  if (!ground) return;
+  playSound(`step:${ground.step || 'floor'}`);
+  if (!ground.step) return;
   const style = BURSTS[ground.step];
   const n = Math.floor(Math.random() * 6);
   fx.particles.push({

@@ -141,12 +141,14 @@ function craft(game, key) {
       parts.push(`+${count} ${ITEMS[item].name}`);
     }
     showMessage(game, recipe.done || parts.join(', '));
+    playSound('craft');
     buzz(20);
     refreshCraft();
     return;
   }
   survivor.tools[recipe.tool] = true;
   showMessage(game, recipe.done);
+  playSound('craft');
   buzz(30);
 }
 
@@ -191,6 +193,7 @@ function build(game) {
   setObject(game.world, spot.x, spot.y, recipe.builds);
   player.act = { action: 'Build', at: player.clock };
   burst(game.fx, spot.x + 0.5, spot.y + 0.5, object.burst, 10);
+  playSound('build');
   buzz(30);
   if (recipe.done) showMessage(game, recipe.done);
 

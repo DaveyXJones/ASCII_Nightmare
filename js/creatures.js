@@ -25,6 +25,7 @@
 //   claw    how much each scratch at a wall counts for (see `claws` in OBJECTS)
 //   after   seconds after nightfall before one can come out
 //   seen    what the game says the first time one comes out each night
+//   sound   the noise it makes as it comes out, from where it is: a name in SOUNDS (sound.js)
 const CREATURES = {
   shade: {
     name: 'Shade',
@@ -40,6 +41,7 @@ const CREATURES = {
     claw: 1,
     after: 0,
     seen: 'Something is moving out there in the dark.',
+    sound: 'growl',
   },
   brute: {
     name: 'Brute',
@@ -55,6 +57,7 @@ const CREATURES = {
     claw: 4,
     after: 150,
     seen: 'Something big is crashing about in the dark. A torch won\'t scare it off.',
+    sound: 'roar',
   },
 };
 
@@ -163,6 +166,7 @@ function comeOut(game, fears, kind) {
       blink: Math.random() * 10, // so they don't all blink together
       hurtAt: -Infinity,
     });
+    playSoundAt(game, CREATURES[kind].sound, tx + 0.5, ty + 0.5);
     if (!game.hunt.seen[kind]) {
       game.hunt.seen[kind] = true;
       showMessage(game, CREATURES[kind].seen);
@@ -276,6 +280,7 @@ function scratch(game, creature, wall) {
   creature.stride += CREATURE_FRAME_TILES; // its legs shift as it rakes at the wall
   fx.shake = { index: wall.index, until: game.time + 0.18 };
   burst(fx, wall.x + 0.5, wall.y + 0.5, object.burst || 'wood', 3);
+  playSoundAt(game, 'claw', wall.x + 0.5, wall.y + 0.5);
   if (!hunt.clawed) {
     hunt.clawed = true;
     showMessage(game, 'Something is clawing at your wall.');
@@ -286,6 +291,7 @@ function scratch(game, creature, wall) {
   }
   setObject(world, wall.x, wall.y, null);
   burst(fx, wall.x + 0.5, wall.y + 0.5, object.burst || 'wood', 12);
+  playSoundAt(game, 'crash', wall.x + 0.5, wall.y + 0.5);
   showMessage(game, `Something breaks through your ${object.name.toLowerCase()}!`);
   buzz(60);
   field.at = -Infinity; // there's a way through now: work out the map of steps again
@@ -345,6 +351,7 @@ function bite(game, creature) {
   survivor.hurtAt = game.time;
   floatText(game.fx, player.x, player.y - 3, `-${kind.bite}`, '#ff5a4e');
   burst(game.fx, player.x, player.y - 1, 'shadow', 4);
+  playSound('bite');
   buzz(80);
   if (!game.hunt.bitten) {
     game.hunt.bitten = true;
@@ -368,9 +375,11 @@ function hitCreature(game, creature) {
   if (creature.hp <= 0) {
     creature.gone = true;
     burst(game.fx, creature.x, creature.y - 1, 'shadow', 14);
+    playSound('dissolve');
     showMessage(game, `The ${kind.name.toLowerCase()} comes apart into smoke.`);
     return;
   }
+  playSound('hit');
   moveAway(game, creature, player.x, player.y, kind.knock);
   creature.state = 'run';
   creature.timer = kind.flinch;

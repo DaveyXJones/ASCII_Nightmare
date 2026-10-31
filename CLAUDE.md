@@ -102,6 +102,13 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   a save. `worldPrint` fingerprints the generated island: if the world code has changed so the
   seed builds a different island, the pack is kept but map changes are dropped. Creatures aren't
   saved; the night's hunt restarts. Bump `SAVE_VERSION` if the saved shape changes.
+- **Sound** (js/sound.js): all synthesized with Web Audio, no files. `SOUNDS` holds one-off sounds
+  (`playSound`, `playSoundAt` for panned, distance-faded ones); `updateSound` runs each frame for
+  wind (louder at night, muffled indoors), birds by day, crickets at night that hush as creatures
+  near (`CRICKET_HUSH`), and crackle near a `flame` object or a lit torch. The audio context is
+  made on the first tap (`wakeSound`, browsers require a gesture); Sound on/off in the menu is
+  kept under `SOUND_KEY`. Levels were set by rendering each sound offline and measuring peaks
+  (actions about 0.35, footsteps 0.07); the compressor only limits the loudest moments.
 - **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
   "Draw only characters on the map", so it waits for the owner's say.
 
@@ -115,7 +122,7 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  render → input → survival → crafting → creatures → save → game`. A file may use globals from files
+  render → input → sound → survival → crafting → creatures → save → game`. A file may use globals from files
   before it at load time, and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
@@ -137,6 +144,7 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
+| `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, birds, crickets, crackle), `setSoundOn`. |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
 | `js/creatures.js` | `CREATURES` (shade, brute), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
