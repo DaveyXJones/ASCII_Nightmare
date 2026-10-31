@@ -457,6 +457,14 @@ function drawGroundTile(ctx, world, tx, ty, x, y, waterFrame) {
   }
 }
 
+// Draws one tile of ground again, after it's changed under the cache (a floor laid or taken up).
+// Off the cached area there's nothing to do: it's drawn fresh when it comes into view.
+function redrawGround(world, x, y) {
+  const cache = groundCache;
+  const cached = x >= cache.left && y >= cache.top && x < cache.left + cache.cols && y < cache.top + cache.rows;
+  if (cache.world === world && cached) drawGroundRegion(world, x, y, x, y);
+}
+
 function redrawWater(world) {
   const cache = groundCache;
   const ctx = cache.ctx;
@@ -1372,12 +1380,22 @@ function drawTarget(target, time, color = TARGET_COLOR) {
 
 // In build mode: a see-through copy of what you're building, standing where it would go, with
 // red brackets instead of yellow if it can't go there. A wall shows the picture it would have there,
-// joined up with the walls beside it.
+// joined up with the walls beside it; a floor, a patch of boards; a board you'd take up, just the
+// brackets.
 function drawBuildSpot(game) {
   const spot = game.buildSpot;
-  const object = OBJECTS[RECIPES[game.building].builds];
+  const recipe = RECIPES[game.building];
   view.ctx.globalAlpha = spot.problem ? GHOST_ALPHA / 2 : GHOST_ALPHA;
-  drawSprite(SPRITES[objectLook(game.world, object, spot.x, spot.y).sprite], spot.x, spot.y);
+  if (recipe.floor && !spot.lift) {
+    const tile = TILES[recipe.floor];
+    const x = Math.round(screenX(spot.x));
+    const y = Math.round(screenY(spot.y));
+    fillCell(view.ctx, tile.bgs[0], x, y, view.tw, view.th);
+    drawGlyphPair(view.ctx, tile, 0, spot.x, spot.y, x, y, 0);
+  } else if (!recipe.floor) {
+    const object = OBJECTS[recipe.builds];
+    drawSprite(SPRITES[objectLook(game.world, object, spot.x, spot.y).sprite], spot.x, spot.y);
+  }
   view.ctx.globalAlpha = 1;
   drawTarget(spot, game.time, spot.problem ? BLOCKED_COLOR : TARGET_COLOR);
 }

@@ -81,6 +81,8 @@ const CRAFT_TABS = { tools: 'Tools', build: 'Build', garden: 'Garden', cook: 'Co
 //   cost     what it takes from your pack, e.g. { wood: 3, stone: 2 }
 //   tool     a key in TOOLS: making it puts that tool in your pack (you only ever need one)
 //   builds   a key in OBJECTS: making it starts build mode, to put one on the map
+//   floor    a key in TILES: making it starts build mode too, but it's laid as the ground itself, so
+//            things can stand on it (see buildFloor)
 //   again    for things you build: stay in build mode afterwards, to build a row of them
 //   over     for things you build onto something already there, like a roof over a campfire: the keys
 //            in OBJECTS it can go on (it takes their place)
@@ -186,6 +188,14 @@ const RECIPES = {
     builds: 'spikes',
     again: true,
   },
+  floor: {
+    tab: 'build',
+    name: 'Wooden floor',
+    about: 'Boards to walk on. No grass grows.',
+    cost: { wood: 1 },
+    floor: 'planks',
+    again: true,
+  },
   lamp: {
     tab: 'build',
     name: 'Lamp',
@@ -278,7 +288,7 @@ function craft(game, key) {
   const recipe = RECIPES[key];
   const survivor = game.survivor;
   if (!recipe || !canMake(survivor, recipe)) return;
-  if (recipe.builds) {
+  if (recipe.builds || recipe.floor) {
     closeCraft();
     game.building = key;
     showMessage(game, BUILD_HINT);
@@ -309,14 +319,19 @@ function craft(game, key) {
 
 // Where build mode would put something: the tile just in front of the player's feet, always a
 // whole tile clear of them so you can't build on top of yourself. Returns { x, y, problem }, where
-// `problem` says why it can't go there, or is null if it can.
+// `problem` says why it can't go there, or is null if it can. Facing a floor you laid, with the
+// floor picked, it's { x, y, lift: true }: Build takes that board up again, and says so (`label`).
 function findBuildSpot(game) {
-  const { player } = game;
+  const { player, world } = game;
   const facing = FACINGS[player.facing];
   // Find the tile the front edge of the feet is on, then step one tile further.
   const x = Math.floor(player.x + facing.x * FOOT_HALF_WIDTH) + facing.x;
   const y = Math.floor(player.y + facing.y * FOOT_HALF_DEPTH) + facing.y;
-  return { x, y, problem: buildProblem(game, x, y, RECIPES[game.building]) };
+  const recipe = RECIPES[game.building];
+  if (recipe.floor && inBounds(world, x, y) && world.floors.has(y * world.width + x)) {
+    return { x, y, problem: null, lift: true, label: 'Take up' };
+  }
+  return { x, y, problem: buildProblem(game, x, y, recipe) };
 }
 
 function buildProblem(game, x, y, recipe) {
@@ -332,14 +347,21 @@ function buildProblem(game, x, y, recipe) {
     return null;
   }
   if (!ground || ground.solid) return "You can't build there.";
-  if (insideHouse(world, x, y)) {
-    if (!recipe.indoors) return "There's no room for that inside the cottage.";
-    if (keepClear(world, x, y)) return 'Leave the way to the door and the bed clear.';
-  }
-  // Things you can walk through, like stumps, are cleared away to make room. Doors and beds aren't,
-  // and nor is a dropped pack you haven't searched yet.
-  if (object && (object.solid || object.door || object.bed || object.loot)) {
-    return `The ${object.name.toLowerCase()} is in the way.`;
+  if (recipe.floor) {
+    // A floor goes down under things you've built (they have a `mark`) and things you walk over, but
+    // not under trees, rocks and bushes; and the cottage has one already.
+    if (insideHouse(world, x, y)) return 'The cottage has a floor already.';
+    if (object && object.solid && !object.mark) return `The ${object.name.toLowerCase()} is in the way.`;
+  } else {
+    if (insideHouse(world, x, y)) {
+      if (!recipe.indoors) return "There's no room for that inside the cottage.";
+      if (keepClear(world, x, y)) return 'Leave the way to the door and the bed clear.';
+    }
+    // Things you can walk through, like stumps, are cleared away to make room. Doors and beds aren't,
+    // and nor is a dropped pack you haven't searched yet.
+    if (object && (object.solid || object.door || object.bed || object.loot)) {
+      return `The ${object.name.toLowerCase()} is in the way.`;
+    }
   }
   if (!canAfford(survivor.pack, recipe.cost)) return `You need ${shortfall(survivor.pack, recipe.cost)}.`;
   return null;
@@ -356,14 +378,19 @@ function keepClear(world, x, y) {
 
 // One press of Build.
 function build(game) {
-  const spot = game.buildSpot;
-  if (!spot) return;
+  // Worked out afresh, in case a second press comes before the next update: the spot it was worked
+  // out for has just been built on.
+  const spot = (game.buildSpot = findBuildSpot(game));
   if (spot.problem) {
     showMessage(game, spot.problem);
     return;
   }
   const { player, survivor } = game;
   const recipe = RECIPES[game.building];
+  if (recipe.floor) {
+    buildFloor(game, spot, recipe);
+    return;
+  }
   const object = OBJECTS[recipe.builds];
   spend(survivor.pack, recipe.cost);
   setObject(game.world, spot.x, spot.y, recipe.builds);
@@ -380,6 +407,32 @@ function build(game) {
   if (!recipe.again) {
     stopBuilding(game);
   } else if (!canAfford(survivor.pack, recipe.cost)) {
+    stopBuilding(game);
+    showMessage(game, `You'd need ${shortfall(survivor.pack, recipe.cost)} for another.`);
+  }
+}
+
+// One press of Build with a floor picked: lays a board as the ground in front of you, remembering
+// what was there (world.floors), or takes up one you laid before and gives its wood back.
+function buildFloor(game, spot, recipe) {
+  const { world, player, survivor, fx } = game;
+  const index = spot.y * world.width + spot.x;
+  if (spot.lift) {
+    setGround(world, spot.x, spot.y, world.floors.get(index));
+    world.floors.delete(index);
+    for (const [item, count] of Object.entries(recipe.cost)) survivor.pack[item] += count;
+    floatText(fx, spot.x + 0.5, spot.y - 1, `+${recipe.cost.wood} wood`, ITEMS.wood.color);
+  } else {
+    spend(survivor.pack, recipe.cost);
+    world.floors.set(index, world.ground[index]);
+    setGround(world, spot.x, spot.y, recipe.floor);
+  }
+  redrawGround(world, spot.x, spot.y);
+  burst(fx, spot.x + 0.5, spot.y + 0.5, 'wood', 6);
+  player.act = { action: 'Build', at: player.clock };
+  playSound('build');
+  buzz(20);
+  if (!spot.lift && !canAfford(survivor.pack, recipe.cost)) {
     stopBuilding(game);
     showMessage(game, `You'd need ${shortfall(survivor.pack, recipe.cost)} for another.`);
   }
@@ -423,6 +476,13 @@ function setupCrafting(elements) {
     let picture;
     if (recipe.builds) {
       picture = document.createElement('canvas'); // filled in by drawRecipePicture() when the panel opens
+    } else if (recipe.floor) {
+      // A floor is ground, not a picture standing on it: a patch of it.
+      const tile = TILES[recipe.floor];
+      picture = document.createElement('span');
+      picture.textContent = tile.glyphs[0].repeat(2);
+      picture.style.color = tile.colors[0];
+      picture.style.background = tile.bgs[0];
     } else if (recipe.gives) {
       const item = ITEMS[Object.keys(recipe.gives)[0]];
       picture = document.createElement('span');

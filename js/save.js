@@ -83,6 +83,7 @@ function saveGame(game) {
     regrowing: world.regrowing,
     chests: [...world.chests],
     fuel: [...world.fuel],
+    floors: [...world.floors.keys()],
     seen: packSeen(world),
     bed: world.bed,
   });
@@ -161,6 +162,12 @@ function restoreWorld(world, save) {
   for (let i = 0; i < world.objects.length; i++) {
     const object = world.objects[i] && OBJECTS[world.objects[i]];
     if (object && object.fuel && object.light && !world.fuel.has(i)) world.fuel.set(i, object.fuel.burns);
+  }
+  // Floors you've laid. What was under each is the island's own ground, as built from its seed.
+  for (const i of save.floors || []) {
+    if (!valid(i) || world.floors.has(i) || TILES[world.ground[i]].solid) continue;
+    world.floors.set(i, world.ground[i]);
+    world.ground[i] = 'planks';
   }
   if (valid(save.bed)) world.bed = save.bed;
   unpackSeen(world, save.seen);

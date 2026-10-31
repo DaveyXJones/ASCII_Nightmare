@@ -633,7 +633,7 @@ function updateHud() {
   let label = state.target ? state.target.label : 'Use';
   let ready = Boolean(state.target);
   if (state.building) {
-    label = 'Build';
+    label = (state.buildSpot && state.buildSpot.label) || 'Build'; // or Take up, facing a floor you laid
     ready = Boolean(state.buildSpot && !state.buildSpot.problem);
   }
   if (hud.action !== label) {

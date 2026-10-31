@@ -127,6 +127,15 @@ const TILES = {
     bgs: ['#6e5a42', '#665339', '#5c4a35'],
     step: 'dust',
   },
+  // A floor you've laid yourself (the Wooden floor in RECIPES): new boards, paler than the cottage's.
+  // Grass doesn't grow through it, so nothing can lurk on it.
+  planks: {
+    name: 'Plank floor',
+    map: ['=', '#d8b07a', '#7a5a39'],
+    glyphs: ['═', '─', '═', '═'],
+    colors: ['#7a5636', '#86603c'],
+    bgs: ['#b48a5c', '#ac8455', '#b8905f'],
+  },
   rug: {
     name: 'Rug',
     glyphs: ['░', '▒', '░'],
