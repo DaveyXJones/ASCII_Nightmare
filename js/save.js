@@ -63,6 +63,7 @@ function saveGame(game) {
   remember(SAVE_KEY, {
     version: SAVE_VERSION,
     seed: world.seed,
+    size: [world.width, world.height],
     print: world.print,
     time: game.time,
     dayClock: game.dayClock,
@@ -95,7 +96,7 @@ function loadGame(game) {
   const save = recall(SAVE_KEY);
   if (!save || save.version !== SAVE_VERSION || !Number.isInteger(save.seed)) return false;
   try {
-    const world = generateWorld(save.seed);
+    const world = generateWorld(save.seed, savedSize(save.size));
     // If the code that builds islands has changed since (a new kind of ground, say), this seed
     // builds a different island now, and the changes saved for the old one would land in the wrong
     // places. Keep what you carry, but not the changes to the land, and wake up in the cottage.
@@ -125,6 +126,14 @@ function loadGame(game) {
     console.warn('The saved world could not be read, so a new one starts.', error);
     return false;
   }
+}
+
+// The size of island a save was made on, [width, height] in tiles. Saves from before islands grew
+// don't say, and are FIRST_WORLD_SIZE.
+function savedSize(size) {
+  const fits = (n) => Number.isInteger(n) && n >= 32 && n <= 2048;
+  if (!Array.isArray(size) || !fits(size[0]) || !fits(size[1])) return FIRST_WORLD_SIZE;
+  return { width: size[0], height: size[1] };
 }
 
 function restoreWorld(world, save) {

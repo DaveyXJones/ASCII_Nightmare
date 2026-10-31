@@ -4,8 +4,10 @@
 // `objects` (what stands on it, from OBJECTS, or null). Mountains are ground with a height,
 // counted in rows of cliff face.
 
-const WORLD_WIDTH = 192;
-const WORLD_HEIGHT = 128;
+const WORLD_SIZE = { width: 384, height: 256 }; // a new island, in tiles
+// Islands made before the island grew (saved before 2026-11-01) were this size, and stay it, so a
+// world you're playing in doesn't change under you (see loadGame in save.js).
+const FIRST_WORLD_SIZE = { width: 192, height: 128 };
 const DEFAULT_SEED = 1028;
 
 // The cottage you wake up in, drawn as text. Each character maps to ground (and maybe an object)
@@ -47,9 +49,8 @@ const FIELD_TILES = new Set(['grass', 'tallGrass', 'flowers']);
 // rows tall and each step above it adds one more.
 const MOUNTAIN_LEVELS = [0.82, 0.87, 0.92];
 
-function generateWorld(seed) {
-  const width = WORLD_WIDTH;
-  const height = WORLD_HEIGHT;
+function generateWorld(seed, island = WORLD_SIZE) {
+  const { width, height } = island;
   const size = width * height;
   const world = {
     width,

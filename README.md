@@ -32,7 +32,9 @@ Android, the **Wake up** button also goes full screen and locks the screen sidew
 Next time, **Carry on** picks up where you left off: the same island, everything you've chopped and
 built, your pack, and the time of day. It's saved in that browser on that phone only, and private
 browsing or clearing the browser's data forgets it. **New world** asks for a second tap before it
-throws your island away. If you die, the island stays as you left it and you wake up the next
+throws your island away. New islands are 384 by 256 tiles; islands started before 1 November 2026
+are half that each way (192 by 128), and keep their size, so a world you're in never changes under
+you. Tap **New world** for a big one. If you die, the island stays as you left it and you wake up the next
 morning with an empty pack (in the cottage, or on your bedroll if you've made one), and anything
 you put in a chest is still there.
 
@@ -62,7 +64,7 @@ font from a file, so some characters may look a little different.
 | Eat | The small button: eats the best food you have | `F` |
 | Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9`, `0`, `-`, `=` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
-| Map | **Map**, under ☰ in the top right | `M` |
+| Map | **Map**, under ☰ in the top right; drag to look around, pinch or **−**/**+** to zoom, **@** to find yourself | `M`; arrow keys, `+`/`-`, mouse wheel |
 | Menu | ☰ in the top right | `Esc` |
 
 Yellow brackets `[ ]` on the map show what the action button will use.
@@ -141,11 +143,16 @@ fish can't be eaten: cook it beside a campfire (**Cooked fish** on the craft pan
 
 Fish and cooked food only show in the pack while you have some, so it fits across a phone.
 
-**The map.** Tap **Map** (under ☰, or `M`) to see the island, drawn in characters, one character
-for a few tiles. It only shows land you've seen: by day you take in about 11 tiles around you, at
-night only what your torch lights. You (`@`), the cottage and the things you've built (fires,
-lamps, chests, your bedroll, walls) are marked on it, with a key beside it. The game pauses while
-it's open. You keep what you've seen when you die, and it's saved with the world.
+**The map.** Tap **Map** (under ☰, or `M`) to see the island, drawn in characters. It only shows
+land you've seen: by day you take in about 11 tiles around you, at night only what your torch
+lights. You (`@`), the cottage, the things you've built (fires, lamps, chests, your bedroll,
+walls), the wreck, crates and a gun you dropped are marked on it, with a key beside it. **Drag** it
+to look around, **pinch** (or tap **−** and **+**) to zoom, and tap **@** to come back to where you
+are. Zoomed out, the whole island fits and each character stands for a block of land; zoomed all
+the way in, there's one character for each tile across. It opens centred on you, at the zoom you
+used last. On a computer: drag with the mouse, the wheel or `+`/`-` to zoom, the arrow keys to look
+around. The game pauses while it's open. You keep what you've seen when you die, and it's saved
+with the world.
 
 **Lamps.** A lamp lights the ground around it at night, not as far as a campfire, and things in the
 dark keep away from it the way they do from firelight (brutes and lurkers too, which the torch
@@ -320,6 +327,8 @@ run straight from the file.
   `js/survival.js` and the pack in `index.html`.
 - **The cottage.** It's drawn as text in `COTTAGE` at the top of `js/world.js`: move the bed, add
   furniture, or make it bigger.
+- **The size of the island.** `WORLD_SIZE` at the top of `js/world.js`, in tiles. It's used for new
+  worlds only; a saved world keeps the size it was made with.
 - **What things cost.** `cost` on each recipe in `RECIPES` (`js/crafting.js`). What an empty chest
   gives back is `CHEST_GIVES_BACK` at the top of `js/chest.js`.
 - **A new recipe.** Add it to `RECIPES` in `js/crafting.js` and it gets its own card. A tool goes in
@@ -356,7 +365,8 @@ run straight from the file.
 
 ## What's next
 
-Done lately, your list of 2026-10-31: walls that join up (a fence running up the screen is seen
+Done lately: a bigger island (four times the land, for new worlds) and a map you can zoom and
+drag. Before that, your list of 2026-10-31: walls that join up (a fence running up the screen is seen
 from the side) and turning in place in build mode, an outline round the player, lamps, a map,
 fishing, and a pistol and a rifle to find. Before that: weather (clouds, rain, storms, and roofs to
 keep campfires burning), lurkers in the long grass, chests, and bedrolls; and before that, your
