@@ -275,8 +275,9 @@ function buildProblem(game, x, y, recipe) {
     if (!recipe.indoors) return "There's no room for that inside the cottage.";
     if (keepClear(world, x, y)) return 'Leave the way to the door and the bed clear.';
   }
-  // Things you can walk through, like stumps, are cleared away to make room. Doors and beds aren't.
-  if (object && (object.solid || object.door || object.bed)) {
+  // Things you can walk through, like stumps, are cleared away to make room. Doors and beds aren't,
+  // and nor is a dropped pack you haven't searched yet.
+  if (object && (object.solid || object.door || object.bed || object.loot)) {
     return `The ${object.name.toLowerCase()} is in the way.`;
   }
   if (!canAfford(survivor.pack, recipe.cost)) return `You need ${shortfall(survivor.pack, recipe.cost)}.`;

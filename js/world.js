@@ -4,10 +4,12 @@
 // `objects` (what stands on it, from OBJECTS, or null). Mountains are ground with a height,
 // counted in rows of cliff face.
 
-const WORLD_SIZE = { width: 384, height: 256 }; // a new island, in tiles
+// A new island: its size in tiles, and whether it has places to find on it (see places.js).
+const WORLD_SIZE = { width: 768, height: 512, places: true };
 // Islands made before the island grew (saved before 2026-11-01) were this size, and stay it, so a
-// world you're playing in doesn't change under you (see loadGame in save.js).
-const FIRST_WORLD_SIZE = { width: 192, height: 128 };
+// world you're playing in doesn't change under you (see loadGame in save.js). Islands saved since
+// say their own size (some are 384 by 256), and have places only if they say so.
+const FIRST_WORLD_SIZE = { width: 192, height: 128, places: false };
 const DEFAULT_SEED = 1028;
 
 // The cottage you wake up in, drawn as text. Each character maps to ground (and maybe an object)
@@ -56,6 +58,7 @@ function generateWorld(seed, island = WORLD_SIZE) {
     width,
     height,
     seed,
+    hasPlaces: Boolean(island.places), // ruined cabins and the like to find (see places.js)
     ground: new Array(size),
     objects: new Array(size).fill(null),
     heights: new Uint8Array(size), // rows of cliff face, for mountains
@@ -69,6 +72,8 @@ function generateWorld(seed, island = WORLD_SIZE) {
     seen: new Uint8Array(size), // 1 for each tile you've seen, for the map (see map.js)
     bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
+    places: [], // the places to find, { kind, x, y, search }, and the notes left in them (places.js)
+    notes: new Map(),
     house: null,
     spawn: null,
   };
@@ -86,7 +91,13 @@ function generateWorld(seed, island = WORLD_SIZE) {
   }
 
   placeCottage(world);
-  placeFinds(world);
+  // The island's print (see save.js) is taken here, before the things put on it to find, so moving
+  // those about later doesn't make a saved island look like a different one.
+  world.print = worldPrint(world);
+  const steps = stepsFromDoor(world);
+  const sea = findSea(world);
+  placeFinds(world, steps, sea);
+  if (world.hasPlaces) placePlaces(world, steps, sea);
   // What stood where before anyone touched it: saving only needs to keep what's changed since.
   world.original = world.objects.slice();
   return world;
@@ -101,15 +112,16 @@ function pickTerrain(x, y, width, height, seed) {
   const edge = Math.min(1, Math.sqrt(dx * dx + dy * dy));
 
   const elevation = fractalNoise(x / 30, y / 30, seed) + 0.22 - edge ** 4 * 0.7;
-  // The same land with the finest bumps left out, so mountains have bold shapes, not ragged ones.
-  const ridge = fractalNoise(x / 30, y / 30, seed, 3) + 0.22 - edge ** 4 * 0.7;
-  const moisture = fractalNoise(x / 18, y / 18, seed + 7919);
-  const roll = hash2(x, y, seed + 17);
   const cell = (ground, object = null) => ({ ground, object, height: 0 });
 
   if (elevation < 0.36) return cell('deepWater');
   if (elevation < 0.42) return cell('water');
   if (elevation < 0.45) return cell('sand');
+  // (The rest is only worked out on land: the sea is half the map.)
+  // The same land with the finest bumps left out, so mountains have bold shapes, not ragged ones.
+  const ridge = fractalNoise(x / 30, y / 30, seed, 3) + 0.22 - edge ** 4 * 0.7;
+  const moisture = fractalNoise(x / 18, y / 18, seed + 7919);
+  const roll = hash2(x, y, seed + 17);
   if (ridge > MOUNTAIN_LEVELS[0]) {
     const height = 1 + MOUNTAIN_LEVELS.filter((level) => ridge > level).length;
     return { ground: 'mountain', object: null, height };
@@ -259,11 +271,9 @@ const SEA_REACH = 2; // a beach is sand within this many tiles of the sea
 // from the cottage, and the rifle's crate on the beach furthest away. Only on tiles where nothing grew, so
 // the island's print stays as it was (see `found` in OBJECTS). Also keeps the list of beach tiles
 // you can walk to (world.beaches), where things wash up later (washUp in guns.js).
-function placeFinds(world) {
+function placeFinds(world, steps, sea) {
   const { width } = world;
-  const steps = stepsFromDoor(world);
   const open = (i) => world.objects[i] === null && world.ground[i] === 'sand' && steps[i] >= 0;
-  const sea = findSea(world);
   const beach = (i) => open(i) && nearSea(world, sea, i);
   world.beaches = [];
   for (let i = 0; i < steps.length; i++) if (beach(i)) world.beaches.push(i);

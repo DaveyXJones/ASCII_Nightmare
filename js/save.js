@@ -58,12 +58,11 @@ function saveGame(game) {
   for (let i = 0; i < world.objects.length; i++) {
     if (world.objects[i] !== world.original[i]) objects.push([i, world.objects[i]]);
   }
-  // The island as it was built never changes, so its print is only worked out once.
-  if (world.print === undefined) world.print = worldPrint(world);
   remember(SAVE_KEY, {
     version: SAVE_VERSION,
     seed: world.seed,
     size: [world.width, world.height],
+    places: world.hasPlaces,
     print: world.print,
     time: game.time,
     dayClock: game.dayClock,
@@ -96,11 +95,10 @@ function loadGame(game) {
   const save = recall(SAVE_KEY);
   if (!save || save.version !== SAVE_VERSION || !Number.isInteger(save.seed)) return false;
   try {
-    const world = generateWorld(save.seed, savedSize(save.size));
+    const world = generateWorld(save.seed, savedIsland(save));
     // If the code that builds islands has changed since (a new kind of ground, say), this seed
     // builds a different island now, and the changes saved for the old one would land in the wrong
     // places. Keep what you carry, but not the changes to the land, and wake up in the cottage.
-    world.print = worldPrint(world);
     const sameIsland = save.print === world.print;
     if (sameIsland) restoreWorld(world, save);
     game.world = world;
@@ -128,12 +126,14 @@ function loadGame(game) {
   }
 }
 
-// The size of island a save was made on, [width, height] in tiles. Saves from before islands grew
-// don't say, and are FIRST_WORLD_SIZE.
-function savedSize(size) {
+// The island a save was made on: its size ([width, height] in tiles) and whether it has places to
+// find. Saves from before islands grew don't say, and are FIRST_WORLD_SIZE; saves from before
+// there were places don't have them.
+function savedIsland(save) {
   const fits = (n) => Number.isInteger(n) && n >= 32 && n <= 2048;
+  const { size } = save;
   if (!Array.isArray(size) || !fits(size[0]) || !fits(size[1])) return FIRST_WORLD_SIZE;
-  return { width: size[0], height: size[1] };
+  return { width: size[0], height: size[1], places: save.places === true };
 }
 
 function restoreWorld(world, save) {
@@ -200,8 +200,10 @@ function restoreSurvivor(saved) {
 }
 
 // A number standing for the island as it was built: its ground and what stood on it. Two islands
-// with the same print are (all but certainly) the same island. Things placed for you to find
-// (`found` in OBJECTS) are left out, so adding them didn't change the print of islands already saved.
+// with the same print are (all but certainly) the same island. It's taken before anything is put on
+// the island for you to find (see generateWorld), so the wreck, the crates and the places can move
+// without a saved island looking like a new one. (Things placed for you to find, `found` in
+// OBJECTS, are left out too: prints were once taken after the wreck was placed.)
 function worldPrint(world) {
   let hash = 2166136261;
   const mix = (text) => {
@@ -209,7 +211,7 @@ function worldPrint(world) {
   };
   for (let i = 0; i < world.ground.length; i++) {
     mix(world.ground[i]);
-    const key = world.original[i];
+    const key = world.objects[i];
     mix(key && !OBJECTS[key].found ? key : '-');
   }
   return hash >>> 0;

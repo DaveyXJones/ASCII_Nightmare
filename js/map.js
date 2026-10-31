@@ -94,13 +94,15 @@ function unpackSeen(world, packed) {
 
 function setupMap(elements) {
   // The key: you, the cottage, and one line for each kind of mark (a lit fire and a cold one share
-  // a name, so only the first is listed).
+  // a name, so only the first is listed). Only the marks on land you've seen are shown (see
+  // showKeyLines), so it grows as you explore.
   const marks = [MAP_YOU, MAP_COTTAGE];
   for (const object of Object.values(OBJECTS)) {
     if (object.mark && !marks.some((mark) => mark.name === object.mark.name)) marks.push(object.mark);
   }
   for (const mark of marks) {
     const line = document.createElement('li');
+    line.dataset.name = mark.name;
     const glyph = document.createElement('span');
     glyph.className = 'map-glyph';
     glyph.textContent = mark.glyph;
@@ -137,9 +139,21 @@ function openMap() {
     mapView.world = state.world;
     mapView.scale = MAP_FIRST_ZOOM; // a new island: start zoomed in a fair way (layoutMap keeps it in range)
   }
+  showKeyLines(state.world);
   layoutMap();
   centreMap(state.player.x, state.player.y);
   drawMap(state);
+}
+
+// Shows the key's line for each kind of mark that's somewhere on the land you've seen (and always
+// you and the cottage).
+function showKeyLines(world) {
+  const names = new Set([MAP_YOU.name, MAP_COTTAGE.name]);
+  for (let i = 0; i < world.objects.length; i++) {
+    const key = world.objects[i];
+    if (key && world.seen[i] && OBJECTS[key].mark) names.add(OBJECTS[key].mark.name);
+  }
+  for (const line of elements.mapKey.children) line.hidden = !names.has(line.dataset.name);
 }
 
 function closeMap() {

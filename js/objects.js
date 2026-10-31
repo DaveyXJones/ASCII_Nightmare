@@ -43,6 +43,10 @@
 //            were added still fit
 //   side     { sprite, opens, scarred }: the pictures to use instead in a fence running up the
 //            screen (see runsUpAndDown in world.js), where it's seen from the side
+//   loot     for something you search (an old cupboard, a tent): a key in LOOT (places.js), the
+//            table of what you might find in it. What you find is worked out from the island's seed
+//            and the tile, so it's the same however many times you load the game.
+//   epitaph  true for a grave: walking into it reads its stone, a line from EPITAPHS (places.js)
 
 // How a lamp burns (see `fuel` below): a filling lasts five minutes of dark, half a night.
 const LAMP_FUEL = { burns: 300, cost: { cloth: 1 }, into: 'lamp', empty: 'lampOut' };
@@ -59,6 +63,12 @@ const MARKS = {
   wreck: { glyph: '∪', color: '#c8b08a', name: 'wreck', rank: 2 },
   crate: { glyph: '☐', color: '#e0c080', name: 'crate', rank: 4 },
   dropped: { glyph: '!', color: '#ff5a4a', name: 'your gun', rank: 6 },
+  // Places on the island to find (see places.js).
+  ruin: { glyph: '⌂', color: '#b8a68c', name: 'ruined cabin', rank: 2 },
+  camp: { glyph: 'Λ', color: '#d8c8a0', name: 'old camp', rank: 4 }, // over its cold campfire
+  stones: { glyph: '∩', color: '#c8c4e0', name: 'standing stones', rank: 2 },
+  lighthouse: { glyph: '♜', color: '#f0e8e0', name: 'lighthouse', rank: 5 },
+  graves: { glyph: '†', color: '#a8a8a0', name: 'graves', rank: 1 },
 };
 
 // The wrecked boat, in three pieces side by side: bow, middle, stern. It can be broken up for wood.
@@ -89,6 +99,34 @@ const GUN_CRATE = {
   sound: 'chop',
   found: true,
   mark: MARKS.crate,
+};
+
+// A wall of an old cabin (see places.js): grey, rotting logs. It joins up with walls you build, so
+// you can patch the gaps in one and make it yours.
+const LOG_WALL = {
+  name: 'Old log wall',
+  sprite: 'logWall',
+  solid: true,
+  blocked: 'A wall of old logs, soft with rot.',
+  action: 'Break',
+  hits: 3,
+  gives: { wood: 2 },
+  becomes: null,
+  burst: 'wood',
+  sound: 'chop',
+  soundDone: 'crash',
+  claws: 10,
+  scarred: 'logWallScarred',
+  fence: true,
+  side: { sprite: 'logWallSide', scarred: 'logWallSideScarred' },
+  map: ['#', '#9a8a72'],
+};
+
+// One half of the lighthouse (see places.js): it stands two tiles wide.
+const LIGHTHOUSE_HALF = {
+  name: 'Lighthouse',
+  solid: true,
+  blocked: 'The lighthouse. Its door has rusted shut, and its lamp went out long ago.',
 };
 
 const OBJECTS = {
@@ -392,6 +430,177 @@ const OBJECTS = {
     says: 'You pick your rifle up again.',
     mark: MARKS.dropped,
   },
+  // ---- Places to find (see places.js) ----
+  logWall: LOG_WALL,
+  // Where an old wall has fallen: a heap of logs you can step over, or break up for wood.
+  logPile: {
+    name: 'Fallen logs',
+    sprite: 'logPile',
+    action: 'Break',
+    hits: 2,
+    gives: { wood: 2 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+  },
+  cupboard: {
+    name: 'Old cupboard',
+    mark: MARKS.ruin,
+    sprite: 'cupboard',
+    solid: true,
+    blocked: 'A cupboard, its paint long gone. The doors are still shut.',
+    action: 'Search',
+    hits: 1,
+    loot: 'cupboard',
+    becomes: 'cupboardOpen',
+    burst: 'dust',
+    sound: 'creak',
+  },
+  cupboardOpen: {
+    name: 'Empty cupboard',
+    mark: MARKS.ruin,
+    sprite: 'cupboardOpen',
+    solid: true,
+    blocked: 'An empty cupboard. Mouse droppings, and a smell of damp.',
+  },
+  oldBed: {
+    name: 'Old bed',
+    sprite: 'oldBed',
+    solid: true,
+    blocked: 'A sagging bed. The mattress is black with mould.',
+  },
+  oldTable: {
+    name: 'Old table',
+    sprite: 'oldTable',
+    solid: true,
+    blocked: 'A table, set for a meal nobody finished. The plates are green.',
+  },
+  stove: {
+    name: 'Iron stove',
+    sprite: 'stove',
+    solid: true,
+    blocked: 'An iron stove, cold for years. Rust flakes off at a touch.',
+  },
+  // A strongbox in the village hall: it takes some prying open.
+  strongbox: {
+    name: 'Strongbox',
+    mark: MARKS.ruin,
+    sprite: 'strongbox',
+    solid: true,
+    blocked: 'An iron strongbox, chained shut. The chain looks weaker than the box.',
+    action: 'Pry open',
+    hits: 5,
+    loot: 'strongbox',
+    becomes: 'strongboxOpen',
+    burst: 'stone',
+    sound: 'mine',
+    soundDone: 'crash',
+  },
+  strongboxOpen: {
+    name: 'Open strongbox',
+    mark: MARKS.ruin,
+    sprite: 'strongboxOpen',
+    solid: true,
+    blocked: 'The strongbox hangs open, empty.',
+  },
+  tent: {
+    name: 'Torn tent',
+    mark: MARKS.camp,
+    sprite: 'tent',
+    solid: true,
+    blocked: 'A canvas tent, torn open down one side. From the inside.',
+    action: 'Search',
+    hits: 1,
+    loot: 'tent',
+    becomes: 'tentDown',
+    burst: 'fluff',
+    sound: 'pick',
+  },
+  // A searched tent, pulled down: cut it up for cloth.
+  tentDown: {
+    name: 'Fallen tent',
+    mark: MARKS.camp,
+    sprite: 'tentDown',
+    action: 'Cut up',
+    hits: 2,
+    gives: { cloth: 2 },
+    becomes: null,
+    burst: 'fluff',
+    sound: 'pick',
+  },
+  // Somebody's pack, dropped and left. You walk over it.
+  oldPack: {
+    name: 'Dropped pack',
+    sprite: 'oldPack',
+    action: 'Search',
+    hits: 1,
+    loot: 'pack',
+    becomes: null,
+    burst: 'fluff',
+    sound: 'pick',
+  },
+  logSeat: {
+    name: 'Log seat',
+    sprite: 'logSeat',
+    solid: true,
+    blocked: 'A log somebody sat on by the fire.',
+    action: 'Break',
+    hits: 2,
+    gives: { wood: 3 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+    soundDone: 'crash',
+  },
+  grave: {
+    name: 'Grave',
+    mark: MARKS.graves,
+    sprite: 'grave',
+    solid: true,
+    epitaph: true,
+  },
+  graveCross: {
+    name: 'Grave',
+    mark: MARKS.graves,
+    sprite: 'graveCross',
+    solid: true,
+    epitaph: true,
+  },
+  standingStone: {
+    name: 'Standing stone',
+    mark: MARKS.stones,
+    sprite: 'standingStone',
+    solid: true,
+    blocked: 'A standing stone, taller than you. Something was carved on it once.',
+  },
+  // The flat stone in the middle of a ring: candles burn on it every night, and nobody you can see
+  // lights them. Like any light, it keeps the things in the dark back.
+  altar: {
+    name: 'Altar stone',
+    mark: MARKS.stones,
+    sprite: 'altar',
+    frames: ['altar', 'altar2'],
+    solid: true,
+    blocked: 'Candles burn on the flat stone. You didn\'t light them.',
+    action: 'Search',
+    hits: 1,
+    loot: 'altar',
+    becomes: 'altarBare',
+    burst: 'spark',
+    sound: 'pick',
+    light: 4,
+  },
+  altarBare: {
+    name: 'Altar stone',
+    mark: MARKS.stones,
+    sprite: 'altar',
+    frames: ['altar', 'altar2'],
+    solid: true,
+    blocked: 'Candles burn on the flat stone. Somebody lit them fresh.',
+    light: 4,
+  },
+  lighthouseLeft: { ...LIGHTHOUSE_HALF, sprite: 'lighthouseLeft', mark: MARKS.lighthouse },
+  lighthouseRight: { ...LIGHTHOUSE_HALF, sprite: 'lighthouseRight' },
   woodDoor: {
     name: 'Wooden door',
     mark: MARKS.wall,

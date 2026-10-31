@@ -83,6 +83,88 @@ const CRATE_INK = {
   X: ['#000000', '#2a1c10'], // the dark inside of an open crate
 };
 
+// The colors of old, weathered wood (the ruined cabins in places.js): grey, cracked, with moss.
+const OLD_WOOD_INK = {
+  t: ['#a89a84'], // tops, bleached grey by the sun
+  T: ['#8a7c66'],
+  L: ['#3e342a', '#7a6c58'], // logs, with dark cracks between them
+  l: ['#3e342a', '#6c604e'],
+  D: ['#2e2620', '#5c5242'], // the lower logs, in shade
+  d: ['#2e2620', '#524838'],
+  m: ['#6a8a44', '#524838'], // moss
+  S: ['#8a7c66'], // the lit side of a wall seen from the side
+  s: ['#6c604e'],
+  P: ['#4e4436'], // ...and its shaded side
+  p: ['#3e342a'],
+  C: ['#3e342a', '#7a6c58'], // a cupboard's frame
+  c: ['#2e2620', '#6c604e'], // ...its doors
+  k: ['#d8c890', '#6c604e'], // ...a brass knob
+  X: ['#1a1410', '#120e0a'], // the dark inside of something open
+  x: ['#4e4436', '#120e0a'],
+  o: ['#7a6c58'], // a door swung open, edge on
+  M: ['#3a4a30', '#6a6650'], // a mouldy mattress
+  n: ['#5a6a4a'],
+  g: ['#7a9a6a', '#6c604e'], // plates, gone green
+};
+
+// Old iron: the stove and the strongbox.
+const IRON_INK = {
+  t: ['#9aa0a4'], // the top, catching the light
+  T: ['#7a8084'],
+  I: ['#3e4448', '#646a6e'], // the sides
+  i: ['#30363a', '#565c60'],
+  c: ['#c8b070', '#646a6e'], // the chain
+  r: ['#a0502a', '#3a3632'], // rust, round the stove's door
+  p: ['#4a4842'], // the stovepipe
+  X: ['#141414', '#0e0e0e'], // the inside, open
+};
+
+// Canvas, rope and a dead fire's company: the old camps.
+const CAMP_INK = {
+  a: ['#d8ccb0'], // canvas in the light
+  b: ['#9a8e74'], // canvas in shade
+  t: ['#c0b494', '#1a1610'], // a torn flap, and the dark inside
+  X: ['#1a1610', '#1a1610'],
+  P: ['#8a7a4a'], // a pack
+  q: ['#6a5a34', '#4a3e22'],
+  e: ['#c49a62'], // the cut end of a log
+  L: ['#5e3d22', '#8b6239'], // bark
+};
+
+// Stone: graves and standing stones.
+const STONE_INK = {
+  t: ['#c8c6d0'], // tops, in the light
+  T: ['#9a98a4'],
+  S: ['#a8a6b2'], // the lit side
+  P: ['#6e6c78'], // the shaded side
+  s: ['#8a8894'],
+  p: ['#56545e'],
+  c: ['#45434c', '#a8a6b2'], // something carved
+  q: ['#56545e', '#8a8894'], // rough stone, in shade
+  Q: ['#45434c', '#6e6c78'],
+  m: ['#5a4a32'], // the mound of a grave
+  w: ['#8b6239'], // a wooden cross
+  f: ['#ffd75e'], // candle flames
+  F: ['#ff9a3a'],
+  y: ['#f0e8d0'], // candle wax
+};
+
+// The lighthouse: red and white bands, a dark lantern room with a broken pane.
+const LIGHTHOUSE_INK = {
+  c: ['#3a3a3a'], // the cap
+  F: ['#2a2a2a'], // the lantern's frame
+  g: ['#506070', '#1a2028'], // its glass, dark
+  G: ['#a0b0c0', '#1a2028'], // ...broken
+  k: ['#4a4a4a', '#e8e4dc'], // the gallery round it, over the top of the tower
+  K: ['#4a4a4a', '#a8a49c'],
+  W: ['#e8e4dc'], // white band, in the light
+  w: ['#a8a49c', '#d0ccc4'], // ...in shade
+  R: ['#b5474f'], // red band, in the light
+  r: ['#7a2e34', '#9a3a42'], // ...in shade
+  D: ['#e8e4dc', '#2a1e14'], // the door's arch
+  d: ['#a8a49c', '#2a1e14'],
+};
+
 // A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
 const BRUTE_INK = {
   t: ['#3e3050'], // the top of its back, catching a little light
@@ -833,6 +915,354 @@ const SPRITES = {
     },
     shadow: 0,
   },
+  // ---- Places to find (see places.js) ----
+
+  // A wall of old logs, front on: grey and cracked, moss creeping up the lowest log.
+  logWall: {
+    art: [
+      '▄▄',
+      '══',
+      '═≈',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dm',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 2,
+  },
+  logWallScarred: {
+    art: [
+      '▄▄',
+      '╱═',
+      '═╱',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 2,
+  },
+  logWallSide: {
+    art: [
+      '▗▖',
+      '▐▌',
+      '▐▌',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 1,
+  },
+  logWallSideScarred: {
+    art: [
+      '▗▖',
+      '╱▌',
+      '▐╱',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 1,
+  },
+  // Where a wall fell: a low heap of logs.
+  logPile: {
+    art: [
+      '▂▄',
+      '═≈',
+    ],
+    paint: [
+      'tT',
+      'Dm',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 1,
+  },
+  // A tall cupboard with two doors and a knob. Searched, its doors hang open on an empty shelf.
+  cupboard: {
+    art: [
+      '▗▄▄▖',
+      '▐││▌',
+      '▐¤│▌',
+      '▐▄▄▌',
+    ],
+    paint: [
+      'tttt',
+      'CccC',
+      'CkcC',
+      'DddD',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 2,
+  },
+  cupboardOpen: {
+    art: [
+      '▗▄▄▖',
+      '╱  ╲',
+      '▐▁▁▌',
+      '▐▄▄▌',
+    ],
+    paint: [
+      'tttt',
+      'oXXo',
+      'CxxC',
+      'DddD',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 2,
+  },
+  oldBed: {
+    art: [
+      '▗▄▄▖',
+      '▐▓▒▌',
+      '╹  ╹',
+    ],
+    paint: [
+      'tnnt',
+      'CMMC',
+      'p  p',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 2,
+  },
+  oldTable: {
+    art: [
+      '▗▄▄▄▄▖',
+      '▐°  °▌',
+      ' |  | ',
+    ],
+    paint: [
+      'tttttt',
+      'lgllgl',
+      ' p  p ',
+    ],
+    ink: OLD_WOOD_INK,
+    shadow: 3,
+  },
+  stove: {
+    art: [
+      ' ▐▌ ',
+      '▐▀▀▌',
+      '▐▒▒▌',
+    ],
+    paint: [
+      ' pp ',
+      'ItTi',
+      'IrrI',
+    ],
+    ink: IRON_INK,
+    shadow: 2,
+  },
+  // An iron box with a chain round it. Pried open, its lid stands up.
+  strongbox: {
+    art: [
+      '▗▄▄▖',
+      '▐╪╪▌',
+    ],
+    paint: [
+      'tttT',
+      'Icci',
+    ],
+    ink: IRON_INK,
+    shadow: 2,
+  },
+  strongboxOpen: {
+    art: [
+      '╱▔▔╲',
+      '▐▁▁▌',
+    ],
+    paint: [
+      'tTTT',
+      'IXXi',
+    ],
+    ink: IRON_INK,
+    shadow: 2,
+  },
+  // A small canvas tent, torn open down one side. Searched, it's pulled down into a heap.
+  tent: {
+    art: [
+      ' ▗▖ ',
+      ' ▟▙ ',
+      '▟▛╲▙',
+      '▛  ▜',
+    ],
+    paint: [
+      ' ab ',
+      ' ab ',
+      'aXtb',
+      'aXXb',
+    ],
+    ink: CAMP_INK,
+    shadow: 3,
+  },
+  tentDown: {
+    art: [
+      '▂▄▃▂',
+    ],
+    paint: [
+      'abab',
+    ],
+    ink: CAMP_INK,
+    shadow: 0,
+  },
+  oldPack: {
+    art: [
+      '▗▙',
+    ],
+    paint: [
+      'Pq',
+    ],
+    ink: CAMP_INK,
+    shadow: 0,
+  },
+  logSeat: {
+    art: [
+      '◖══◗',
+    ],
+    paint: [
+      'eLLe',
+    ],
+    ink: CAMP_INK,
+    shadow: 2,
+  },
+  // A headstone with a low mound of earth in front of it, and a plain wooden cross.
+  grave: {
+    art: [
+      '▗▖',
+      '▐▌',
+      '▀▀',
+    ],
+    paint: [
+      'tT',
+      'cP',
+      'mm',
+    ],
+    ink: STONE_INK,
+    shadow: 1,
+  },
+  graveCross: {
+    art: [
+      ' ┼',
+      ' │',
+      '▀▀',
+    ],
+    paint: [
+      ' w',
+      ' w',
+      'mm',
+    ],
+    ink: STONE_INK,
+    shadow: 1,
+  },
+  standingStone: {
+    art: [
+      '▗▄',
+      '█▓',
+      '▓▒',
+      '█▓',
+    ],
+    paint: [
+      'tT',
+      'Sq',
+      'cQ',
+      'sQ',
+    ],
+    ink: STONE_INK,
+    shadow: 2,
+  },
+  // The flat stone in the middle of the ring, with two candles burning on it. The two pictures differ
+  // only in the flames.
+  altar: {
+    art: [
+      ' ¡ ¡',
+      '▗▄▄▖',
+      '▐▀▀▌',
+    ],
+    paint: [
+      ' f f',
+      'tyty',
+      'SssP',
+    ],
+    ink: STONE_INK,
+    shadow: 2,
+  },
+  altar2: {
+    art: [
+      ' ¡ ı',
+      '▗▄▄▖',
+      '▐▀▀▌',
+    ],
+    paint: [
+      ' F f',
+      'tyty',
+      'SssP',
+    ],
+    ink: STONE_INK,
+    shadow: 2,
+  },
+  // The lighthouse, in two halves side by side (each stands on its own tile): a lantern room with a
+  // broken pane, a gallery, and the tower in red and white bands down to its door.
+  lighthouseLeft: {
+    art: [
+      ' ▗',
+      '▐▒',
+      '▀▀',
+      '▐█',
+      '▐█',
+      '▐█',
+      '▐█',
+      '▐█',
+      '▐▛',
+    ],
+    paint: [
+      ' c',
+      'Fg',
+      'kk',
+      'WW',
+      'RR',
+      'WW',
+      'RR',
+      'WW',
+      'WD',
+    ],
+    ink: LIGHTHOUSE_INK,
+    shadow: 2,
+  },
+  lighthouseRight: {
+    art: [
+      '▖ ',
+      '╳▌',
+      '▀▀',
+      '▓▌',
+      '▓▌',
+      '▓▌',
+      '▓▌',
+      '▓▌',
+      '▜▌',
+    ],
+    paint: [
+      'c ',
+      'GF',
+      'KK',
+      'ww',
+      'rr',
+      'ww',
+      'rr',
+      'ww',
+      'dw',
+    ],
+    ink: LIGHTHOUSE_INK,
+    shadow: 3,
+  },
   // A brute: a great hunched thing with a shaggy hide and a single amber eye, three tiles wide. Its
   // legs shift between the two pictures as it lumbers along.
   brute: {
@@ -1164,7 +1594,9 @@ const ACTION_POSES = {
   Fish: { pose: 'crouch', held: null, seconds: 0.3 }, // kneeling at the water, rod held out
   Shoot: { pose: 'strike', held: null, seconds: 0.35, aim: true }, // the gun held out, and kept there
   'Pick up': { pose: 'crouch', held: null, seconds: 0.4 },
-  Eat: { pose: 'windup', held: null, seconds: 0.4 },
+  Search: { pose: 'crouch', held: null, seconds: 0.5 }, // rummaging through a cupboard or a pack
+  'Cut up': { pose: 'crouch', held: null, seconds: 0.3 },
+  Eat:{ pose: 'windup', held: null, seconds: 0.4 },
 };
 
 // The torch in the player's hand: a stick with a rag wrapped round the top, which becomes a flame

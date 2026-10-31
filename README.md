@@ -32,9 +32,10 @@ Android, the **Wake up** button also goes full screen and locks the screen sidew
 Next time, **Carry on** picks up where you left off: the same island, everything you've chopped and
 built, your pack, and the time of day. It's saved in that browser on that phone only, and private
 browsing or clearing the browser's data forgets it. **New world** asks for a second tap before it
-throws your island away. New islands are 384 by 256 tiles; islands started before 1 November 2026
-are half that each way (192 by 128), and keep their size, so a world you're in never changes under
-you. Tap **New world** for a big one. If you die, the island stays as you left it and you wake up the next
+throws your island away. New islands are 768 by 512 tiles, with ruins, camps, standing stones and a
+lighthouse to find (see "Places to find" below). Islands started before that keep their size
+(192 by 128, or 384 by 256) and have none of those places, so a world you're in never changes under
+you. Tap **New world** for the big one. If you die, the island stays as you left it and you wake up the next
 morning with an empty pack (in the cottage, or on your bedroll if you've made one), and anything
 you put in a chest is still there.
 
@@ -146,7 +147,9 @@ Fish and cooked food only show in the pack while you have some, so it fits acros
 **The map.** Tap **Map** (under ☰, or `M`) to see the island, drawn in characters. It only shows
 land you've seen: by day you take in about 11 tiles around you, at night only what your torch
 lights. You (`@`), the cottage, the things you've built (fires, lamps, chests, your bedroll,
-walls), the wreck, crates and a gun you dropped are marked on it, with a key beside it. **Drag** it
+walls), the wreck, crates, a gun you dropped and the places you've found (ruined cabins `⌂`, old
+camps `Λ`, standing stones `∩`, graves `†`, the lighthouse `♜`) are marked on it, with a key
+beside it that grows as you find more kinds of thing. **Drag** it
 to look around, **pinch** (or tap **−** and **+**) to zoom, and tap **@** to come back to where you
 are. Zoomed out, the whole island fits and each character stands for a block of land; zoomed all
 the way in, there's one character for each tile across. It opens centred on you, at the zoom you
@@ -275,6 +278,41 @@ them.
 - **If you die**, your guns drop where you fell (a red **!** on the map). Go back and **Pick up**
   them. Bullets are lost with the rest of your pack, so keep spare ones in a chest.
 
+## Places to find
+
+New islands are big (768 by 512 tiles: about three minutes' walk across), and people lived here
+before you. Their places are scattered over the island, further out than you'd go on your first
+day, and none of them are safe at night.
+
+- **Ruined cabins** stand in clearings, their walls half fallen into heaps of logs, grass growing
+  up through the floorboards (and you know what sits in long grass). Each has an old cupboard: face
+  it and tap **Search**.
+- **The old village**, as far from your cottage as there's room for it: a hall with a strongbox
+  (**Pry open**: it takes a few goes), four cabins round a square with a well you can drink from,
+  and a graveyard. Walk into a grave to read its stone.
+- **Old camps** by lakes and rivers: a torn tent to **Search** (then **Cut up** for cloth), a
+  dropped pack, a cold campfire you can light again with a piece of wood, and a log to sit on (or
+  break up for wood).
+- **Standing stones** up on the hills, in a ring round a flat stone where candles burn every
+  night. You didn't light them, and nobody you can see does. Things in the dark keep away from them
+  like they do from a fire, so a ring of stones is somewhere to run to at night.
+- **The lighthouse**, out on a point with the sea round it, and the keeper's hut beside it. It's
+  tall enough to see from anywhere, so it's on your map from the start.
+
+What you find when you search: **tins** of food (◘ in the pack: 35 food and a little health, and
+you can eat them anywhere), bullets, cloth, sometimes a tool you haven't got, and **scraps of
+map**: each shows the nearest place you haven't been, and puts it on your map. Most places also
+hold a **note** from someone who was here before you. The game pauses while you read it. The
+notes nearest your cottage come first, so the story goes on the further out you go, and between
+them they tell you most of what they learned too late.
+
+A ruined cabin can be yours: its old walls join up with walls you build, so build a wall or a door
+into each gap (right over a fallen heap of logs) and it's shelter again. Things in the dark claw at
+old walls the same as yours, and the old ones give way sooner.
+
+What's in each cupboard is worked out from the island's seed, and the game saves the moment you've
+searched something, so there's no reloading for a second helping.
+
 ## How it's put together
 
 Plain HTML, CSS and JavaScript, with nothing to install or build.
@@ -288,6 +326,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/sprites.js` | The ASCII art for everything that stands up: trees, rocks, the well, the player. |
 | `js/objects.js` | The things standing on the map, and what the action button does to each one. |
 | `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage, the wreck and the crates. |
+| `js/places.js` | The places to find: the ruined cabins, the village, camps, standing stones and the lighthouse, what's in them, and the notes. |
 | `js/night.js` | Day and night: how long each lasts, the moon, and how dark it gets. |
 | `js/weather.js` | Clouds, rain and storms: when they come, and rain putting out campfires. |
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
@@ -306,7 +345,9 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `.nojekyll` | An empty file that tells GitHub Pages to publish everything exactly as it is. |
 
 The scripts are plain `<script>` files loaded in order (no modules), which is what lets the game
-run straight from the file.
+run straight from the file. Each one (and the stylesheet) ends in a version number, `?v=11`: raise
+it in `index.html` whenever you change the code, so browsers fetch the new files instead of using
+old copies they've kept.
 
 ## Things to try changing
 
@@ -329,6 +370,12 @@ run straight from the file.
   furniture, or make it bigger.
 - **The size of the island.** `WORLD_SIZE` at the top of `js/world.js`, in tiles. It's used for new
   worlds only; a saved world keeps the size it was made with.
+- **The places to find.** `PLACES` in `js/places.js`: each kind has its layouts drawn as text,
+  like the cottage (`#` a wall, `.` floor, `C` a cupboard, `g` a grave; `PLACE_LEGEND` lists them
+  all), and how many to put on an island. Draw a new cabin and it's built on the next new island.
+  What's in each kind of cupboard, tent or pack is in `LOOT`, the notes are `NOTES` (in the order
+  they're found), and what the graves say is `EPITAPHS`. `WALL_FALLEN` and `WEEDS` are how ruined
+  the cabins are.
 - **What things cost.** `cost` on each recipe in `RECIPES` (`js/crafting.js`). What an empty chest
   gives back is `CHEST_GIVES_BACK` at the top of `js/chest.js`.
 - **A new recipe.** Add it to `RECIPES` in `js/crafting.js` and it gets its own card. A tool goes in
@@ -365,13 +412,24 @@ run straight from the file.
 
 ## What's next
 
-Done lately: a bigger island (four times the land, for new worlds) and a map you can zoom and
-drag. Before that, your list of 2026-10-31: walls that join up (a fence running up the screen is seen
+Done lately: an island four times bigger again, with places to find: ruined cabins, an old
+village with a graveyard, camps, standing stones with candles nobody lights, and a lighthouse, with
+tins of food, scraps of map and notes in them. Before that: a bigger island and a map you can zoom
+and drag. Before that, your list of 2026-10-31: walls that join up (a fence running up the screen is seen
 from the side) and turning in place in build mode, an outline round the player, lamps, a map,
 fishing, and a pistol and a rifle to find. Before that: weather (clouds, rain, storms, and roofs to
 keep campfires burning), lurkers in the long grass, chests, and bedrolls; and before that, your
 look, flashing when hurt and falling when you die, the stone pick, doors, cooked berries, brutes,
 walls that get clawed down, saving, and sound.
+
+Ideas for next (Claude's suggestions):
+
+- **Light the lighthouse.** The notes hint at it: find oil (in the keeper's hut, the village, the
+  wreck) and carry it up to the lamp. Lit, it could keep the dark back across a whole stretch of
+  coast, or change what comes out at night.
+- **A book of notes.** Keep the notes you've found, to read again from the menu.
+- **Mend an old cabin.** A **Repair** on a fallen heap of logs, to stand the wall up again for a
+  little wood, instead of building your own wall in the gap.
 
 Later: **multiplayer**. Because the world is built from a seed, a server only has to share the seed
 and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a small
