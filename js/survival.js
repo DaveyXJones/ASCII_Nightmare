@@ -1,10 +1,14 @@
 // Staying alive: health, food and water, what you're carrying, and what the action button does.
 
+// Everything that goes in your pack. Each needs a counter in the pack in index.html, with the id
+// count-<item>. Things you can eat say how much `food` they give, and `heals` how much health.
+// The Eat button eats whatever fills you most.
 const ITEMS = {
   wood: { name: 'wood', glyph: '≡', color: '#d0a46a' },
   stone: { name: 'stone', glyph: '●', color: '#b4b8b0' },
-  berries: { name: 'berries', glyph: '•', color: '#ff5a6e' },
+  berries: { name: 'berries', glyph: '•', color: '#ff5a6e', food: 12 },
   cloth: { name: 'cloth', glyph: '▦', color: '#e6dcc4' },
+  cooked: { name: 'cooked berries', glyph: '♨', color: '#ec8a4a', food: 30, heals: 10 },
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -12,7 +16,6 @@ const WATER_PER_SECOND = 100 / 300; // thirst comes faster: five minutes
 const STARVING_DAMAGE = 2; // health lost each second with no food, and again with no water
 const HEAL_PER_SECOND = 0.5; // health regained each second while fed and watered
 const FIRE_HEAL_PER_SECOND = 2; // the same, resting beside a campfire
-const BERRY_FOOD = 12;
 const SIP_WATER = 20;
 const SWING_SECONDS = 0.42; // time between swings while the action button is held
 const REACH = 0.95; // how far the player can reach, in tiles, from their feet to the edge of a tile
@@ -35,6 +38,8 @@ function newSurvivor() {
     torchLeft: 0, // seconds the torch will keep burning, or 0 when it isn't lit
     warm: false, // standing beside a campfire
     hurtBy: null, // what last hurt you: 'hunger' or 'dark', for the words when you die
+    hurtAt: -Infinity, // when something last bit you, in seconds of play: you flash red for a moment
+    starving: false, // true while hunger or thirst is taking your health
     warned: { food: false, water: false, health: false, torch: false },
     nextSwingAt: 0,
   };
@@ -46,7 +51,8 @@ function updateVitals(game, dt) {
   vitals.water = Math.max(0, vitals.water - WATER_PER_SECOND * dt);
   if (vitals.food === 0) vitals.health -= STARVING_DAMAGE * dt;
   if (vitals.water === 0) vitals.health -= STARVING_DAMAGE * dt;
-  if (vitals.food === 0 || vitals.water === 0) game.survivor.hurtBy = 'hunger';
+  game.survivor.starving = vitals.food === 0 || vitals.water === 0;
+  if (game.survivor.starving) game.survivor.hurtBy = 'hunger';
   game.survivor.warm = besideFire(game);
   if (vitals.food > LOW && vitals.water > LOW) {
     vitals.health += (game.survivor.warm ? FIRE_HEAL_PER_SECOND : HEAL_PER_SECOND) * dt;
@@ -97,6 +103,7 @@ function lightTorch(game, target) {
   survivor.torchLeft = TOOLS.torch.burns;
   survivor.warned.torch = false;
   burst(game.fx, target.x + 0.5, target.y + 0.5, 'spark', 8);
+  playSound('ignite');
   floatText(game.fx, game.player.x, game.player.y - 3, relit ? 'torch relit' : 'torch lit', '#ffb347');
   const minutes = Math.round(TOOLS.torch.burns / 60);
   showMessage(game, `Your torch catches. It will burn for about ${minutes} minutes.`);
@@ -110,6 +117,7 @@ function updateTorch(game, dt) {
   survivor.torchLeft = Math.max(0, survivor.torchLeft - dt);
   if (survivor.torchLeft === 0) {
     showMessage(game, 'Your torch gutters out. Light it again at a campfire.');
+    playSound('snuff');
   } else if (!survivor.warned.torch && survivor.torchLeft < TOOLS.torch.burns * TORCH_LOW) {
     survivor.warned.torch = true;
     showMessage(game, WARNINGS.torch);
@@ -178,6 +186,9 @@ function findTarget(game) {
     }
   }
 
+  // A creature in reach comes before anything else, even a wall right in front of you (so you can
+  // hit one clawing at the other side of it, instead of breaking the wall).
+  let bestCreatureScore = Infinity;
   for (const creature of game.creatures) {
     if (creature.state === 'fade') continue;
     const toX = creature.x - player.x;
@@ -185,11 +196,15 @@ function findTarget(game) {
     const distance = Math.hypot(toX, toY);
     const ahead = (toX * facing.x + toY * facing.y) / (distance || 1);
     if (distance > HIT_REACH || ahead < -0.2) continue;
-    const score = distance - ahead * 0.6 - 1;
-    if (score < bestScore) {
-      // Brackets round its face: its picture is two tiles wide, and its eyes a row and a bit up.
-      best = { x: creature.x - 1, y: creature.y - 1.75, w: 2, label: 'Hit', creature };
-      bestScore = score;
+    const score = distance - ahead * 0.6;
+    if (score < bestCreatureScore) {
+      // Brackets round its face: as wide as its picture, on the row its eyes are on.
+      const kind = CREATURES[creature.kind];
+      const sprite = SPRITES[kind.frames[0]];
+      const w = sprite.width / 2;
+      const y = creature.y + 0.25 - sprite.cells.length + kind.eyes.cells[0][1];
+      best = { x: creature.x - w / 2, y, w, label: 'Hit', creature };
+      bestCreatureScore = score;
     }
   }
   return best;
@@ -231,8 +246,10 @@ function useTarget(game) {
 
   if (swings < object.hits) {
     world.damage.set(index, swings);
+    playSound(object.sound);
     return;
   }
+  playSound(object.soundDone || object.sound);
 
   // Done: into the pack it goes, and whatever's left takes its place.
   const parts = [];
@@ -259,12 +276,23 @@ function drink(game, target) {
   }
   vitals.water = Math.min(100, vitals.water + SIP_WATER);
   burst(game.fx, target.x + 0.5, target.y + 0.5, 'water', 6);
+  playSound('drink');
   floatText(game.fx, target.x + 0.5, target.y - 0.5, '+water', '#7ab4e8');
 }
 
-function eatBerry(game) {
+// The best thing in your pack to eat: whatever gives the most food, or null if there's nothing.
+function bestFood(pack) {
+  let best = null;
+  for (const [item, { food }] of Object.entries(ITEMS)) {
+    if (food && pack[item] > 0 && (!best || food > ITEMS[best].food)) best = item;
+  }
+  return best;
+}
+
+function eat(game) {
   const { vitals, pack } = game.survivor;
-  if (pack.berries === 0) {
+  const item = bestFood(pack);
+  if (!item) {
     showMessage(game, 'You have nothing to eat. Berry bushes grow in the fields.');
     return;
   }
@@ -272,10 +300,13 @@ function eatBerry(game) {
     showMessage(game, "You're not hungry.");
     return;
   }
-  pack.berries--;
-  vitals.food = Math.min(100, vitals.food + BERRY_FOOD);
+  const { food, heals, color } = ITEMS[item];
+  pack[item]--;
+  vitals.food = Math.min(100, vitals.food + food);
+  if (heals) vitals.health = Math.min(100, vitals.health + heals);
   game.player.act = { action: 'Eat', at: game.player.clock };
-  floatText(game.fx, game.player.x, game.player.y - 3, '+food', ITEMS.berries.color);
+  playSound('eat');
+  floatText(game.fx, game.player.x, game.player.y - 3, heals ? '+food +health' : '+food', color);
 }
 
 // ---- Little effects ----
@@ -312,11 +343,14 @@ function burst(fx, x, y, kind, count) {
   }
 }
 
-// One speck kicked up from the ground where the player's foot lands, if the ground has a `step`.
+// A footstep: its sound, and one speck kicked up from the ground where the player's foot lands, if
+// the ground has a `step`. Ground without one (the cottage floor) sounds like floorboards.
 function footstep(game) {
   const { world, player, fx } = game;
   const ground = groundAt(world, Math.floor(player.x), Math.floor(player.y));
-  if (!ground || !ground.step) return;
+  if (!ground) return;
+  playSound(`step:${ground.step || 'floor'}`);
+  if (!ground.step) return;
   const style = BURSTS[ground.step];
   const n = Math.floor(Math.random() * 6);
   fx.particles.push({

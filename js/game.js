@@ -8,6 +8,8 @@ const CORNER_SLIP = 0.4; // how far off-center you can be and still slide around
 const WATER_FRAME_SECONDS = 0.45; // how often the water ripples
 const FLAME_FRAME_SECONDS = 0.15; // how often campfire flames flicker
 const MESSAGE_SECONDS = 3.5;
+const COLLAPSE_SECONDS = 1.8; // from health running out to the death screen: the player sinks and falls
+const NEW_WORLD_CONFIRM_SECONDS = 4; // how long New world waits for the second tap
 
 const FACINGS = {
   up: { x: 0, y: -1 },
@@ -19,6 +21,7 @@ const FACINGS = {
 const elements = {
   game: document.getElementById('game'),
   canvas: document.getElementById('map'),
+  hud: document.querySelector('.hud'), // flashes red round the edges when something bites you
   healthVital: document.querySelector('.vital.health'), // glows while you're warming by a fire
   bars: {
     health: document.getElementById('bar-health'),
@@ -50,6 +53,7 @@ const elements = {
   startButton: document.getElementById('start'),
   newWorldButton: document.getElementById('new-world'),
   fullscreenButton: document.getElementById('fullscreen'),
+  soundButton: document.getElementById('sound-button'),
   seedLabel: document.getElementById('seed'),
   death: document.getElementById('death'),
   deathTitle: document.getElementById('death-title'),
@@ -59,6 +63,11 @@ const elements = {
   craft: document.getElementById('craft'),
   recipes: document.getElementById('recipes'),
   craftClose: document.getElementById('craft-close'),
+  lookButton: document.getElementById('look-button'),
+  look: document.getElementById('look'),
+  lookParts: document.getElementById('look-parts'),
+  lookPicture: document.getElementById('look-picture'),
+  lookDone: document.getElementById('look-done'),
 };
 
 const portrait = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -85,25 +94,39 @@ const state = {
   messageUntil: 0,
   bumpedInto: null,
   paused: true,
+  dying: null, // while collapsing, { seconds } since health ran out; then the death screen
   dead: false,
   started: false,
+  resumed: false, // true if this visit carried on a saved world (see loadGame() in save.js)
+  savedAt: 0, // when the game was last saved, in seconds of play
+  look: defaultLook(), // the player's colors, picked on the Your look panel
   hud: {}, // what the screen around the map last showed, so it's only touched when something changes
 };
 
 function newGame(seed) {
   state.world = generateWorld(seed);
   state.dayClock = 0;
-  elements.seedLabel.textContent = String(seed);
   wakeUp();
 }
 
 // Starts a life: in the cottage, beside the bed, with an empty pack, at the start of a new day.
 function wakeUp() {
   const spawn = state.world.spawn;
+  state.survivor = newSurvivor();
+  state.dayClock = nextMorning(state.dayClock);
+  state.lifeStarted = state.time;
+  startLife(spawn.x, spawn.y, 'down');
+  showMessage(state, 'You wake up in your cottage. Find food and water to survive.');
+  saveGame(state);
+}
+
+// Puts the player at (x, y) with everything around them settled: nothing flying through the air,
+// nothing out in the dark yet. Used when waking up, and when carrying on a saved game.
+function startLife(x, y, facing) {
   state.player = {
-    x: spawn.x,
-    y: spawn.y,
-    facing: 'down',
+    x,
+    y,
+    facing,
     moving: false,
     stride: 0, // distance walked, for the walking animation
     steps: 0, // footsteps taken, to kick up a puff of dust at each one
@@ -112,17 +135,15 @@ function wakeUp() {
     working: null, // the action word while the action button is held on something
     holding: null, // the action word the button was held down for, while it's held
   };
-  state.survivor = newSurvivor();
-  state.dayClock = nextMorning(state.dayClock);
   state.sky = skyAt(state.dayClock, state.world.seed);
   state.fx = { particles: [], floaters: [], shake: null };
   state.creatures = [];
   state.hunt = newHunt();
   stopBuilding(state);
+  state.dying = null;
+  elements.game.classList.remove('collapsing');
   state.dead = false;
-  state.lifeStarted = state.time;
   snapCamera(state.world, state.player);
-  showMessage(state, 'You wake up in your cottage. Find food and water to survive.');
 }
 
 // ---- Moving ----
@@ -161,7 +182,8 @@ function update(dt) {
   updateTorch(state, dt);
   updateCreatures(state, dt);
   updateRegrowth(state.world, state.time);
-  if (survivor.vitals.health <= 0) die();
+  if (survivor.vitals.health <= 0) collapse();
+  if (state.time - state.savedAt >= SAVE_EVERY) saveGame(state);
 }
 
 function movePlayer(dt) {
@@ -260,7 +282,34 @@ function faceToward(player, x, y) {
 
 // ---- Life and death ----
 
+// Health has run out. The player sinks to their knees and falls (see playerPose() in render.js)
+// while the screen darkens, and then the death screen comes up.
+function collapse() {
+  state.dying = { seconds: 0 };
+  state.player.moving = false;
+  state.player.working = null;
+  state.target = null;
+  stopBuilding(state);
+  releaseAll();
+  elements.game.classList.add('collapsing');
+  playSound('collapse');
+  buzz(120);
+}
+
+function updateDying(dt) {
+  const dying = state.dying;
+  const before = dying.seconds;
+  dying.seconds += dt;
+  // The moment they hit the ground: a puff of dust.
+  if (before < KNEEL_SECONDS && dying.seconds >= KNEEL_SECONDS) {
+    burst(state.fx, state.player.x, state.player.y, 'dust', 6);
+    buzz(60);
+  }
+  if (dying.seconds >= COLLAPSE_SECONDS) die();
+}
+
 function die() {
+  state.dying = null;
   state.dead = true;
   releaseAll();
   const takenByTheDark = state.survivor.hurtBy === 'dark';
@@ -270,6 +319,7 @@ function die() {
   elements.deathTime.textContent =
     minutes > 0 ? `${minutes} min ${seconds % 60} s` : `${seconds} seconds`;
   elements.death.hidden = false;
+  saveGame(state); // so reloading the page doesn't undo dying
 }
 
 // ---- Menus ----
@@ -277,8 +327,23 @@ function die() {
 function openMenu() {
   state.paused = true;
   releaseAll();
-  elements.startButton.textContent = state.started ? 'Resume' : 'Wake up';
+  saveGame(state);
+  elements.startButton.textContent = state.started ? 'Resume' : state.resumed ? 'Carry on' : 'Wake up';
+  const day = Math.floor(state.dayClock / CYCLE_SECONDS) + 1;
+  elements.seedLabel.textContent = `${state.world.seed}, day ${day}`;
+  confirmNewWorld(false);
   elements.menu.hidden = false;
+}
+
+// Starting a new world throws this one away, so once you've played in it, New world asks for a
+// second tap first.
+let newWorldTimer = null;
+
+function confirmNewWorld(asking) {
+  clearTimeout(newWorldTimer);
+  elements.newWorldButton.classList.toggle('asking', asking);
+  elements.newWorldButton.textContent = asking ? 'Tap again to leave this world' : 'New world';
+  if (asking) newWorldTimer = setTimeout(() => confirmNewWorld(false), NEW_WORLD_CONFIRM_SECONDS * 1000);
 }
 
 function closeMenu() {
@@ -307,10 +372,25 @@ elements.startButton.addEventListener('click', () => {
   closeMenu();
 });
 elements.newWorldButton.addEventListener('click', () => {
+  const played = state.started || state.resumed;
+  if (played && !elements.newWorldButton.classList.contains('asking')) {
+    confirmNewWorld(true);
+    return;
+  }
+  confirmNewWorld(false);
   newGame(Math.floor(Math.random() * 1_000_000));
   closeMenu();
 });
 elements.fullscreenButton.addEventListener('click', toggleFullscreen);
+elements.soundButton.addEventListener('click', () => {
+  setSoundOn(!audio.on);
+  showSoundButton();
+});
+
+function showSoundButton() {
+  elements.soundButton.textContent = audio.on ? 'Sound on' : 'Sound off';
+  elements.soundButton.setAttribute('aria-pressed', String(audio.on));
+}
 elements.fullscreenButton.hidden = !document.fullscreenEnabled;
 elements.againButton.addEventListener('click', () => {
   elements.death.hidden = true;
@@ -320,6 +400,64 @@ elements.deathNewWorldButton.addEventListener('click', () => {
   elements.death.hidden = true;
   newGame(Math.floor(Math.random() * 1_000_000));
 });
+
+// ---- Your look ----
+
+// One row of color buttons for each part of the player (LOOKS in sprites.js), made once at startup.
+function setupLook() {
+  for (const [part, { name, colors }] of Object.entries(LOOKS)) {
+    const row = document.createElement('div');
+    row.className = 'look-part';
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', name);
+    const label = document.createElement('span');
+    label.className = 'look-name';
+    label.textContent = name;
+    row.append(label);
+    for (const choice of colors) {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = 'swatch';
+      swatch.dataset.part = part;
+      swatch.dataset.color = choice.color;
+      swatch.style.setProperty('--swatch', choice.color);
+      swatch.setAttribute('aria-label', `${name}: ${choice.name}`);
+      swatch.addEventListener('click', () => {
+        state.look[part] = choice.color;
+        dressPlayer(state.look);
+        remember(LOOK_KEY, state.look);
+        showLook();
+      });
+      row.append(swatch);
+    }
+    elements.lookParts.append(row);
+  }
+  elements.lookButton.addEventListener('click', openLook);
+  elements.lookDone.addEventListener('click', closeLook);
+  elements.look.addEventListener('click', (event) => {
+    if (event.target === elements.look) closeLook();
+  });
+}
+
+// Marks the colors being worn and draws the player in them.
+function showLook() {
+  for (const swatch of elements.lookParts.querySelectorAll('.swatch')) {
+    swatch.setAttribute('aria-pressed', String(state.look[swatch.dataset.part] === swatch.dataset.color));
+  }
+  const { down, right, up } = PLAYER_SPRITES;
+  drawLookPicture(elements.lookPicture, [down.stand, right.stand, up.stand]);
+}
+
+// The panel opens over the menu, and closing it goes back to the menu.
+function openLook() {
+  showLook();
+  elements.look.hidden = false;
+  elements.lookDone.focus({ preventScroll: true });
+}
+
+function closeLook() {
+  elements.look.hidden = true;
+}
 
 // ---- The screen around the map ----
 
@@ -349,6 +487,16 @@ function updateHud() {
     if (hud[`tool-${tool}`] === has) continue;
     hud[`tool-${tool}`] = has;
     elements.tools[tool].hidden = !has;
+  }
+  // A red flash round the edges of the screen each time something bites.
+  const { hurtAt } = state.survivor;
+  if (hud.hurtAt !== hurtAt) {
+    hud.hurtAt = hurtAt;
+    elements.hud.classList.remove('hurt');
+    if (Number.isFinite(hurtAt)) {
+      void elements.hud.offsetWidth; // so the flash starts again from the beginning
+      elements.hud.classList.add('hurt');
+    }
   }
   const warm = state.survivor.warm;
   if (hud.warm !== warm) {
@@ -394,7 +542,7 @@ function updateHud() {
     hud.ready = ready;
     elements.actionButton.classList.toggle('idle', !ready);
   }
-  const canEat = pack.berries > 0;
+  const canEat = bestFood(pack) !== null;
   if (hud.canEat !== canEat) {
     hud.canEat = canEat;
     elements.eatButton.classList.toggle('idle', !canEat);
@@ -424,16 +572,17 @@ function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000);
   lastFrame = now;
 
-  let playing = !state.paused && !state.dead && !portrait.matches;
+  let playing = !state.paused && !state.dead && !state.dying && !portrait.matches;
   for (let press = takePress(); press; press = takePress()) {
     const crafting = !elements.craft.hidden;
     if (press === 'menu' || press === 'back') {
-      // Esc backs out of one thing at a time (the craft panel, the menu, build mode) before it
-      // opens the menu. The ☰ button and P go straight to the menu.
+      // Esc backs out of one thing at a time (the craft panel, the look panel, the menu, build
+      // mode) before it opens the menu. The ☰ button and P go straight to the menu.
       if (crafting) closeCraft();
+      else if (!elements.look.hidden) closeLook();
       else if (!elements.menu.hidden && state.started) closeMenu();
       else if (press === 'back' && state.building && playing) stopBuilding(state);
-      else if (!state.dead) openMenu();
+      else if (!state.dead && !state.dying) openMenu();
     } else if (press === 'craft' && (playing || crafting)) {
       if (crafting) closeCraft();
       else if (state.building) stopBuilding(state);
@@ -443,13 +592,14 @@ function frame(now) {
     } else if (press === 'action' && playing && state.building) {
       build(state);
     } else if (press === 'eat' && playing) {
-      eatBerry(state);
+      eat(state);
     }
-    playing = !state.paused && !state.dead && !portrait.matches;
+    playing = !state.paused && !state.dead && !state.dying && !portrait.matches;
   }
 
   if (playing) update(dt);
   else state.player.moving = false;
+  if (state.dying && !state.paused && !portrait.matches) updateDying(dt);
 
   updateEffects(state.fx, dt);
   if (state.fx.shake && state.time > state.fx.shake.until) state.fx.shake = null;
@@ -466,16 +616,24 @@ function frame(now) {
     }
   }
 
+  updateSound(state, playing);
   followCamera(state.world, state.player, dt);
   drawFrame(state);
   updateHud();
   requestAnimationFrame(frame);
 }
 
+state.look = recallLook();
+dressPlayer(state.look);
 setupView(elements.canvas);
 setupInput(elements);
 setupCrafting(elements);
-newGame(DEFAULT_SEED);
+setupLook();
+setupSound();
+showSoundButton();
+// Carry on from last time if there's a saved world; otherwise the first island.
+state.resumed = loadGame(state);
+if (!state.resumed) newGame(DEFAULT_SEED);
 resizeView();
 snapCamera(state.world, state.player);
 openMenu();
@@ -491,4 +649,10 @@ if (document.fonts) {
     placeCamera(state.world);
   }, () => {});
 }
+// Save when the page is put away (switching apps, locking the phone, closing the tab), since it
+// might not come back.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveGame(state);
+});
+window.addEventListener('pagehide', () => saveGame(state));
 requestAnimationFrame(frame);

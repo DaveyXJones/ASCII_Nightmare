@@ -35,6 +35,14 @@ const TOOL_COLOR = '#cfd4d8'; // the tool in the player's hand
 const WALK_FRAME_TILES = 0.45; // how far the player walks on each picture of the walking animation
 const WALK_BOB = 0.08; // how far the player rises as their legs pass, in rows
 const BLINK_SECONDS = 0.12;
+const HURT_COLOR = '#ff3a2a'; // the player flashes this color when something hurts them
+const TINT_SHARE = 0.6; // how far a tinted sprite's colors are pushed toward the tint, from 0 to 1
+const HURT_FLASH_SECONDS = 0.4; // how long the player flashes after a bite
+const HURT_BLINK_SECONDS = 0.08; // how fast they flash on and off
+const STARVE_FLASH_EVERY = 1.5; // while hunger or thirst is hurting, a flash this often, in seconds
+const STARVE_FLASH_SECONDS = 0.16;
+const KNEEL_SECONDS = 0.35; // collapsing: how long the player sinks to their knees before falling
+const DOOR_OPEN_REACH = 1.4; // a door you've built stands open while you're this close, in tiles
 const GHOST_ALPHA = 0.55; // how solid the see-through copy in build mode looks
 const NIGHT_SCALE = 4; // the dark is drawn this many times smaller than the screen, then stretched
 const EYES_REACH = 2; // with no light at all you can still make out this far around you, in tiles
@@ -57,6 +65,7 @@ const view = {
   th: 0,
   font: '',
   boldFont: '',
+  fontSize: 0, // in device pixels
   baseline: 0, // where to put the text baseline inside a cell so block characters fill it
   camX: 0, // the world position, in tiles, at the middle of the screen
   camY: 0,
@@ -93,6 +102,7 @@ function resizeView() {
   const block = ctx.measureText('█');
   const blockHeight = block.actualBoundingBoxAscent + block.actualBoundingBoxDescent || 116;
   const fontSize = Math.ceil((view.ch / blockHeight) * 100 * 1.02);
+  view.fontSize = fontSize;
   view.font = `${fontSize}px ${MAP_FONT}`;
   view.boldFont = `bold ${fontSize}px ${MAP_FONT}`;
   ctx.font = view.font;
@@ -187,9 +197,18 @@ function drawGlyphPair(ctx, tile, v, tx, ty, x, y, waterFrame) {
 
 // ---- Sprites ----
 
-// A sprite's picture, drawn the first time it's needed at the current size.
-function spriteImage(sprite) {
-  if (sprite.image && sprite.imageAtlas === view.atlas) return sprite.image;
+// A sprite's picture, drawn the first time it's needed at the current size. With a `tint`, a color,
+// every color in the picture is pushed most of the way toward it: the player flashing red when hurt.
+// Each tint is drawn once and kept too. Setting `sprite.imageAtlas = null` throws them all away, to
+// be drawn again (dressPlayer() in sprites.js does that when the player's colors change).
+function spriteImage(sprite, tint = null) {
+  if (sprite.imageAtlas !== view.atlas) {
+    sprite.images = {};
+    sprite.imageAtlas = view.atlas;
+  }
+  const key = tint || 'plain';
+  if (sprite.images[key]) return sprite.images[key];
+  const color = (value) => (tint ? blendColor(value, tint, TINT_SHARE) : value);
   const { canvas, ctx } = makeCanvas(sprite.width * view.cw, sprite.cells.length * view.th);
   for (let r = 0; r < sprite.cells.length; r++) {
     const cells = sprite.cells[r];
@@ -199,12 +218,11 @@ function spriteImage(sprite) {
       if (!ink) continue;
       const x = c * view.cw;
       const y = r * view.th;
-      if (ink[1]) fillCell(ctx, ink[1], x, y);
-      drawGlyph(ctx, cells[c], ink[0], x, y, sprite.bold);
+      if (ink[1]) fillCell(ctx, color(ink[1]), x, y);
+      drawGlyph(ctx, cells[c], color(ink[0]), x, y, sprite.bold);
     }
   }
-  sprite.image = canvas;
-  sprite.imageAtlas = view.atlas;
+  sprite.images[key] = canvas;
   return canvas;
 }
 
@@ -601,7 +619,7 @@ function drawStanding(game, range, inside) {
       if (!key) continue;
       const shake = game.fx.shake && game.fx.shake.index === i ? game.fx.shake : null;
       const offset = shake ? Math.round(Math.sin(game.time * 70) * view.cw * 0.2) : 0;
-      drawSprite(objectSprite(OBJECTS[key], i, game.flameFrame), tx, ty, offset);
+      drawSprite(objectSprite(game, OBJECTS[key], tx, ty), tx, ty, offset);
     }
     if (inside && ty === house.top) drawHouseImage(backWallImage(house), house.left, house.top - WALL_ROWS);
     if (!inside && ty === house.top + house.height - 1) {
@@ -615,10 +633,18 @@ function drawStanding(game, range, inside) {
 }
 
 // The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
-// tile starts at a different point so two fires side by side don't flicker in step.
-function objectSprite(object, i, flameFrame) {
+// tile starts at a different point so two fires side by side don't flicker in step. A door stands
+// open while you're beside it or in it, and a wall clawed halfway through shows the marks.
+function objectSprite(game, object, tx, ty) {
+  const { player, world } = game;
+  if (object.opens && Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DOOR_OPEN_REACH) {
+    return SPRITES[object.opens];
+  }
+  if (object.scarred && (world.clawed.get(ty * world.width + tx) || 0) >= object.claws / 2) {
+    return SPRITES[object.scarred];
+  }
   if (!object.frames) return SPRITES[object.sprite];
-  return SPRITES[object.frames[(flameFrame + i) % object.frames.length]];
+  return SPRITES[object.frames[(game.flameFrame + ty * world.width + tx) % object.frames.length]];
 }
 
 // ---- The cottage ----
@@ -753,6 +779,14 @@ function playerPose(game) {
     lift: 0,
   });
 
+  // Health has run out: they sink to their knees, then fall on their side. Facing up they fall to
+  // the left, facing down to the right.
+  if (game.dying) {
+    if (game.dying.seconds < KNEEL_SECONDS) return { ...pose('crouch'), torch: null };
+    const side = player.facing === 'left' || player.facing === 'up' ? 'left' : 'right';
+    return { sprite: PLAYER_SPRITES[side].fallen, held: null, torch: null, lift: 0 };
+  }
+
   // Just did something: swinging, reaching, kneeling to drink.
   if (player.act) {
     const look = actionPose(player.act.action);
@@ -777,10 +811,24 @@ function blinking(clock) {
   return clock % 4.3 < BLINK_SECONDS || (clock + 1.9) % 6.7 < BLINK_SECONDS;
 }
 
+// Whether the player is shown flashing red right now: on and off for a moment after a bite, and a
+// short flash every so often while hunger or thirst is hurting them. With motion turned down, a bite
+// shows as one steady flash instead of flickering.
+function hurtFlash(game) {
+  const { survivor } = game;
+  // The game's clock stops while collapsing, dead or behind a menu, so a flash would never end.
+  if (game.dying || game.dead || game.paused) return false;
+  const since = game.time - survivor.hurtAt;
+  if (since < HURT_FLASH_SECONDS) {
+    return reducedMotion.matches || Math.floor(since / HURT_BLINK_SECONDS) % 2 === 0;
+  }
+  return survivor.starving && game.time % STARVE_FLASH_EVERY < STARVE_FLASH_SECONDS;
+}
+
 function drawPlayer(game, alpha) {
   const { world, player } = game;
   const look = playerPose(game);
-  const image = spriteImage(look.sprite);
+  const image = spriteImage(look.sprite, hurtFlash(game) ? HURT_COLOR : null);
   const left = Math.round(screenX(player.x) - image.width / 2);
   const top = Math.round(screenY(player.y) + view.th * 0.25) - image.height - look.lift;
   view.ctx.globalAlpha = alpha;
@@ -996,6 +1044,49 @@ function findLights(game, range, inside) {
 // still when motion is turned down (the flame counter stops then).
 function flicker(game, seed) {
   return 1 + FLICKER * (hash2(game.flameFrame, seed, 99) * 2 - 1);
+}
+
+// ---- The Your look panel ----
+
+const LOOK_SCALE = 2; // the player on the Your look panel is drawn this many times bigger than on the map
+
+// Draws pictures of the player side by side, big, with a character's gap between them. This is
+// only drawn when you pick a color, not every frame, so it draws each character straight onto the
+// canvas instead of going through the atlas (which only holds map-sized characters).
+function drawLookPicture(canvas, pictures) {
+  const cw = view.cw * LOOK_SCALE;
+  const ch = view.ch * LOOK_SCALE;
+  const rows = Math.max(...pictures.map((picture) => picture.cells.length));
+  const cols = pictures.reduce((total, picture) => total + picture.width, pictures.length - 1);
+  canvas.width = cols * cw;
+  canvas.height = rows * ch;
+  canvas.style.width = `${canvas.width / view.dpr}px`;
+  canvas.style.height = `${canvas.height / view.dpr}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.font = `bold ${view.fontSize * LOOK_SCALE}px ${MAP_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  let left = 0;
+  for (const picture of pictures) {
+    const top = (rows - picture.cells.length) * ch;
+    picture.cells.forEach((cells, r) => {
+      cells.forEach((char, c) => {
+        const ink = picture.ink[picture.paintCells[r][c]];
+        if (!ink) return;
+        const x = (left + c) * cw;
+        const y = top + r * ch;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, cw, ch);
+        ctx.clip(); // block characters overflow their cell a little, like on the map
+        if (ink[1]) fillCell(ctx, ink[1], x, y, cw, ch);
+        ctx.fillStyle = ink[0];
+        ctx.fillText(char, x + cw / 2, y + view.baseline * LOOK_SCALE);
+        ctx.restore();
+      });
+    });
+    left += picture.width + 1;
+  }
 }
 
 // ---- Effects ----

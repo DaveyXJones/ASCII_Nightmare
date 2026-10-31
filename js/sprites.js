@@ -25,6 +25,27 @@ const FIRE_INK = {
   s: ['#a3a69e'], // the ring of stones
 };
 
+// The colors of things built from wood: the wall and the door.
+const WOOD_INK = {
+  t: ['#d8b07a'], // tops, in the light
+  T: ['#b08458'],
+  L: ['#5e3d22', '#b08458'], // planks, with dark lines between them
+  l: ['#5e3d22', '#9c7048'],
+  D: ['#4a2f1c', '#8b6239'], // the lower planks, in shade
+  d: ['#4a2f1c', '#7a5230'],
+  P: ['#7a5230'], // a post seen edge-on
+};
+
+// A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
+const BRUTE_INK = {
+  t: ['#3e3050'], // the top of its back, catching a little light
+  s: ['#241a30'], // its shoulders and sides
+  b: ['#3a2a4a', '#1a1224'], // its face
+  f: ['#33263f', '#140e1c'], // its shaggy hide
+  E: ['#ffb02e', '#1a1224'], // its eye
+  l: ['#1e1528'], // legs
+};
+
 // A shade's colors (see CREATURES in creatures.js), shared by both its pictures.
 const SHADE_INK = {
   w: ['#4a3a5a'], // ears
@@ -317,15 +338,102 @@ const SPRITES = {
       'Ll',
       'Dd',
     ],
-    ink: {
-      t: ['#d8b07a'],
-      T: ['#b08458'],
-      L: ['#5e3d22', '#b08458'],
-      l: ['#5e3d22', '#9c7048'],
-      D: ['#4a2f1c', '#8b6239'],
-      d: ['#4a2f1c', '#7a5230'],
-    },
+    ink: WOOD_INK,
     shadow: 2,
+  },
+  // A door you build into a wall: a frame of two posts under a crossbar, with a plank door between
+  // them. It lines up with the wall stakes on either side. Beside it, it stands open (woodDoorOpen):
+  // swung back against one post, with the ground showing through.
+  woodDoor: {
+    art: [
+      '▄▄',
+      '╟╢',
+      '╟╢',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: WOOD_INK,
+    shadow: 2,
+  },
+  // The same, once something in the dark has clawed it halfway through (see `scarred` in objects.js).
+  woodWallScarred: {
+    art: [
+      '▲▲',
+      '╱▏',
+      '▏╱',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: WOOD_INK,
+    shadow: 2,
+  },
+  woodDoorScarred: {
+    art: [
+      '▄▄',
+      '╱╢',
+      '╟╱',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: WOOD_INK,
+    shadow: 2,
+  },
+  woodDoorOpen: {
+    art: [
+      '▄▄',
+      '▌▐',
+      '▌▐',
+    ],
+    paint: [
+      'tT',
+      'LP',
+      'DP',
+    ],
+    ink: WOOD_INK,
+    shadow: 2,
+  },
+  // A brute: a great hunched thing with a shaggy hide and a single amber eye, three tiles wide. Its
+  // legs shift between the two pictures as it lumbers along.
+  brute: {
+    art: [
+      ' ▗▄▄▖ ',
+      '▟▓●▓▓▙',
+      '▐#%#%▌',
+      '▐▘  ▝▌',
+    ],
+    paint: [
+      ' tttt ',
+      'sbEbbs',
+      'sffffs',
+      'll  ll',
+    ],
+    ink: BRUTE_INK,
+    shadow: 0,
+  },
+  brute2: {
+    art: [
+      ' ▗▄▄▖ ',
+      '▟▓●▓▓▙',
+      '▐%#%#▌',
+      '▝▌  ▐▘',
+    ],
+    paint: [
+      ' tttt ',
+      'sbEbbs',
+      'sffffs',
+      'll  ll',
+    ],
+    ink: BRUTE_INK,
+    shadow: 0,
   },
   // A shade: a hunched thing of shadow with pointed ears and red eyes. Its legs shift between the two
   // pictures as it walks.
@@ -366,10 +474,15 @@ const SPRITES = {
 //            other stride, legs passing; the arms swing against the legs
 //   windup   tool raised, between swings      strike   the swing landing, or a hand reaching out
 //   crouch   kneeling, to drink or put out a fire
+//   fallen   lying on the ground, when health runs out (only facing left and right; facing up or
+//            down they fall to the left or right, see playerPose() in render.js)
 // `held` says where the tool in their hand is drawn in each pose, in characters from the picture's
 // top-left corner (see ACTION_POSES for which tool). `torch` says the same for the torch, carried in
 // the other hand all the time once you've made one: where the hand holding its stick is, standing
 // (and walking and swinging) and kneeling. Its rag, or its flame, is drawn on the row above.
+// The colors below are the player's before the game starts. The hat, hair, skin, shirt and trousers
+// are then replaced by the colors picked on the Your look panel (see LOOKS and dressPlayer() below);
+// the pack keeps these.
 const PLAYER_INK = {
   T: ['#f0d27a'], // straw hat: the crown, in the light
   B: ['#d4a540'], // the brim
@@ -428,6 +541,7 @@ const PLAYER_SPRITES = {
     windup: { art: ['▄█▖', '▐·▌', ' █▌', ' Π '], paint: ['BTb', 'fFr', ' Ck', ' p '] },
     strike: { art: ['▄█▖', '▐·▌', '▀█▌', ' Π '], paint: ['BTb', 'fFr', 'fCk', ' p '] },
     crouch: { art: ['   ', '▄█▖', '▐·▌', '▐█▌'], paint: ['   ', 'BTb', 'fFr', 'fCk'] },
+    fallen: { art: ['▗▄▖    ', '▐ū▓█▬▬▘'], paint: ['BTb    ', 'rFkCppp'] },
     held: { windup: [2, 0], strike: [-1, 2], crouch: [-1, 3] },
     torch: { stand: [3, 2], crouch: [3, 3] },
   },
@@ -443,10 +557,121 @@ const PLAYER_SPRITES = {
     windup: { art: ['▗█▄', '▐·▌', '▐█ ', ' Π '], paint: ['BTb', 'rFg', 'kC ', ' p '] },
     strike: { art: ['▗█▄', '▐·▌', '▐█▀', ' Π '], paint: ['BTb', 'rFg', 'kCg', ' p '] },
     crouch: { art: ['   ', '▗█▄', '▐·▌', '▐█▌'], paint: ['   ', 'BTb', 'rFg', 'kCg'] },
+    fallen: { art: ['    ▗▄▖', '▝▬▬█▓ū▌'], paint: ['    BTb', 'pppCkFr'] },
     held: { windup: [0, 0], strike: [3, 2], crouch: [3, 3] },
     torch: { stand: [-1, 2], crouch: [-1, 3] },
   },
 };
+
+// The choices on the Your look panel (in the menu). Each part of the player has a row of colors to
+// pick from; the first in each row is what a new player wears. Add a color and it gets its own
+// button. Only the main color is given: the lighter and darker shades for the sunlit and shaded
+// sides are worked out from it (see dressPlayer()).
+const LOOKS = {
+  hat: {
+    name: 'Hat',
+    colors: [
+      { name: 'Straw', color: '#d4a540' },
+      { name: 'Leather', color: '#8a5a32' },
+      { name: 'Red', color: '#b8433a' },
+      { name: 'Blue', color: '#3f6aa8' },
+      { name: 'Green', color: '#4f8a3a' },
+      { name: 'White', color: '#e0dac6' },
+    ],
+  },
+  hair: {
+    name: 'Hair',
+    colors: [
+      { name: 'Brown', color: '#5a3a22' },
+      { name: 'Black', color: '#221c1a' },
+      { name: 'Fair', color: '#c9a050' },
+      { name: 'Red', color: '#a8502a' },
+      { name: 'Grey', color: '#9a9690' },
+    ],
+  },
+  skin: {
+    name: 'Skin',
+    colors: [
+      { name: 'Light', color: '#f0c290' },
+      { name: 'Pale', color: '#f6d8bc' },
+      { name: 'Tan', color: '#d49a68' },
+      { name: 'Brown', color: '#a8714a' },
+      { name: 'Dark', color: '#6e4630' },
+    ],
+  },
+  shirt: {
+    name: 'Shirt',
+    colors: [
+      { name: 'Rust', color: '#d9603b' },
+      { name: 'Blue', color: '#4a78c0' },
+      { name: 'Green', color: '#5a9a48' },
+      { name: 'Yellow', color: '#d8b040' },
+      { name: 'Purple', color: '#8a5ab0' },
+      { name: 'White', color: '#d8d4c8' },
+    ],
+  },
+  trousers: {
+    name: 'Trousers',
+    colors: [
+      { name: 'Denim', color: '#41557f' },
+      { name: 'Brown', color: '#6e4a2c' },
+      { name: 'Black', color: '#2e2c30' },
+      { name: 'Green', color: '#3e5a34' },
+      { name: 'Grey', color: '#76767a' },
+    ],
+  },
+};
+
+const PACK_STRAPS = '#5e4630'; // the pack's straps over the shirt, whatever color the shirt is
+
+// The look a new player starts with: the first color in each row of LOOKS.
+function defaultLook() {
+  return Object.fromEntries(Object.entries(LOOKS).map(([part, { colors }]) => [part, colors[0].color]));
+}
+
+// Dresses the player in `look` ({ hat: color, hair: color, ... }): rewrites the colors in PLAYER_INK,
+// which every picture of the player shares, then throws away the pictures drawn in the old colors
+// so they're drawn again in the new ones.
+function dressPlayer(look) {
+  const { hat, hair, skin, shirt, trousers } = { ...defaultLook(), ...look };
+  PLAYER_INK.T = [shade(hat, 0.22)]; // the hat's crown catches the light
+  PLAYER_INK.B = [hat];
+  PLAYER_INK.b = [shade(hat, -0.14)];
+  PLAYER_INK.r = [hair];
+  PLAYER_INK.R = [shade(hair, -0.5), hair];
+  PLAYER_INK.F = [shade(skin, -0.75), skin]; // eyes and mouth: a deep shade of the skin
+  PLAYER_INK.f = [skin];
+  PLAYER_INK.g = [shade(skin, -0.12)];
+  PLAYER_INK.C = [shade(shirt, -0.18), shirt]; // folds in the shirt
+  PLAYER_INK.P = [PACK_STRAPS, shirt];
+  PLAYER_INK.p = [trousers];
+  forEachPlayerPicture((picture) => {
+    picture.imageAtlas = null; // see spriteImage() in render.js
+  });
+}
+
+function forEachPlayerPicture(visit) {
+  for (const set of Object.values(PLAYER_SPRITES)) {
+    for (const [pose, pictures] of Object.entries(set)) {
+      if (pose !== 'held' && pose !== 'torch') [].concat(pictures).forEach(visit);
+    }
+  }
+}
+
+// A color made lighter (amount above 0, up to 1 for white) or darker (below 0, down to -1 for black).
+function shade(color, amount) {
+  return blendColor(color, amount > 0 ? '#ffffff' : '#000000', Math.abs(amount));
+}
+
+// Two colors like '#d4a540' mixed: `share` 0 gives the first, 1 the second.
+function blendColor(a, b, share) {
+  const parse = (hex) => [1, 3, 5].map((n) => parseInt(hex.slice(n, n + 2), 16));
+  const [from, to] = [parse(a), parse(b)];
+  return `#${from.map((value, n) => {
+    const mixed = Math.round(value + (to[n] - value) * share);
+    return mixed.toString(16).padStart(2, '0');
+  }).join('')}`;
+}
 
 // How the player looks doing each thing, by the word on the action button (and Eat and Build).
 //   pose     which picture: 'strike', 'windup' or 'crouch' (see PLAYER_SPRITES)

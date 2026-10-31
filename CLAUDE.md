@@ -7,7 +7,7 @@ and overlap whatever is behind them. The owner is building toward a fuller survi
 (crafting, a day and night cycle with things that come out at night, saving, maybe multiplayer);
 see "What's next" in README.md.
 
-## Where things stand: the game is online (last updated 2026-10-29)
+## Where things stand: the game is online (last updated 2026-10-31)
 
 The game is live at **https://daveyxjones.github.io/ASCII_Nightmare/**. The repository
 (`DaveyXJones/ASCII_Nightmare`) is public, its default branch is `main`, and GitHub Pages deploys
@@ -60,24 +60,64 @@ of it tunable in `CREATURES`, the constants in `js/creatures.js` and `creatures`
 
 - **Shades**: dark eared silhouettes with red eyes. Their eyes are drawn above the darkness, so on
   a black night pairs of red eyes are all you see.
-- **Light keeps them back**: they never come within `FEAR_SHARE` (80%) of a light's reach, so a lit
-  torch or a campfire means safety, and they pace at the edge. Without light they creep in, lunge,
-  bite (8 health) and back off. **They never enter the cottage**, and walls stop them: they path
-  round obstacles but can't get through a closed ring.
+- **Light keeps them back**: they never come within `fear.fire`/`fear.torch` (80%) of a light's
+  reach, so a lit torch or a campfire means safety, and they pace at the edge. Without light they
+  creep in, lunge, bite (8 health) and back off. **They never enter the cottage**, and walls stop
+  them: they path round obstacles but can't get through a closed ring (since 2026-10-31, they claw
+  through it in the end; see "More in the dark" above).
 - **You can hit them**: the action button says **Hit** when one's in reach; 3 hits (2 with the
   axe, `power: { Hit: 2 }`) and it dissolves. Each hit knocks it back and sends it running.
-- **The moon sets the number** out at once: 2 (half), 3 (thin), 4 (none), 1 (full).
+- **The moon sets the number** of each kind out at once (`creatures: { shade: 2 }` on each moon).
 - Dying to them shows "The dark takes you." instead of "You collapse."
 
-Next, the owner hasn't picked. Ideas noted in README's "What's next": more creature kinds, shades
-that break walls. Character ideas the owner liked (none started):
-1. **Choose your look:** hat, shirt and trouser colors picked from the menu. All of the player's
-   colors are in `PLAYER_INK`; after changing them, clear the player sprites' cached `image` so
-   `spriteImage` redraws them.
-2. **Hurt and collapse:** a flash while hunger or thirst is hurting, and a fall before the death
-   screen.
-3. **Outline:** a thin dark edge so the player stands out on busy ground. It bends "Draw only
-   characters on the map", so ask the owner before building it.
+## The "What's next" list (built 2026-10-31)
+
+The owner asked to build README's "What's next" list ("I like the ideas you have for it"). Items
+1 to 5 were built, each its own commit; choices Claude made that the owner hadn't specified, any
+of which they may want changed:
+
+- **Your look**: a panel off the menu with a row of color squares each for hat, hair, skin, shirt
+  and trousers (`LOOKS` in sprites.js; hair and skin were Claude's addition). Only the main color
+  is listed; `dressPlayer` derives the lit and shaded inks into `PLAYER_INK` and marks every player
+  picture for redrawing. Kept in localStorage (`LOOK_KEY`, js/save.js).
+- **Hurt**: after a bite the player flickers red (`hurtFlash` in render.js: a tinted copy of the
+  sprite, see `spriteImage`) and the screen's edges flash red (`.hud.hurt`); while starving, a short
+  red flash every 1.5 s. Under reduced motion a bite is one steady flash.
+- **Collapse**: when health runs out, `state.dying` holds the player for `COLLAPSE_SECONDS`: the
+  `crouch` pose, then `fallen` (lying down), with the screen's edges closing in (`.collapsing`),
+  then the death screen fades in. Nothing else updates meanwhile.
+- **More to craft**: a stone pick (`TOOLS.pick`, `power: { Mine: 2 }`, held as `⌐`/`¬`); a wooden
+  door (`woodDoor`, see below); cooked berries (`RECIPES.cook`, 2 berries → 1 `cooked`: 30 food and
+  10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
+  `bestFood`). On short screens the craft cards lie on their side, three to a row, so all seven
+  fit on a 667×375 phone; keep card texts to about 40 characters so they stay on two lines.
+- **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
+  fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
+  thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
+  and `scarred` in OBJECTS); marks live in `world.clawed` and clear by day. A clawing creature
+  presses right up to the wall, `HIT_REACH` is 1.9 (a creature against a wall to your side is about
+  1.75 away), and a creature in reach always beats any object as the target, so you hit it through
+  the wall instead of breaking your own. Nothing claws while you're in the cottage (the map of
+  steps is one tile there, so everything looks cut off).
+- **Saving** (js/save.js): `saveGame` keeps the seed, the clock, the player, the survivor, and only
+  the objects that differ from `world.original` (the island as generated), plus `damage`,
+  `clawed` and `regrowing`, in localStorage under `SAVE_KEY`. It runs every `SAVE_EVERY` seconds
+  of play, on opening the menu, on hiding the page, on waking and on dying (a save made while dead
+  or dying loads as a fresh morning). `loadGame` runs at startup instead of `newGame` when there's
+  a save. `worldPrint` fingerprints the generated island: if the world code has changed so the
+  seed builds a different island, the pack is kept but map changes are dropped. Creatures aren't
+  saved; the night's hunt restarts. Bump `SAVE_VERSION` if the saved shape changes.
+- **Sound** (js/sound.js): all synthesized with Web Audio, no files. `SOUNDS` holds one-off sounds
+  (`playSound`, `playSoundAt` for panned, distance-faded ones); `updateSound` runs each frame for
+  wind (louder at night, muffled indoors), birds by day, crickets at night that hush as creatures
+  near (`CRICKET_HUSH`), and crackle near a `flame` object or a lit torch. The audio context is
+  made on the first tap (`wakeSound`, browsers require a gesture); Sound on/off in the menu is
+  kept under `SOUND_KEY`. Levels were set by rendering each sound offline and measuring peaks
+  (actions about 0.35, footsteps 0.07); the compressor only limits the loudest moments.
+- **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
+  "Draw only characters on the map", so it waits for the owner's say. **Not built: multiplayer**:
+  it needs a server, and GitHub Pages only hosts files, so it needs the owner to choose a host.
+  Rain was in the sound item but needs weather first; README's "What's next" now lists that.
 
 ## Hard rules
 
@@ -89,7 +129,7 @@ that break walls. Character ideas the owner liked (none started):
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  render → input → survival → crafting → creatures → game`. A file may use globals from files
+  render → input → sound → survival → crafting → creatures → save → game`. A file may use globals from files
   before it at load time, and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
@@ -105,16 +145,18 @@ that break walls. Character ideas the owner liked (none started):
 | --- | --- |
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
-| `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, and `ACTION_POSES`. Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles) and `flame` (a torch can be lit at it). |
+| `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
-| `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
+| `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
-| `js/survival.js` | `ITEMS`, vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eatBerry`, `BURSTS`, particles and floating text. |
+| `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, birds, crickets, crackle), `setSoundOn`. |
+| `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
-| `js/creatures.js` | `CREATURES`, the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
-| `js/game.js` | `state`, player movement and collision, menus, death, HUD updates, the main loop. |
+| `js/creatures.js` | `CREATURES` (shade, brute), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
+| `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
+| `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
 | `fonts/` | DejaVu Sans Mono (regular and bold) as WOFF2, with its license. |
 | `manifest.webmanifest`, `icons/` | Home-screen install: full screen, landscape. |
@@ -129,6 +171,9 @@ that break walls. Character ideas the owner liked (none started):
   small foot box (`FOOT_HALF_WIDTH`, `FOOT_HALF_DEPTH`), moving one axis at a time with corner
   slipping so thumbstick movement slides through doorways.
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
+- `world.original` is `objects` as generated (saving keeps only the differences); `damage` and
+  `clawed` are Maps of tile index to swings or scratches taken. **Anything new that should survive
+  a reload** (a survivor field, a world Map) needs adding to `saveGame` and `loadGame`.
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
 
@@ -136,7 +181,9 @@ that break walls. Character ideas the owner liked (none started):
 
 - `RECIPES` drives everything: the craft panel makes one card per recipe at startup
   (`setupCrafting`), in table order, and number keys pick by that order. A recipe with `tool` puts
-  a key in `survivor.tools` (lost on death, like the pack); one with `builds` starts build mode.
+  a key in `survivor.tools` (lost on death, like the pack); one with `builds` starts build mode; one
+  with `gives` adds items to the pack and keeps the panel open (`refreshCraft`). `byFire` recipes
+  need `survivor.warm` (beside a campfire), checked in `canMake`.
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
 - The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not
@@ -146,6 +193,9 @@ that break walls. Character ideas the owner liked (none started):
   overlaps the player. While building, `findTarget` is skipped and the action button builds once
   per press (the `'action'` press from `input.js`), not on hold. Anything built is an ordinary
   object with an `action` that takes it down again, so a misplaced wall is never a trap.
+- **Doors** are objects with `door: true` and no `solid`: the player walks through (`blockerAt`
+  ignores them), creatures can't (`creatureCanStand`), and nothing can be built over one. While the
+  player is within `DOOR_OPEN_REACH` it's drawn with its `opens` sprite (`objectSprite`).
 - `.game > canvas` is the map; the panel's previews are canvases too, copied from `spriteImage`.
 - **The torch** is a tool with no `power`: `TOOLS.torch` has `burns` (seconds) and `light` (tiles).
   `survivor.torchLeft` counts down while it's lit (0 = unlit). Facing an object with `flame` while
@@ -167,23 +217,28 @@ that break walls. Character ideas the owner liked (none started):
 ## Creatures (js/creatures.js)
 
 - `state.creatures` is a list of free-moving things (`{ kind, x, y, hp, state, timer, fade, … }`,
-  feet position in tiles like the player), cleared on waking. `state.hunt` remembers when the
-  next one comes out and which once-a-night messages have shown. `updateCreatures` runs every
-  update after the vitals; it does nothing by day once they've all gone.
-- States: `creep` (follow the map of steps; lunge when within `LUNGE_RANGE` and ≤ 3 steps),
-  `lunge` (dart straight at you; bite within `BITE_REACH`, then `run`), `run` (away from you or the
-  light that caught it, for a time), `fade` (dawn: back away while fading, then removed).
+  feet position in tiles like the player), cleared on waking. `state.hunt` remembers when night
+  fell, when the next one comes out and which once-a-night messages have shown. `updateCreatures`
+  runs every update after the vitals; it does nothing by day once they've all gone. Each tick of
+  `CREATURE_EVERY`, `kindToComeOut` picks a kind the moon allows more of whose `after` has passed.
+- States: `creep` (follow the map of steps; lunge when within `LUNGE_RANGE` and ≤ 3 steps; claw
+  when off the map and a wall with `claws` is `CLAW_REACH` ahead), `lunge` (dart straight at you;
+  bite within `BITE_REACH`, then `run`), `run` (away from you or the light that caught it, for a
+  time), `claw` (scratch every `CLAW_SECONDS` until the wall breaks or a way opens), `fade` (dawn:
+  back away while fading, then removed).
 - **The map of steps** (`field`) is a breadth-first flood from the player's tile over a square of
   `FIELD_RADIUS`, through tiles where `creatureCanStand` (not solid, not inside the house), no
   diagonal squeezing between corners. Recomputed every `FIELD_SECONDS`; ~0.3 ms. If a creature's
   tile isn't on it (you're walled in or indoors), it heads straight for you and presses against
   whatever stops it, and never lunges. That's what makes walls and the cottage safe.
 - **Fear of light**: `lightsToFear` is the objects with `light` found by `mapSteps` plus the torch
-  (`torchReach`). A creature never steps to within `FEAR_SHARE` of any light's reach; at that edge
-  it `prowl`s sideways. If a light appears on top of it, it runs.
+  (`torchReach`, marked `torch: true`). A creature never steps to within its kind's `fear` share of
+  any light's reach (`fear.torch` for the torch, `fear.fire` for the rest; 0 = not afraid); at
+  that edge it `prowl`s sideways. If a light appears on top of it, it runs.
 - **Hitting**: `findTarget` (survival.js) puts any creature within `HIT_REACH` ahead of the player
-  before other targets, as `{ x, y, w: 2, label: 'Hit', creature }` (brackets round its face);
-  `useTarget` hands it to `hitCreature`, which uses `toolPower(survivor, 'Hit')`.
+  before every other target, as `{ x, y, w, label: 'Hit', creature }` (brackets round its face, sized
+  from its sprite and eye row); `useTarget` hands it to `hitCreature`, which uses
+  `toolPower(survivor, 'Hit')` and the kind's `knock` and `flinch`.
 - `survivor.hurtBy` (`'dark'` from a bite, `'hunger'` from starving) picks the death screen's words.
 
 ## Rendering (js/render.js)
@@ -194,8 +249,9 @@ that break walls. Character ideas the owner liked (none started):
 - **Never call `fillText` per cell per frame.** Three caches keep phones fast:
   - **Glyph atlas** (`glyphSlot`): each (char, color, bold) is drawn once. Use `drawGlyph(ctx, …)`.
   - **Sprite images** (`spriteImage`): each sprite is rendered once to its own canvas and drawn with
-    one `drawImage`. Cottage images are cached the same way. These rebuild automatically when the
-    atlas changes (on resize or font load).
+    one `drawImage`, kept in `sprite.images` by tint (`'plain'`, or a color every ink is pushed
+    toward, like `HURT_COLOR`). Cottage images are cached the same way. These rebuild automatically
+    when the atlas changes (on resize or font load); `sprite.imageAtlas = null` forces it.
   - **Ground cache** (`groundCache`): ground, cliff-foot shadows and mountains for the screen plus a
     margin. When the camera moves, the old image is shifted and only the newly exposed strips are
     drawn (`drawGroundRegion`). Water tiles are redrawn when `waterFrame` ticks.
@@ -246,9 +302,10 @@ that break walls. Character ideas the owner liked (none started):
   a paint letter has no ink.
 - **The player** has a picture per pose per facing: `stand`, `blink` (not for `up`), `walk` (four:
   stride, legs passing, other stride, legs passing; arms shorten on the swinging side), `windup`,
-  `strike`, `crouch` (top row empty, so it's the same height). `held` gives the cell, from the
+  `strike`, `crouch` (top row empty, so it's the same height), and `fallen` (left and right only,
+  2 rows, 7 wide: lying down, for the collapse). `held` gives the cell, from the
   picture's top-left, where the tool glyph is drawn for each pose. `playerPose()` in render.js
-  picks one: a recent `player.act` (`{ action, at }`, set by `useTarget`, `eatBerry` and `build`)
+  picks one: a recent `player.act` (`{ action, at }`, set by `useTarget`, `eat` and `build`)
   for its `ACTION_POSES` seconds, then `windup` while `player.working` (the button held on a
   target), then walking (lifted `WALK_BOB` on passing steps), then blinking or standing. A crafted
   tool with `held` glyphs and power for the action replaces the default `⚒`.

@@ -12,10 +12,17 @@
 //   drink    true if the action drinks from it, as many times as you like (the well)
 //   empty    message when you try to use it and there's nothing to take
 //   burst    what flies off when you work on it: a style in BURSTS (survival.js), like 'leaf' or 'stone'
+//   sound    what each swing sounds like: a name in SOUNDS (sound.js), like 'chop'
+//   soundDone  the sound of the last swing, as it gives way (a tree falling); `sound` if left out
 //   frames   a list of sprites to flicker between instead of one still picture (a campfire's flames)
 //   warmth   how close, in tiles, you need to stand to feel its heat; beside it you heal faster
 //   light    how far, in tiles, it lights up the dark at night (see night.js)
 //   flame    true for an open fire: facing it with a torch that needs lighting, the button lights it
+//   door     true for a door you've built: you walk through it (leave `solid` off), shades can't
+//   opens    the picture in SPRITES to draw instead while you're beside it: the door standing open
+//   claws    how many scratches it takes before something in the dark claws through it (see `claw`
+//            in CREATURES, creatures.js). Claw marks are forgotten by day.
+//   scarred  the picture to draw once it's been clawed halfway through
 
 const OBJECTS = {
   oak: {
@@ -28,6 +35,8 @@ const OBJECTS = {
     gives: { wood: 3 },
     becomes: 'stump',
     burst: 'leaf',
+    sound: 'chop',
+    soundDone: 'fell',
   },
   pine: {
     name: 'Pine tree',
@@ -39,6 +48,8 @@ const OBJECTS = {
     gives: { wood: 2 },
     becomes: 'stump',
     burst: 'leaf',
+    sound: 'chop',
+    soundDone: 'fell',
   },
   boulder: {
     name: 'Boulder',
@@ -50,6 +61,8 @@ const OBJECTS = {
     gives: { stone: 3 },
     becomes: null,
     burst: 'stone',
+    sound: 'mine',
+    soundDone: 'crumble',
   },
   bush: {
     name: 'Berry bush',
@@ -61,6 +74,7 @@ const OBJECTS = {
     gives: { berries: 3 },
     becomes: 'bushBare',
     burst: 'leaf',
+    sound: 'pick',
   },
   bushBare: {
     name: 'Picked bush',
@@ -81,6 +95,7 @@ const OBJECTS = {
     gives: { cloth: 1 },
     becomes: 'cottonBare',
     burst: 'fluff',
+    sound: 'pick',
   },
   cottonBare: {
     name: 'Picked cotton',
@@ -136,6 +151,7 @@ const OBJECTS = {
     gives: { stone: 3 },
     becomes: null,
     burst: 'spark',
+    sound: 'snuff',
     warmth: 2.5,
     light: 6.5,
     flame: true,
@@ -150,5 +166,24 @@ const OBJECTS = {
     gives: { wood: 2 },
     becomes: null,
     burst: 'wood',
+    sound: 'chop',
+    soundDone: 'build',
+    claws: 15,
+    scarred: 'woodWallScarred',
+  },
+  woodDoor: {
+    name: 'Wooden door',
+    sprite: 'woodDoor',
+    opens: 'woodDoorOpen',
+    door: true,
+    action: 'Break',
+    hits: 2,
+    gives: { wood: 3 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+    soundDone: 'build',
+    claws: 20,
+    scarred: 'woodDoorScarred',
   },
 };
