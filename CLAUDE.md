@@ -83,6 +83,11 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
 - **Collapse**: when health runs out, `state.dying` holds the player for `COLLAPSE_SECONDS`: the
   `crouch` pose, then `fallen` (lying down), with the screen's edges closing in (`.collapsing`),
   then the death screen fades in. Nothing else updates meanwhile.
+- **More to craft**: a stone pick (`TOOLS.pick`, `power: { Mine: 2 }`, held as `⌐`/`¬`); a wooden
+  door (`woodDoor`, see below); cooked berries (`RECIPES.cook`, 2 berries → 1 `cooked`: 30 food and
+  10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
+  `bestFood`). On short screens the craft cards lie on their side, three to a row, so all seven
+  fit on a 667×375 phone; keep card texts to about 40 characters so they stay on two lines.
 - **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
   "Draw only characters on the map", so it waits for the owner's say.
 
@@ -113,12 +118,12 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles) and `flame` (a torch can be lit at it). |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built). |
 | `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
-| `js/survival.js` | `ITEMS`, vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eatBerry`, `BURSTS`, particles and floating text. |
+| `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
 | `js/creatures.js` | `CREATURES`, the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`. |
@@ -144,7 +149,9 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
 
 - `RECIPES` drives everything: the craft panel makes one card per recipe at startup
   (`setupCrafting`), in table order, and number keys pick by that order. A recipe with `tool` puts
-  a key in `survivor.tools` (lost on death, like the pack); one with `builds` starts build mode.
+  a key in `survivor.tools` (lost on death, like the pack); one with `builds` starts build mode; one
+  with `gives` adds items to the pack and keeps the panel open (`refreshCraft`). `byFire` recipes
+  need `survivor.warm` (beside a campfire), checked in `canMake`.
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
 - The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not
@@ -154,6 +161,9 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   overlaps the player. While building, `findTarget` is skipped and the action button builds once
   per press (the `'action'` press from `input.js`), not on hold. Anything built is an ordinary
   object with an `action` that takes it down again, so a misplaced wall is never a trap.
+- **Doors** are objects with `door: true` and no `solid`: the player walks through (`blockerAt`
+  ignores them), creatures can't (`creatureCanStand`), and nothing can be built over one. While the
+  player is within `DOOR_OPEN_REACH` it's drawn with its `opens` sprite (`objectSprite`).
 - `.game > canvas` is the map; the panel's previews are canvases too, copied from `spriteImage`.
 - **The torch** is a tool with no `power`: `TOOLS.torch` has `burns` (seconds) and `light` (tiles).
   `survivor.torchLeft` counts down while it's lit (0 = unlit). Facing an object with `flame` while
@@ -258,7 +268,7 @@ The owner asked to build README's "What's next" list ("I like the ideas you have
   `strike`, `crouch` (top row empty, so it's the same height), and `fallen` (left and right only,
   2 rows, 7 wide: lying down, for the collapse). `held` gives the cell, from the
   picture's top-left, where the tool glyph is drawn for each pose. `playerPose()` in render.js
-  picks one: a recent `player.act` (`{ action, at }`, set by `useTarget`, `eatBerry` and `build`)
+  picks one: a recent `player.act` (`{ action, at }`, set by `useTarget`, `eat` and `build`)
   for its `ACTION_POSES` seconds, then `windup` while `player.working` (the button held on a
   target), then walking (lifted `WALK_BOB` on passing steps), then blinking or standing. A crafted
   tool with `held` glyphs and power for the action replaces the default `⚒`.

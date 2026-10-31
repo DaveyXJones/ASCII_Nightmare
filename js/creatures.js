@@ -302,9 +302,11 @@ function eyesOpen(game, creature) {
 
 // ---- Getting about ----
 
-// Shades can stand anywhere you could, except indoors.
+// Shades can stand anywhere you could, except indoors and in a doorway you've built: doors open
+// for you, never for them.
 function creatureCanStand(world, tx, ty) {
-  return !blockerAt(world, tx, ty) && !insideHouse(world, tx, ty);
+  const object = objectAt(world, tx, ty);
+  return !blockerAt(world, tx, ty) && !insideHouse(world, tx, ty) && !(object && object.door);
 }
 
 // Moves one, a step along each axis in turn so it slides along walls. Returns true if it moved.

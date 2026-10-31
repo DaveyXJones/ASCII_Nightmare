@@ -42,6 +42,7 @@ const HURT_BLINK_SECONDS = 0.08; // how fast they flash on and off
 const STARVE_FLASH_EVERY = 1.5; // while hunger or thirst is hurting, a flash this often, in seconds
 const STARVE_FLASH_SECONDS = 0.16;
 const KNEEL_SECONDS = 0.35; // collapsing: how long the player sinks to their knees before falling
+const DOOR_OPEN_REACH = 1.4; // a door you've built stands open while you're this close, in tiles
 const GHOST_ALPHA = 0.55; // how solid the see-through copy in build mode looks
 const NIGHT_SCALE = 4; // the dark is drawn this many times smaller than the screen, then stretched
 const EYES_REACH = 2; // with no light at all you can still make out this far around you, in tiles
@@ -618,7 +619,7 @@ function drawStanding(game, range, inside) {
       if (!key) continue;
       const shake = game.fx.shake && game.fx.shake.index === i ? game.fx.shake : null;
       const offset = shake ? Math.round(Math.sin(game.time * 70) * view.cw * 0.2) : 0;
-      drawSprite(objectSprite(OBJECTS[key], i, game.flameFrame), tx, ty, offset);
+      drawSprite(objectSprite(game, OBJECTS[key], tx, ty), tx, ty, offset);
     }
     if (inside && ty === house.top) drawHouseImage(backWallImage(house), house.left, house.top - WALL_ROWS);
     if (!inside && ty === house.top + house.height - 1) {
@@ -632,10 +633,15 @@ function drawStanding(game, range, inside) {
 }
 
 // The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
-// tile starts at a different point so two fires side by side don't flicker in step.
-function objectSprite(object, i, flameFrame) {
+// tile starts at a different point so two fires side by side don't flicker in step. A door stands
+// open while you're beside it or in it.
+function objectSprite(game, object, tx, ty) {
+  const { player, world } = game;
+  if (object.opens && Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DOOR_OPEN_REACH) {
+    return SPRITES[object.opens];
+  }
   if (!object.frames) return SPRITES[object.sprite];
-  return SPRITES[object.frames[(flameFrame + i) % object.frames.length]];
+  return SPRITES[object.frames[(game.flameFrame + ty * world.width + tx) % object.frames.length]];
 }
 
 // ---- The cottage ----

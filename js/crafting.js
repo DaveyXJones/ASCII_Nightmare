@@ -13,6 +13,7 @@
 // out, and you light it again.
 const TOOLS = {
   axe: { name: 'Stone axe', glyph: '┮', held: ['┭', '┮'], power: { Chop: 2, Hit: 2 } },
+  pick: { name: 'Stone pick', glyph: 'ϒ', held: ['⌐', '¬'], power: { Mine: 2 } },
   torch: { name: 'Torch', glyph: '¡', burns: 300, light: 5 },
 };
 
@@ -24,18 +25,27 @@ const TOOLS = {
 //   tool     a key in TOOLS: making it puts that tool in your pack (you only ever need one)
 //   builds   a key in OBJECTS: making it starts build mode, to put one on the map
 //   again    for things you build: stay in build mode afterwards, to build a row of them
+//   gives    items it puts in your pack, e.g. { cooked: 1 }; the panel stays open to make more
+//   byFire   true if you have to be standing beside a campfire to make it (cooking)
 //   done     message shown once it's made
 const RECIPES = {
   axe: {
     name: 'Stone axe',
-    about: 'Trees fall in half the swings, and shades too.',
+    about: 'Halves the swings for trees and shades.',
     cost: { wood: 3, stone: 2 },
     tool: 'axe',
     done: 'You lash a sharp stone to a stick. Trees fall twice as fast now.',
   },
+  pick: {
+    name: 'Stone pick',
+    about: 'Breaks boulders in half the swings.',
+    cost: { wood: 2, stone: 3 },
+    tool: 'pick',
+    done: 'You bind a pointed stone to a handle. Boulders break twice as fast now.',
+  },
   torch: {
     name: 'Torch',
-    about: 'Light it at a campfire to see in the dark.',
+    about: 'Light it at a fire to see in the dark.',
     cost: { wood: 2, cloth: 1 },
     tool: 'torch',
     done: 'You wrap a rag round a stick. Light it at a campfire.',
@@ -49,10 +59,24 @@ const RECIPES = {
   },
   wall: {
     name: 'Wooden wall',
-    about: 'One stretch of wall. Build as many as you like.',
+    about: 'Build a row of them into a fence.',
     cost: { wood: 2 },
     builds: 'woodWall',
     again: true,
+  },
+  door: {
+    name: 'Wooden door',
+    about: 'Goes in a wall. Opens only for you.',
+    cost: { wood: 3 },
+    builds: 'woodDoor',
+    done: 'You hang the door. It swings open as you come near.',
+  },
+  cook: {
+    name: 'Cooked berries',
+    about: 'More filling, and heals you a little.',
+    cost: { berries: 2 },
+    gives: { cooked: 1 },
+    byFire: true,
   },
 };
 
@@ -76,9 +100,14 @@ function spend(pack, cost) {
   for (const [item, count] of Object.entries(cost)) pack[item] -= count;
 }
 
-// A recipe can be made if you can pay for it and it isn't a tool you already have.
+// A recipe can be made if you can pay for it, it isn't a tool you already have, and you're beside
+// a fire if it needs one (`warm` is worked out each moment by updateVitals() in survival.js).
 function canMake(survivor, recipe) {
-  return canAfford(survivor.pack, recipe.cost) && !(recipe.tool && survivor.tools[recipe.tool]);
+  return (
+    canAfford(survivor.pack, recipe.cost) &&
+    !(recipe.tool && survivor.tools[recipe.tool]) &&
+    !(recipe.byFire && !survivor.warm)
+  );
 }
 
 // How many swings one swing counts as, with the best tool you have for the job.
@@ -104,6 +133,18 @@ function craft(game, key) {
     return;
   }
   spend(survivor.pack, recipe.cost);
+  if (recipe.gives) {
+    // Things for the pack, like cooked berries: the panel stays open so you can make another.
+    const parts = [];
+    for (const [item, count] of Object.entries(recipe.gives)) {
+      survivor.pack[item] += count;
+      parts.push(`+${count} ${ITEMS[item].name}`);
+    }
+    showMessage(game, recipe.done || parts.join(', '));
+    buzz(20);
+    refreshCraft();
+    return;
+  }
   survivor.tools[recipe.tool] = true;
   showMessage(game, recipe.done);
   buzz(30);
@@ -129,8 +170,8 @@ function buildProblem(game, x, y, recipe) {
   const object = objectAt(world, x, y);
   if (!ground || ground.solid) return "You can't build there.";
   if (insideHouse(world, x, y)) return "There's no room for that inside the cottage.";
-  // Things you can walk through, like stumps, are cleared away to make room.
-  if (object && object.solid) return `The ${object.name.toLowerCase()} is in the way.`;
+  // Things you can walk through, like stumps, are cleared away to make room. Doors aren't.
+  if (object && (object.solid || object.door)) return `The ${object.name.toLowerCase()} is in the way.`;
   if (!canAfford(survivor.pack, recipe.cost)) return `You need ${shortfall(survivor.pack, recipe.cost)}.`;
   return null;
 }
@@ -179,6 +220,11 @@ function setupCrafting(elements) {
     let picture;
     if (recipe.builds) {
       picture = document.createElement('canvas'); // filled in by drawRecipePicture() when the panel opens
+    } else if (recipe.gives) {
+      const item = ITEMS[Object.keys(recipe.gives)[0]];
+      picture = document.createElement('span');
+      picture.textContent = item.glyph;
+      picture.style.color = item.color;
     } else {
       picture = document.createElement('span');
       picture.textContent = TOOLS[recipe.tool].glyph;
@@ -206,6 +252,12 @@ function setupCrafting(elements) {
       cost.append(part);
     }
 
+    if (recipe.byFire) {
+      const need = document.createElement('span'); // shown while you're not beside a fire
+      need.className = 'recipe-need';
+      need.textContent = 'Needs a fire';
+      cost.append(need);
+    }
     card.append(picture, name, about, cost);
     card.addEventListener('click', () => craft(state, key));
     elements.recipes.append(card);
@@ -219,14 +271,9 @@ function setupCrafting(elements) {
 }
 
 function openCraft() {
-  const survivor = state.survivor;
+  refreshCraft();
   for (const card of elements.recipes.children) {
     const recipe = RECIPES[card.dataset.recipe];
-    card.disabled = !canMake(survivor, recipe);
-    card.classList.toggle('owned', Boolean(recipe.tool && survivor.tools[recipe.tool]));
-    for (const part of card.querySelectorAll('.cost')) {
-      part.classList.toggle('short', survivor.pack[part.dataset.item] < recipe.cost[part.dataset.item]);
-    }
     if (recipe.builds) {
       drawRecipePicture(card.querySelector('canvas'), SPRITES[OBJECTS[recipe.builds].sprite]);
     }
@@ -234,6 +281,20 @@ function openCraft() {
   state.paused = true;
   releaseAll();
   elements.craft.hidden = false;
+}
+
+// Shows which cards you can make right now, and what you're short of.
+function refreshCraft() {
+  const survivor = state.survivor;
+  for (const card of elements.recipes.children) {
+    const recipe = RECIPES[card.dataset.recipe];
+    card.disabled = !canMake(survivor, recipe);
+    card.classList.toggle('owned', Boolean(recipe.tool && survivor.tools[recipe.tool]));
+    card.classList.toggle('cold', Boolean(recipe.byFire && !survivor.warm));
+    for (const part of card.querySelectorAll('.cost')) {
+      part.classList.toggle('short', survivor.pack[part.dataset.item] < recipe.cost[part.dataset.item]);
+    }
+  }
 }
 
 function closeCraft() {

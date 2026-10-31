@@ -51,8 +51,8 @@ font from a file, so some characters may look a little different.
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
 | Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**. Hold it to keep going | `Space` or `E` (hold to keep going) |
-| Eat a berry | The small button | `F` |
-| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` `2` `3` `4` |
+| Eat | The small button: eats the best food you have | `F` |
+| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `7` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
 | Menu | ☰ in the top right | `Esc` |
 
@@ -69,7 +69,9 @@ and trousers. The game remembers them next time.
   while it does. Keep both up and it slowly comes back. When it runs out you sink to your knees
   and fall.
 - **Berry bushes** give three berries each and grow back after a minute and a half. Each berry is
-  a little food.
+  a little food. **Cook** them at a campfire (Craft, while you stand by the fire): two berries make
+  one portion of cooked berries, which fills you more than the two raw ones and gives back a little
+  health. The Eat button eats cooked berries first.
 - **Drink** at the edge of any lake or the sea, or from the well beside the cottage.
 - **Trees** give wood and leave a stump; **boulders** give stone. Craft with them (below).
 - **Cotton plants** (white bolls on green stems) give cloth, for a torch. Two grow beside the
@@ -84,17 +86,20 @@ something you can afford.
 | Make | Costs | What it does |
 | --- | --- | --- |
 | **Stone axe** | 3 wood, 2 stone | Trees fall in half the swings, and shades too. You lose it if you die. |
+| **Stone pick** | 2 wood, 3 stone | Boulders break in half the swings. You lose it if you die. |
 | **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
+| **Wooden door** | 3 wood | Set it in a line of wall. It swings open as you walk up and shuts behind you; shades can't open it. |
+| **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
 front of you. Yellow brackets mean it can go there, red means it can't (the message says why).
 Tap **Build** to put it down. Walls stay in build mode so you can keep going: build, step
 sideways, build again. Tap **Done** when you've finished.
 
-Changed your mind? Face the wall and **Break** it, or **Put out** the campfire, and you get the
-wood or stone back. Things you build stay in the world when you die.
+Changed your mind? Face the wall or door and **Break** it, or **Put out** the campfire, and you
+get the wood or stone back. Things you build stay in the world when you die.
 
 ## Night
 
@@ -184,11 +189,13 @@ run straight from the file.
   `js/survival.js` and the pack in `index.html`.
 - **The cottage.** It's drawn as text in `COTTAGE` at the top of `js/world.js`: move the bed, add
   furniture, or make it bigger.
-- **A new recipe.** Add it to `RECIPES` in `js/crafting.js` and it gets its own card. For a stone
-  pick that breaks rocks faster, add `pick: { name: 'Stone pick', glyph: '⚒', power: { Mine: 2 } }`
-  to `TOOLS`, a recipe with `tool: 'pick'`, and a slot in the pack in `index.html` like the axe's.
-  To make something you build, draw it in `SPRITES`, describe it in `OBJECTS`, and give the recipe
-  `builds:` its name.
+- **A new recipe.** Add it to `RECIPES` in `js/crafting.js` and it gets its own card. A tool goes in
+  `TOOLS` (look at the pick: `power: { Mine: 2 }` makes each swing count twice) and needs a slot in
+  the pack in `index.html` like the axe's. To make something you build, draw it in `SPRITES`,
+  describe it in `OBJECTS`, and give the recipe `builds:` its name. Something for the pack, like
+  cooked berries, uses `gives:`; add `byFire: true` if it needs a campfire.
+- **A new food.** Give an item in `ITEMS` (`js/survival.js`) a `food` number, and a `heals` number
+  if it should give health back. The Eat button always eats whatever gives the most food.
 - **How hard survival is.** `FOOD_PER_SECOND`, `WATER_PER_SECOND` and friends at the top of
   `js/survival.js`.
 - **Day and night.** `DAY_SECONDS` and `NIGHT_SECONDS` at the top of `js/night.js` (set
@@ -210,7 +217,7 @@ Roughly in order:
 
 1. **The character.** ~~Pick your own colors, flash when you're hurt and fall over when you
    die~~ (done). Still to decide: a dark outline so you stand out on busy ground.
-2. **More to craft.** A pick for stone, a door in a wall, cooking berries over the fire.
+2. **More to craft.** ~~A pick for stone, a door in a wall, cooking berries over the fire~~ (done).
 3. **More in the dark.** Other kinds of creature, shades that claw at walls until they break.
 4. **Saving.** Keep the world and your pack between visits.
 5. **Sound.** Chops, footsteps, rain.

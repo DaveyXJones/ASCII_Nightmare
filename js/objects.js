@@ -16,6 +16,8 @@
 //   warmth   how close, in tiles, you need to stand to feel its heat; beside it you heal faster
 //   light    how far, in tiles, it lights up the dark at night (see night.js)
 //   flame    true for an open fire: facing it with a torch that needs lighting, the button lights it
+//   door     true for a door you've built: you walk through it (leave `solid` off), shades can't
+//   opens    the picture in SPRITES to draw instead while you're beside it: the door standing open
 
 const OBJECTS = {
   oak: {
@@ -148,6 +150,17 @@ const OBJECTS = {
     action: 'Break',
     hits: 2,
     gives: { wood: 2 },
+    becomes: null,
+    burst: 'wood',
+  },
+  woodDoor: {
+    name: 'Wooden door',
+    sprite: 'woodDoor',
+    opens: 'woodDoorOpen',
+    door: true,
+    action: 'Break',
+    hits: 2,
+    gives: { wood: 3 },
     becomes: null,
     burst: 'wood',
   },

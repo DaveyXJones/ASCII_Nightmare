@@ -1,10 +1,14 @@
 // Staying alive: health, food and water, what you're carrying, and what the action button does.
 
+// Everything that goes in your pack. Each needs a counter in the pack in index.html, with the id
+// count-<item>. Things you can eat say how much `food` they give, and `heals` how much health.
+// The Eat button eats whatever fills you most.
 const ITEMS = {
   wood: { name: 'wood', glyph: '≡', color: '#d0a46a' },
   stone: { name: 'stone', glyph: '●', color: '#b4b8b0' },
-  berries: { name: 'berries', glyph: '•', color: '#ff5a6e' },
+  berries: { name: 'berries', glyph: '•', color: '#ff5a6e', food: 12 },
   cloth: { name: 'cloth', glyph: '▦', color: '#e6dcc4' },
+  cooked: { name: 'cooked berries', glyph: '♨', color: '#ec8a4a', food: 30, heals: 10 },
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -12,7 +16,6 @@ const WATER_PER_SECOND = 100 / 300; // thirst comes faster: five minutes
 const STARVING_DAMAGE = 2; // health lost each second with no food, and again with no water
 const HEAL_PER_SECOND = 0.5; // health regained each second while fed and watered
 const FIRE_HEAL_PER_SECOND = 2; // the same, resting beside a campfire
-const BERRY_FOOD = 12;
 const SIP_WATER = 20;
 const SWING_SECONDS = 0.42; // time between swings while the action button is held
 const REACH = 0.95; // how far the player can reach, in tiles, from their feet to the edge of a tile
@@ -265,9 +268,19 @@ function drink(game, target) {
   floatText(game.fx, target.x + 0.5, target.y - 0.5, '+water', '#7ab4e8');
 }
 
-function eatBerry(game) {
+// The best thing in your pack to eat: whatever gives the most food, or null if there's nothing.
+function bestFood(pack) {
+  let best = null;
+  for (const [item, { food }] of Object.entries(ITEMS)) {
+    if (food && pack[item] > 0 && (!best || food > ITEMS[best].food)) best = item;
+  }
+  return best;
+}
+
+function eat(game) {
   const { vitals, pack } = game.survivor;
-  if (pack.berries === 0) {
+  const item = bestFood(pack);
+  if (!item) {
     showMessage(game, 'You have nothing to eat. Berry bushes grow in the fields.');
     return;
   }
@@ -275,10 +288,12 @@ function eatBerry(game) {
     showMessage(game, "You're not hungry.");
     return;
   }
-  pack.berries--;
-  vitals.food = Math.min(100, vitals.food + BERRY_FOOD);
+  const { food, heals, color } = ITEMS[item];
+  pack[item]--;
+  vitals.food = Math.min(100, vitals.food + food);
+  if (heals) vitals.health = Math.min(100, vitals.health + heals);
   game.player.act = { action: 'Eat', at: game.player.clock };
-  floatText(game.fx, game.player.x, game.player.y - 3, '+food', ITEMS.berries.color);
+  floatText(game.fx, game.player.x, game.player.y - 3, heals ? '+food +health' : '+food', color);
 }
 
 // ---- Little effects ----

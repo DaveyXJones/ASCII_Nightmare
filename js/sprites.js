@@ -25,6 +25,17 @@ const FIRE_INK = {
   s: ['#a3a69e'], // the ring of stones
 };
 
+// The colors of things built from wood: the wall and the door.
+const WOOD_INK = {
+  t: ['#d8b07a'], // tops, in the light
+  T: ['#b08458'],
+  L: ['#5e3d22', '#b08458'], // planks, with dark lines between them
+  l: ['#5e3d22', '#9c7048'],
+  D: ['#4a2f1c', '#8b6239'], // the lower planks, in shade
+  d: ['#4a2f1c', '#7a5230'],
+  P: ['#7a5230'], // a post seen edge-on
+};
+
 // A shade's colors (see CREATURES in creatures.js), shared by both its pictures.
 const SHADE_INK = {
   w: ['#4a3a5a'], // ears
@@ -317,14 +328,38 @@ const SPRITES = {
       'Ll',
       'Dd',
     ],
-    ink: {
-      t: ['#d8b07a'],
-      T: ['#b08458'],
-      L: ['#5e3d22', '#b08458'],
-      l: ['#5e3d22', '#9c7048'],
-      D: ['#4a2f1c', '#8b6239'],
-      d: ['#4a2f1c', '#7a5230'],
-    },
+    ink: WOOD_INK,
+    shadow: 2,
+  },
+  // A door you build into a wall: a frame of two posts under a crossbar, with a plank door between
+  // them. It lines up with the wall stakes on either side. Beside it, it stands open (woodDoorOpen):
+  // swung back against one post, with the ground showing through.
+  woodDoor: {
+    art: [
+      '▄▄',
+      '╟╢',
+      '╟╢',
+    ],
+    paint: [
+      'tT',
+      'Ll',
+      'Dd',
+    ],
+    ink: WOOD_INK,
+    shadow: 2,
+  },
+  woodDoorOpen: {
+    art: [
+      '▄▄',
+      '▌▐',
+      '▌▐',
+    ],
+    paint: [
+      'tT',
+      'LP',
+      'DP',
+    ],
+    ink: WOOD_INK,
     shadow: 2,
   },
   // A shade: a hunched thing of shadow with pointed ears and red eyes. Its legs shift between the two

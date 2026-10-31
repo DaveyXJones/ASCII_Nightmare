@@ -499,7 +499,7 @@ function updateHud() {
     hud.ready = ready;
     elements.actionButton.classList.toggle('idle', !ready);
   }
-  const canEat = pack.berries > 0;
+  const canEat = bestFood(pack) !== null;
   if (hud.canEat !== canEat) {
     hud.canEat = canEat;
     elements.eatButton.classList.toggle('idle', !canEat);
@@ -549,7 +549,7 @@ function frame(now) {
     } else if (press === 'action' && playing && state.building) {
       build(state);
     } else if (press === 'eat' && playing) {
-      eatBerry(state);
+      eat(state);
     }
     playing = !state.paused && !state.dead && !state.dying && !portrait.matches;
   }
