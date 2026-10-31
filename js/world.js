@@ -62,6 +62,9 @@ function generateWorld(seed) {
     variants: new Uint8Array(size), // a random number per tile, for picking glyphs and colors
     damage: new Map(), // tile index -> swings taken, for trees and rocks being worked on
     clawed: new Map(), // tile index -> scratches taken, for walls things in the dark are clawing at
+    soaked: new Map(), // tile index -> seconds of rain a campfire has taken (see weather.js)
+    chests: new Map(), // tile index -> what's in the chest there, { items, tools } (see chest.js)
+    bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
     house: null,
     spawn: null,
@@ -287,6 +290,20 @@ function setObject(world, x, y, key) {
   world.objects[i] = key;
   world.damage.delete(i);
   world.clawed.delete(i);
+  world.soaked.delete(i);
+  world.chests.delete(i);
+}
+
+// Where you wake up after dying: on the bed you built last (an object with `bed`), or if that one's
+// gone, any other you've built, as { x, y } in tiles. Null if there's none, and you wake in the
+// cottage.
+function bedSpot(world) {
+  const isBed = (key) => Boolean(key && OBJECTS[key].bed);
+  let i = world.bed;
+  if (!Number.isInteger(i) || !isBed(world.objects[i])) i = world.objects.findIndex(isBed);
+  if (i < 0) return null;
+  const x = i % world.width;
+  return { x: x + 0.5, y: (i - x) / world.width + 0.5 };
 }
 
 function clamp01(value) {

@@ -23,6 +23,11 @@
 //   claws    how many scratches it takes before something in the dark claws through it (see `claw`
 //            in CREATURES, creatures.js). Claw marks are forgotten by day.
 //   scarred  the picture to draw once it's been clawed halfway through
+//   doused   what it turns into when rain puts it out (see weather.js): a fire with no roof
+//   relight  { cost, into } for a fire that's gone out: the action lights it again with a little wood
+//            (`cost`), turning it back `into` a fire, once the rain has stopped
+//   bed      true for a bed you've built: you wake up on the newest one after you die (world.bed)
+//   chest    true for a chest: the action opens it, to keep things in (see chest.js)
 
 const OBJECTS = {
   oak: {
@@ -155,6 +160,33 @@ const OBJECTS = {
     warmth: 2.5,
     light: 6.5,
     flame: true,
+    doused: 'campfireOut',
+  },
+  // A campfire the rain has put out. Light it again with a piece of wood once the rain stops.
+  campfireOut: {
+    name: 'Cold campfire',
+    sprite: 'campfireOut',
+    solid: true,
+    blocked: 'A ring of stones round wet ashes.',
+    action: 'Light',
+    relight: { cost: { wood: 1 }, into: 'campfire' },
+  },
+  // A campfire with a roof built over it (the Roof in RECIPES): the rain can't put it out.
+  roofedFire: {
+    name: 'Campfire under a roof',
+    sprite: 'roofedFire',
+    frames: ['roofedFire', 'roofedFire2', 'roofedFire', 'roofedFire3'],
+    solid: true,
+    blocked: 'The fire crackles under its roof. Too hot to walk through.',
+    action: 'Put out',
+    hits: 2,
+    gives: { stone: 3, wood: 3 },
+    becomes: null,
+    burst: 'spark',
+    sound: 'snuff',
+    warmth: 2.5,
+    light: 6.5,
+    flame: true,
   },
   woodWall: {
     name: 'Wooden wall',
@@ -170,6 +202,29 @@ const OBJECTS = {
     soundDone: 'build',
     claws: 15,
     scarred: 'woodWallScarred',
+  },
+  // A chest keeps what's in it when you die (see chest.js). It's taken down from its own panel, once
+  // it's empty.
+  chest: {
+    name: 'Chest',
+    sprite: 'chest',
+    solid: true,
+    blocked: 'Your chest. Open it to put things in.',
+    action: 'Open',
+    chest: true,
+    burst: 'wood',
+  },
+  // A bedroll on the ground: you walk over it, and wake up on it after you die.
+  bedroll: {
+    name: 'Bedroll',
+    sprite: 'bedroll',
+    bed: true,
+    action: 'Roll up',
+    hits: 1,
+    gives: { cloth: 2 },
+    becomes: null,
+    burst: 'fluff',
+    sound: 'pick',
   },
   woodDoor: {
     name: 'Wooden door',

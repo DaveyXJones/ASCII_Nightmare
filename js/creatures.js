@@ -4,7 +4,8 @@
 // can shut yourself in, though not for good: shut out, they claw at the wall until it breaks. With
 // no light they dart in, bite and back off again. Hit one and it runs; hit it enough and it comes
 // apart into smoke. At dawn they slink away. On the darkest nights a brute comes out too: slow, hard
-// to put down, and not afraid of a torch, only of firelight.
+// to put down, and not afraid of a torch, only of firelight. And lurkers don't hunt at all: they sit
+// still in the long grass with their eyes open, and spring at you if you walk too close.
 //
 // To find their way to you round trees, rocks and walls they follow a map of steps that spreads
 // out from wherever you're standing (`field`), worked out a few times a second.
@@ -12,8 +13,10 @@
 // The kinds of thing that come out at night. How many of each can be out at once is up to the moon
 // (`creatures` in MOONS, night.js).
 //   frames  its pictures in SPRITES (sprites.js), swapped as it walks
-//   eyes    the glyph and color of its eyes, and which cells of its picture they're in. They're
-//           drawn again above the dark, so in the dark that's all you see of it.
+//   crouched  its picture while it sits still, lurking (only for ones that lurk)
+//   eyes    the glyph and color of its eyes, and which cells of its picture they're in (the same in
+//           every picture). They're drawn again above the dark, so in the dark that's all you see of
+//           it. `stare: true` and they never blink.
 //   hp      how many hits it takes (a tool with power to Hit, like the axe, counts for more)
 //   bite    how much health each bite takes from you
 //   speed   tiles per second as it creeps toward you
@@ -24,8 +27,14 @@
 //   knock   how far, in tiles, a hit knocks it back
 //   claw    how much each scratch at a wall counts for (see `claws` in OBJECTS)
 //   after   seconds after nightfall before one can come out
+//   lurks   true for one that comes out in tall grass and sits still, waiting, instead of hunting
+//           you; it springs when you come within SPRING_RANGE, and afterwards slinks off to lurk
+//           somewhere else
+//   spawn   how far from you, in tiles, it comes out (SPAWN_DISTANCE if left out)
 //   seen    what the game says the first time one comes out each night
-//   sound   the noise it makes as it comes out, from where it is: a name in SOUNDS (sound.js)
+//   sound   the noise it makes as it comes out, from where it is: a name in SOUNDS (sound.js), or
+//           null to come out without a sound
+//   spring  the noise it makes as it springs at you (for ones that lurk)
 const CREATURES = {
   shade: {
     name: 'Shade',
@@ -59,6 +68,26 @@ const CREATURES = {
     seen: 'Something big is crashing about in the dark. A torch won\'t scare it off.',
     sound: 'roar',
   },
+  lurker: {
+    name: 'Lurker',
+    frames: ['lurker', 'lurker2'],
+    crouched: 'lurkerLow',
+    eyes: { glyph: '•', color: '#c6ff3d', cells: [[1, 0], [2, 0]], stare: true },
+    hp: 2,
+    bite: 10,
+    speed: 3,
+    lunge: 9,
+    fear: { fire: 0.8, torch: 0 },
+    flinch: 1.5,
+    knock: 0.6,
+    claw: 0,
+    after: 0,
+    lurks: true,
+    spawn: [7, 15],
+    seen: 'Eyes are watching you from the long grass.',
+    sound: null,
+    spring: 'hiss',
+  },
 };
 
 const FIRST_CREATURE_SECONDS = 25; // how long after nightfall the first one comes out
@@ -83,6 +112,10 @@ const CREATURE_HALF_WIDTH = 0.3; // its feet, in tiles, like the player's
 const CREATURE_HALF_DEPTH = 0.2;
 const CREATURE_FRAME_TILES = 0.4; // how far it walks on each of its pictures
 const EYE_BLINK_SECONDS = 0.15;
+const SPRING_RANGE = 2.4; // how close, in tiles, you can come to a lurker before it springs
+const DEN_REACH = 8; // how far, in tiles, a lurker looks for long grass to hide in again
+const DEN_AWAY = 5; // ...at least this far from you
+const HIDE_SECONDS = 6; // how long it tries to get there before it gives up and slinks off
 
 // The map of steps: for each tile around you, how many steps it is to get to you without going
 // through anything solid, or below 0 if there's no way (or the tile is solid itself).
@@ -99,7 +132,7 @@ const field = {
 // What a night's hunt has done so far: when night fell and when the next one comes out, and which
 // messages have shown, so each only shows once a night.
 function newHunt() {
-  return { nightAt: null, nextAt: null, seen: {}, bitten: false, clawed: false };
+  return { nightAt: null, nextAt: null, seen: {}, bitten: false, clawed: false, sprung: false };
 }
 
 function updateCreatures(game, dt) {
@@ -143,30 +176,36 @@ function kindToComeOut(game) {
   return ready.length ? ready[Math.floor(Math.random() * ready.length)] : null;
 }
 
-// A new one somewhere in the dark around you, on open ground, out of reach of any light.
+// A new one somewhere in the dark around you, on open ground, out of reach of any light. One that
+// lurks comes out in tall grass.
 function comeOut(game, fears, kind) {
   const { world, player } = game;
+  const type = CREATURES[kind];
   for (let tries = 0; tries < 20; tries++) {
     const angle = Math.random() * Math.PI * 2;
-    const distance = between(SPAWN_DISTANCE);
+    const distance = between(type.spawn || SPAWN_DISTANCE);
     const tx = Math.floor(player.x + Math.cos(angle) * distance);
     const ty = Math.floor(player.y + Math.sin(angle) * distance);
     if (!creatureCanStand(world, tx, ty) || inLight(fears, tx + 0.5, ty + 0.5, { fire: 1, torch: 1 })) continue;
+    if (type.lurks && !groundAt(world, tx, ty).tall) continue;
     game.creatures.push({
       kind,
       x: tx + 0.5,
       y: ty + 0.5,
       hp: CREATURES[kind].hp,
-      state: 'creep', // creep toward you, 'lunge' at you, 'run' away, 'claw' at a wall, or 'fade' at dawn
+      // creep toward you, 'lunge' at you, 'run' away, 'claw' at a wall, or 'fade' at dawn; one that
+      // lurks sits still ('lurk'), lunges, runs, then goes to 'hide' in the grass again
+      state: type.lurks ? 'lurk' : 'creep',
       timer: 0, // seconds left of a lunge or a run, or until the next scratch at a wall
       clawing: null, // the wall it's clawing at: { x, y, index, key }
+      den: null, // for one that lurks: the tile of long grass it's heading for, { x, y }
       fade: 0, // how solid it is, from 0 (not there) to 1
       stride: 0, // distance walked, for its walking pictures
       side: Math.random() < 0.5 ? -1 : 1, // which way it paces round a light
       blink: Math.random() * 10, // so they don't all blink together
       hurtAt: -Infinity,
     });
-    playSoundAt(game, CREATURES[kind].sound, tx + 0.5, ty + 0.5);
+    if (type.sound) playSoundAt(game, type.sound, tx + 0.5, ty + 0.5);
     if (!game.hunt.seen[kind]) {
       game.hunt.seen[kind] = true;
       showMessage(game, CREATURES[kind].seen);
@@ -206,7 +245,13 @@ function moveCreature(game, creature, dt, fears, night) {
   if (creature.state === 'run') {
     const from = light || player;
     moveAway(game, creature, from.x, from.y, RUN_SPEED * dt);
-    if (creature.timer <= 0) creature.state = 'creep';
+    if (creature.timer <= 0) creature.state = kind.lurks ? 'hide' : 'creep';
+  } else if (creature.state === 'lurk') {
+    // Sitting still in the long grass, watching. Come too close, with nothing in the way, and it springs.
+    const steps = stepsAt(Math.floor(creature.x), Math.floor(creature.y));
+    if (distance < SPRING_RANGE && steps >= 0 && steps <= 4) spring(game, creature);
+  } else if (creature.state === 'hide') {
+    hide(game, creature, dt);
   } else if (creature.state === 'lunge') {
     if (distance < BITE_REACH) {
       bite(game, creature);
@@ -266,6 +311,72 @@ function moveCreature(game, creature, dt, fears, night) {
     if (inLight(fears, creature.x + dx, creature.y + dy, kind.fear)) prowl(game, creature, dt, fears);
     else stepCreature(game, creature, dx, dy);
   }
+}
+
+// A lurker leaping out of the grass at you: a dart, like a shade's lunge, but faster and from further.
+function spring(game, creature) {
+  const kind = CREATURES[creature.kind];
+  creature.state = 'lunge';
+  creature.timer = LUNGE_SECONDS;
+  playSoundAt(game, kind.spring, creature.x, creature.y);
+  burst(game.fx, creature.x, creature.y, 'grass', 6);
+  if (!game.hunt.sprung) {
+    game.hunt.sprung = true;
+    showMessage(game, 'Something springs at you out of the long grass!');
+  }
+}
+
+// After a bite (or a hit, or a light chasing it off), a lurker slinks away to another patch of long
+// grass, well away from you, and sits down to wait again. If there's none nearby, or it can't get
+// there, it melts away into the dark (and another may come out somewhere else).
+function hide(game, creature, dt) {
+  const kind = CREATURES[creature.kind];
+  if (!creature.den) {
+    creature.den = findDen(game, creature);
+    creature.timer = HIDE_SECONDS;
+    if (!creature.den) {
+      creature.state = 'fade';
+      return;
+    }
+  }
+  const den = creature.den;
+  const away = Math.hypot(den.x + 0.5 - creature.x, den.y + 0.5 - creature.y);
+  if (away < 0.25) {
+    creature.state = 'lurk';
+    creature.den = null;
+    return;
+  }
+  const way = towards(creature, den.x + 0.5, den.y + 0.5);
+  const step = Math.min(away, kind.speed * dt);
+  if (!stepCreature(game, creature, way.x * step, way.y * step) || creature.timer <= 0) {
+    // Stuck on something, or it's taking too long: if it's in long grass already, it waits here.
+    const here = groundAt(game.world, Math.floor(creature.x), Math.floor(creature.y));
+    creature.state = here && here.tall ? 'lurk' : 'fade';
+    creature.den = null;
+  }
+}
+
+// The nearest tile of long grass a lurker could hide in: within DEN_REACH of it, at least DEN_AWAY
+// from you, and somewhere it can stand. Returns { x, y } or null.
+function findDen(game, creature) {
+  const { world, player } = game;
+  const cx = Math.floor(creature.x);
+  const cy = Math.floor(creature.y);
+  let best = null;
+  let bestDistance = Infinity;
+  for (let ty = cy - DEN_REACH; ty <= cy + DEN_REACH; ty++) {
+    for (let tx = cx - DEN_REACH; tx <= cx + DEN_REACH; tx++) {
+      const ground = groundAt(world, tx, ty);
+      if (!ground || !ground.tall || !creatureCanStand(world, tx, ty)) continue;
+      if (Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DEN_AWAY) continue;
+      const distance = Math.hypot(tx + 0.5 - creature.x, ty + 0.5 - creature.y);
+      if (distance < bestDistance) {
+        best = { x: tx, y: ty };
+        bestDistance = distance;
+      }
+    }
+  }
+  return best;
 }
 
 // A wall or door right in front of a creature, on its way to you, that it could claw down: one with
@@ -417,8 +528,9 @@ function keepApart(game, fears) {
   }
 }
 
-// Whether its eyes are open right now: they blink every few seconds.
+// Whether its eyes are open right now: they blink every few seconds, unless it's one that stares.
 function eyesOpen(game, creature) {
+  if (CREATURES[creature.kind].eyes.stare) return true;
   return (game.time + creature.blink) % 3.7 > EYE_BLINK_SECONDS;
 }
 

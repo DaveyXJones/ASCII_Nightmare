@@ -230,6 +230,14 @@ function useTarget(game) {
     lightTorch(game, target);
     return;
   }
+  if (target.object.relight) {
+    relightFire(game, target);
+    return;
+  }
+  if (target.object.chest) {
+    openChest(game, target.y * world.width + target.x);
+    return;
+  }
 
   const object = target.object;
   const index = target.y * world.width + target.x;
@@ -319,6 +327,7 @@ const BURSTS = {
   spark: { glyphs: ['*', '·', '\'', '°'], colors: ['#ffd75e', '#ff8a2a', '#a3a69e'] },
   fluff: { glyphs: ['°', '·', '\'', '˚'], colors: ['#f6f2e6', '#cdc6b6'] },
   shadow: { glyphs: ['░', '▒', '·', '°'], colors: ['#5a4870', '#3b2d4a', '#2a1d36'] },
+  steam: { glyphs: ['°', '˚', '·', '\''], colors: ['#d8dde2', '#a9b0b6'] }, // rain hissing on a fire
   // Footsteps (see `step` in tiles.js).
   dust: { glyphs: ['.', '·', ','], colors: ['#b08e60', '#8f7552'] },
   sand: { glyphs: ['.', '·', ','], colors: ['#c9b27a', '#a8915c'] },

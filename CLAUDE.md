@@ -89,8 +89,9 @@ of which they may want changed:
 - **More to craft**: a stone pick (`TOOLS.pick`, `power: { Mine: 2 }`, held as `⌐`/`¬`); a wooden
   door (`woodDoor`, see below); cooked berries (`RECIPES.cook`, 2 berries → 1 `cooked`: 30 food and
   10 health, only beside a campfire). The Eat button eats the item with the most `food` (`eat`,
-  `bestFood`). On short screens the craft cards lie on their side, three to a row, so all seven
-  fit on a 667×375 phone; keep card texts to about 40 characters so they stay on two lines.
+  `bestFood`). On short screens the craft cards are small and five to a row, with pictures capped
+  at `RECIPE_PICTURE_ROWS_SHORT` rows, so ten fit on a 667×375 phone; keep card texts to about 40
+  characters so they stay within three lines.
 - **More in the dark**: brutes (`CREATURES.brute`): slow, 6 hp, bite 18, one amber eye, `fear: {
   fire: 0.8, torch: 0 }` so the torch doesn't stop them, out from 150 s into the no-moon and second
   thin-moon nights. Shut-out creatures claw at walls and doors (`claw` state, `scratch`, `claws`
@@ -117,7 +118,84 @@ of which they may want changed:
 - **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
   "Draw only characters on the map", so it waits for the owner's say. **Not built: multiplayer**:
   it needs a server, and GitHub Pages only hosts files, so it needs the owner to choose a host.
-  Rain was in the sound item but needs weather first; README's "What's next" now lists that.
+  Rain was in the sound item but needs weather first; that came with the next list (below).
+
+The owner then asked to "work on the Whats next" again (2026-10-31): items 2 to 4 of the new list
+(weather, lurkers, chest and bedroll) were built, each its own commit, in the sections below. The
+outline and multiplayer still wait on the owner. README's "What's next" now lists a map, fishing
+and lamps as Claude's suggestions between them.
+
+## Weather (built 2026-10-31)
+
+Item 2 of the second "What's next" list ("Clouds that roll in, rain drawn as falling characters,
+and the sound of it. Rain could put out campfires, so a roof starts to matter"). The owner said
+"lets work on the Whats next" with no further spec; everything below is Claude's design, tunable in
+the constants at the top of js/weather.js:
+
+- **Deterministic, like the moon**: `weatherAt(clock, seed)` is 2-octave `fractalNoise` along the
+  clock (`WEATHER_SECONDS` = 240 per unit) mapped through `CLOUDS_FROM`/`OVERCAST_AT` (cloud) and
+  `RAIN_FROM`/`POURING_AT` (rain); `storm` is rain above `STORM_FROM`. Simulated over 20 cycles on
+  four seeds: rain about 16% of the time, about one spell per day-night cycle, 2 to 4 minutes long;
+  storms about 9%. The first day (`DRY_SECONDS`) is dry. Nothing about the weather is saved.
+- **Grey light**: `skyAt` (night.js) folds cloud in: cloud hides the moon (`CLOUD_HIDES_MOON`), and
+  a grey veil (`OVERCAST_DIM`, `OVERCAST_COLOR`) is laid over day or night. `sky.darkness` includes
+  it; `sky.gloom` is the darkness without it (the "eyes" light only shows in gloom).
+- **Cloud shadows** drift with `sky.weather.wind` when the sky is patchy (strongest at half cover):
+  a 64×64 tileable noise picture (`makeCloudPicture`), one pixel per tile, stretched smooth onto the
+  night canvas before the lights are cut out (`drawCloudShadows`).
+- **Rain** (`stepRain`, `drawRain` in render.js): world-anchored drops falling 4 to 10 rows to a
+  ground spot, bold `\`/`/` (by wind) and `'`, about `RAIN_DROPS` per visible tile; some splash
+  into `fx.particles` (`°` on water). On the cottage they land on the roof (`WALL_ROWS` up); with you
+  inside none fall there and drawing is clipped off the house. Drawn after the standing pass and
+  before the night layer, so at night you only see rain in the light. Frozen under reduced motion.
+  Pouring rain is about 240 extra glyph draws (all from the atlas, same alpha, so they batch).
+- **Storms**: lightning at random (`LIGHTNING_EVERY` at full storm) sets `state.weather.flashAt`;
+  `lightningAt` gives a double flash that takes most of the dark away and washes the screen white
+  (`FLASH_LIGHTS`, `FLASH_WASH`), off under reduced motion. Thunder follows after `THUNDER_DELAY`.
+- **Fires**: objects with `doused` (the campfire) soak up rain once a second in `soakFires`
+  (`world.soaked`, not saved) and become `campfireOut` after `DOUSE_SECONDS` of pouring rain; they
+  steam, and warn once past `SPUTTER_AT`. A cold campfire's action is **Light** (`relight`: 1 wood,
+  refused while `tooWetToLight`). The **Roof** recipe (`over: ['campfire', 'campfireOut']`, 4
+  wood) replaces either with `roofedFire`, which has no `doused`. A lit torch outdoors burns down
+  `TORCH_RAIN_BURN` faster in rain (never put out by it directly).
+- **Sound**: a second looping noise (`audio.rain`, highpass then lowpass, duller indoors), random
+  `patter` ticks, wind up in storms (`STORM_WIND`), `SOUNDS.thunder`; crickets and birds stop in
+  rain heavier than `QUIET_IN_RAIN` (so you lose the crickets' warning: lightning makes up for it).
+- **HUD**: by day the sky icon shows ☂ in rain and ☁ when overcast.
+
+## Lurkers (built 2026-10-31)
+
+Item 3 ("Lurkers that sit still in the tall grass, eyes open, and spring when you walk too close"),
+Claude's design: `CREATURES.lurker` with `lurks: true` comes out (`spawn: [7, 15]` tiles away) only
+on `tall` ground, in state `lurk`, drawn with its `crouched` sprite (2 rows; `drawGrassOver` puts
+the grass blades back over its lower row, and over every creature's and the player's feet). Its
+eyes are yellow-green and never blink (`eyes.stare`). Within `SPRING_RANGE` (2.4) and ≤ 4 steps it
+`spring`s: a `lunge` at 9 tiles/s with the `hiss` sound. After the bite and `run` it goes to `hide`:
+`findDen` picks the nearest tall grass within `DEN_REACH` that's at least `DEN_AWAY` from you; it
+walks there and lurks again, or fades out if there's none or it gets stuck (another may come out
+later). 2 hp, bite 10, `fear: { fire: 0.8, torch: 0 }` (the torch doesn't help; watch for eyes).
+Moons: none on the first half moon or the two brute nights; 1 on the first thin moon, 2 on the
+half and bright moons, 3 under the full moon, so bright nights have their own danger.
+
+## Chest and bedroll (built 2026-10-31)
+
+Item 4 ("A chest that keeps its contents when you die, and a bed to wake up beside"), Claude's
+design:
+
+- **Chest** (`RECIPES.chest`, 6 wood, `indoors: true`, so it's the one thing that can be built in
+  the cottage; `keepClear` refuses the doorway, the floor inside it and the spawn tile). The object
+  has `chest: true` and action **Open**: `useTarget` calls `openChest`, which pauses like the craft
+  panel. Contents live in `world.chests` (tile index → `{ items, tools }` counts), saved and
+  restored (`restoreChest`). Tapping a thing moves all of an item or one tool; **Put all in** moves
+  items only, **Take all out** items and tools you don't carry (you only ever carry one of each).
+  A torch put away goes out. **Take down** works only when empty (`CHEST_GIVES_BACK`). The action
+  button acts on `pointerdown`, and some phones deliver the lift of that touch to whatever is now
+  under the finger, so the panel ignores clicks until a `pointerdown` lands on it (`chestArmed`).
+- **Bedroll** (2 cloth, 1 wood): not solid, `bed: true`, action **Roll up** (gives the cloth back).
+  Building one sets `world.bed`; `wakeUp` puts you on `bedSpot(world)`: that tile if it still
+  holds a bed, else any other bed on the map, else the cottage. Nothing can be built over a bed. `world.bed` is saved.
+- **Quick taps**: a press of the action button sets `state.tapped`, which counts as held for one
+  update, so a tap shorter than a frame isn't lost (it was, before; Playwright's taps showed it).
 
 ## Hard rules
 
@@ -129,7 +207,7 @@ of which they may want changed:
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  render → input → sound → survival → crafting → creatures → save → game`. A file may use globals from files
+  weather → render → input → sound → survival → crafting → chest → creatures → save → game`. A file may use globals from files
   before it at load time, and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
@@ -146,15 +224,17 @@ of which they may want changed:
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built). |
-| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
-| `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left), `nextMorning`, `skyMessage`. No drawing. |
-| `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order. |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`. |
+| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`. |
+| `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
+| `js/weather.js` | `weatherAt(clock, seed)` (cloud, rain, storm, wind), `updateWeather` (rain messages, the torch in rain, lightning and thunder, `soakFires`), `relightFire`, `lightningAt`. No drawing. |
+| `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
-| `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, birds, crickets, crackle), `setSoundOn`. |
+| `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
-| `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
-| `js/creatures.js` | `CREATURES` (shade, brute), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
+| `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
+| `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
+| `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
@@ -171,8 +251,10 @@ of which they may want changed:
   small foot box (`FOOT_HALF_WIDTH`, `FOOT_HALF_DEPTH`), moving one axis at a time with corner
   slipping so thumbstick movement slides through doorways.
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
-- `world.original` is `objects` as generated (saving keeps only the differences); `damage` and
-  `clawed` are Maps of tile index to swings or scratches taken. **Anything new that should survive
+- `world.original` is `objects` as generated (saving keeps only the differences); `damage`,
+  `clawed` and `soaked` are Maps of tile index to swings, scratches or seconds of rain taken
+  (`setObject` clears all three, and `chests`; `soaked` isn't saved). `chests` holds what's in each
+  chest and `bed` the newest bedroll's tile; both are saved. **Anything new that should survive
   a reload** (a survivor field, a world Map) needs adding to `saveGame` and `loadGame`.
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
@@ -183,7 +265,9 @@ of which they may want changed:
   (`setupCrafting`), in table order, and number keys pick by that order. A recipe with `tool` puts
   a key in `survivor.tools` (lost on death, like the pack); one with `builds` starts build mode; one
   with `gives` adds items to the pack and keeps the panel open (`refreshCraft`). `byFire` recipes
-  need `survivor.warm` (beside a campfire), checked in `canMake`.
+  need `survivor.warm` (beside a campfire), checked in `canMake`. A `builds` recipe with `over` (the
+  roof) must be built onto one of those objects and replaces it, instead of going on clear ground.
+  Number keys: `1`–`9` then `0` for the tenth (input.js).
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
 - The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not
@@ -202,6 +286,7 @@ of which they may want changed:
   `torchWantsFire`, `findTarget` returns a `Light` target instead of the object's own action.
 - **Holding the action button keeps doing one thing** (`player.holding`): if the target's label
   changes under the thumb (Light becoming Put out), working stops until the button is released.
+  A press always counts for at least one update (`state.tapped`), however quick.
 
 ## Day and night (js/night.js)
 
@@ -225,7 +310,8 @@ of which they may want changed:
   when off the map and a wall with `claws` is `CLAW_REACH` ahead), `lunge` (dart straight at you;
   bite within `BITE_REACH`, then `run`), `run` (away from you or the light that caught it, for a
   time), `claw` (scratch every `CLAW_SECONDS` until the wall breaks or a way opens), `fade` (dawn:
-  back away while fading, then removed).
+  back away while fading, then removed). Kinds that `lurks` use `lurk` (sit still; `spring` into a
+  lunge) and `hide` (walk to a `den` of tall grass) instead of `creep`, and never claw.
 - **The map of steps** (`field`) is a breadth-first flood from the player's tile over a square of
   `FIELD_RADIUS`, through tiles where `creatureCanStand` (not solid, not inside the house), no
   diagonal squeezing between corners. Recomputed every `FIELD_SECONDS`; ~0.3 ms. If a creature's
@@ -284,7 +370,11 @@ of which they may want changed:
   dim `EYES_REACH` without one), objects with `light` within `LIGHT_REACH` of the screen (indoor
   ones only when you're inside), and the cottage's front windows from outside. Their reach
   flickers with `state.flameFrame`, so it holds still under reduced motion. Sun shadows fade with
-  the darkness (`drawShadows`).
+  the darkness (`drawShadows`). The same layer carries the weather: it also runs by day when it's
+  cloudy (the grey is part of `sky.darkness`), cloud shadows go on before the lights are cut, and
+  lightning (`lightningAt`) thins the dark and adds a white wash after the stretch.
+- **Rain** (`drawRain`) is drawn right after the standing pass, before `dimOutside`, the ghost and
+  the night layer; `stepRain` moves it each frame (from `frame()` in game.js, not while paused).
 
 ## Sprites (js/sprites.js)
 

@@ -2,7 +2,7 @@
 // simple tones, so there are no sound files to load and it works opened straight from disk.
 //
 // One-off sounds (a chop, a bite) are described in SOUNDS and played with playSound(). The sounds
-// of the place you're in (wind, birds by day, crickets at night, a campfire crackling) follow
+// of the place you're in (wind, rain, birds by day, crickets at night, a campfire crackling) follow
 // what's around you, in updateSound(), every frame.
 //
 // Browsers only let a page make sound after you've touched or clicked it, so nothing plays until
@@ -19,6 +19,11 @@ const CRICKET_HUSH = [4, 14]; // crickets fall silent when something from the da
 const BIRD_EVERY = [4, 11]; // seconds between birdsong by day
 const CRACKLE_REACH = 8; // how far, in tiles, you can hear a campfire crackle
 const HEAR_REACH = 30; // how far, in tiles, you can hear things out in the dark
+const RAIN_LOUDNESS = 0.3; // the hiss of pouring rain
+const RAIN_INDOORS = 0.5; // indoors, the rain on the roof is this much as loud, and duller
+const PATTER_PER_SECOND = 30; // drops you hear land close by each second in pouring rain
+const STORM_WIND = 1.2; // in a storm the wind is this much louder again
+const QUIET_IN_RAIN = 0.3; // rain heavier than this (0 to 1) quietens the crickets and birds
 
 // The one-off sounds. Each is made of up to two parts played together:
 //   noise   a burst of hiss through a filter: { seconds, filter, hz, q, to }. The filter is
@@ -84,6 +89,12 @@ const SOUNDS = {
     noise: { seconds: 1.5, filter: 'lowpass', hz: 240, to: 120 },
     tone: { seconds: 1.5, wave: 'sawtooth', hz: 52, to: 36 },
   },
+  hiss: {
+    volume: 2.4,
+    vary: 0.12,
+    noise: { seconds: 0.4, filter: 'bandpass', hz: 3200, q: 1.2, to: 5200 },
+    tone: { seconds: 0.25, wave: 'sawtooth', hz: 150, to: 240 },
+  },
   claw: { volume: 4.5, vary: 0.2, noise: { seconds: 0.2, filter: 'bandpass', hz: 2800, q: 3, to: 1700 } },
   crash: {
     volume: 1.4,
@@ -91,6 +102,12 @@ const SOUNDS = {
     tone: { seconds: 0.3, wave: 'triangle', hz: 130, to: 50 },
   },
   collapse: { volume: 0.85, tone: { seconds: 1.3, wave: 'sine', hz: 220, to: 50 } },
+  thunder: {
+    volume: 2.2,
+    vary: 0.2,
+    noise: { seconds: 3, filter: 'lowpass', hz: 420, to: 45 },
+    tone: { seconds: 2.2, wave: 'sine', hz: 55, to: 28 },
+  },
   // Footsteps, by what the ground kicks up (`step` in tiles.js); 'floor' is for indoors.
   'step:grass': { volume: 0.24, vary: 0.2, noise: { seconds: 0.05, filter: 'highpass', hz: 2000 } },
   'step:sand': { volume: 0.65, vary: 0.2, noise: { seconds: 0.07, filter: 'bandpass', hz: 1300, q: 0.8 } },
@@ -108,10 +125,12 @@ const audio = {
   out: null, // everything plays into this: the overall volume
   noise: null, // two seconds of hiss, shared by every sound made from noise
   wind: null, // the wind, playing all the time: { filter, gain }
+  rain: null, // the hiss of rain, playing all the time and turned up when it rains: { filter, gain }
   on: true, // the player's choice, from the menu
   nextCricket: 0, // when the next cricket, bird and crackle come, in seconds of play
   nextBird: 0,
   nextCrackle: 0,
+  lastAt: 0, // the sound maker's clock last frame, in seconds
 };
 
 // Called once at startup: remembers whether sound was on, and listens for the first tap.
@@ -167,17 +186,30 @@ function makeSoundParts() {
   const samples = audio.noise.getChannelData(0);
   for (let n = 0; n < length; n++) samples[n] = Math.random() * 2 - 1;
 
+  audio.wind = loopNoise('lowpass', 400);
+  audio.rain = loopNoise('lowpass', 5000);
+  audio.rain.hiss = ctx.createBiquadFilter(); // rain is mostly the high part of the hiss
+  audio.rain.hiss.type = 'highpass';
+  audio.rain.hiss.frequency.value = 700;
+  audio.rain.filter.disconnect();
+  audio.rain.filter.connect(audio.rain.hiss).connect(audio.rain.gain);
+}
+
+// Hiss playing round and round through a filter, silent until it's turned up: { filter, gain }.
+// Each starts at a different place in the noise so the wind and the rain don't hiss in step.
+function loopNoise(type, hz) {
+  const ctx = audio.ctx;
   const source = ctx.createBufferSource();
   source.buffer = audio.noise;
   source.loop = true;
   const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 400;
+  filter.type = type;
+  filter.frequency.value = hz;
   const gain = ctx.createGain();
   gain.gain.value = 0;
   source.connect(filter).connect(gain).connect(audio.out);
-  source.start();
-  audio.wind = { filter, gain };
+  source.start(0, Math.random() * 2);
+  return { filter, gain };
 }
 
 function soundReady() {
@@ -260,16 +292,27 @@ function updateSound(game, playing) {
   const now = audio.ctx.currentTime;
   const indoors = insideHouse(world, Math.floor(player.x), Math.floor(player.y));
 
-  // The wind gusts (smooth noise over time), louder at night and muffled indoors.
+  // The wind gusts (smooth noise over time), louder at night and in a storm, and muffled indoors.
+  const { rain, storm } = sky.weather;
   const gust = fractalNoise(game.time / 5, 0, 911, 2);
   const dark = Math.min(1, sky.darkness / MOONLIT);
-  const wind = (WIND_DAY + (WIND_NIGHT - WIND_DAY) * dark) * (0.4 + gust) * (indoors ? WIND_INDOORS : 1);
+  const wind = (WIND_DAY + (WIND_NIGHT - WIND_DAY) * dark) * (0.4 + gust) * (1 + STORM_WIND * storm) *
+    (indoors ? WIND_INDOORS : 1);
   audio.wind.gain.gain.setTargetAtTime(playing ? wind : 0, now, 0.4);
   audio.wind.filter.frequency.setTargetAtTime(250 + 600 * gust, now, 0.4);
+  // The rain: a steady hiss outdoors, a dull drumming on the roof indoors.
+  const rainLoudness = RAIN_LOUDNESS * rain * (indoors ? RAIN_INDOORS : 1);
+  audio.rain.gain.gain.setTargetAtTime(playing ? rainLoudness : 0, now, 0.6);
+  audio.rain.filter.frequency.setTargetAtTime(indoors ? 1100 : 5000, now, 0.3);
   if (!playing) return;
 
-  // Crickets sing at night, and fall silent when something from the dark comes close.
-  if (sky.phase === 'night' && game.time >= audio.nextCricket) {
+  // Drops landing close by, one here and one there: on average PATTER_PER_SECOND of them in a downpour.
+  const since = Math.min(0.1, now - audio.lastAt);
+  audio.lastAt = now;
+  if (!indoors && rain > 0 && Math.random() < rain * PATTER_PER_SECOND * since) patter(rain);
+
+  // Crickets sing at night, and fall silent when something from the dark comes close, or in the rain.
+  if (sky.phase === 'night' && rain < QUIET_IN_RAIN && game.time >= audio.nextCricket) {
     audio.nextCricket = game.time + between(CRICKET_EVERY);
     let nearest = Infinity;
     for (const creature of game.creatures) {
@@ -281,7 +324,7 @@ function updateSound(game, playing) {
   }
 
   // Birds by day, outdoors.
-  if (sky.phase === 'day' && !indoors && game.time >= audio.nextBird) {
+  if (sky.phase === 'day' && !indoors && rain < QUIET_IN_RAIN && game.time >= audio.nextBird) {
     audio.nextBird = game.time + between(BIRD_EVERY);
     tweet();
   }
@@ -352,6 +395,22 @@ function tweet() {
     oscillator.start(at);
     oscillator.stop(at + 0.12);
   }
+}
+
+// One raindrop landing nearby: a tiny tick of high hiss, from somewhere to one side.
+function patter(rain) {
+  const ctx = audio.ctx;
+  const start = ctx.currentTime;
+  const source = ctx.createBufferSource();
+  source.buffer = audio.noise;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 2500 + Math.random() * 4000;
+  filter.Q.value = 2;
+  const out = withPan(ctx.createGain(), Math.random() * 2 - 1);
+  out.gain.value = (0.12 + Math.random() * 0.2) * rain;
+  source.connect(filter).connect(envelope(start, 0.015 + Math.random() * 0.02)).connect(out);
+  source.start(start, Math.random() * 1.5, 0.05);
 }
 
 // One pop from a fire.

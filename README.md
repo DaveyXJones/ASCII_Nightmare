@@ -33,7 +33,8 @@ Next time, **Carry on** picks up where you left off: the same island, everything
 built, your pack, and the time of day. It's saved in that browser on that phone only, and private
 browsing or clearing the browser's data forgets it. **New world** asks for a second tap before it
 throws your island away. If you die, the island stays as you left it and you wake up the next
-morning with an empty pack.
+morning with an empty pack (in the cottage, or on your bedroll if you've made one), and anything
+you put in a chest is still there.
 
 GitHub Pages publishes the `main` branch there for free. Anything pushed to `main` shows up at that
 address within a couple of minutes (reload the page, or close and reopen the home-screen icon).
@@ -57,9 +58,9 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**. Hold it to keep going | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
-| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `7` |
+| Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9` and `0` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
 | Menu | ☰ in the top right | `Esc` |
 
@@ -101,8 +102,11 @@ something you can afford.
 | **Stone pick** | 2 wood, 3 stone | Boulders break in half the swings. You lose it if you die. |
 | **Torch** | 2 wood, 1 cloth | Light it at a campfire to see in the dark (below). You lose it if you die. |
 | **Campfire** | 4 wood, 3 stone | Stand beside it and your health comes back four times faster (the ♥ glows). |
+| **Roof** | 4 wood | Build it over a campfire and rain can't put the fire out (see Weather, below). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
 | **Wooden door** | 3 wood | Set it in a line of wall. It swings open as you walk up and shuts behind you; shades can't open it. |
+| **Chest** | 6 wood | Keeps whatever you put in it, even when you die. It can go inside the cottage. |
+| **Bedroll** | 2 cloth, 1 wood | After you die, you wake up on it instead of in the cottage. |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
@@ -112,6 +116,19 @@ sideways, build again. Tap **Done** when you've finished.
 
 Changed your mind? Face the wall or door and **Break** it, or **Put out** the campfire, and you
 get the wood or stone back. Things you build stay in the world when you die.
+
+A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
+
+**Chests.** Face a chest and tap **Open**. Your pack is on the left, the chest on the right: tap
+something to move all of it across, or **Put all in** (everything but your tools) and **Take all
+out**. Tools go in one at a time, so your axe can wait at home for you; a torch put away goes out.
+The game pauses while the chest is open. Dying empties your pack, never a chest. A chest is the
+one thing you can build inside the cottage (anywhere but the doorway and the spot by the bed). To
+move it, empty it and tap **Take down** for some of the wood back.
+
+**Bedrolls.** You walk over a bedroll, and wake up on it after you die, so build one inside your
+fence by the fire. If you've made more than one, you wake on the newest (or another, if you've rolled that one up). Face it and **Roll up**
+to take it back.
 
 ## Night
 
@@ -135,6 +152,26 @@ runs low (the game warns you, and the torch in your pack turns red), and goes ou
 at any campfire. Once it's burnt halfway down a fire offers to top it up, so you can set out with a
 fresh one.
 
+## Weather
+
+Now and then clouds roll in. First their shadows drift across the island, then the whole sky
+turns grey and it starts to rain: drops slant down the screen and splash on the ground and the
+water, and you hear it drumming on the cottage roof. The heaviest rain comes with **thunder and
+lightning**, and at night a flash of lightning lights up the island for a moment, showing whatever
+is out there with you. It rains about once a day and night, for a few minutes. The first day of a
+new world stays dry. While it rains, the sun on the fourth bar turns into an umbrella ☂ (a cloud
+☁ when it's just grey).
+
+- **Rain puts out campfires.** A fire out in the open hisses and steams, and after about half a
+  minute of heavy rain it goes out, and its light with it, which matters at night. Face a cold
+  campfire and the button says **Light**: once the rain stops, a piece of wood gets it going again.
+- **A roof keeps it burning.** Craft a **Roof** and build it over the campfire (or over a cold
+  one, which lights it again). Rain can't touch a fire under a roof.
+- **Your torch** burns down twice as fast out in pouring rain, so get under the cottage roof or
+  keep a fire going.
+- In the rain the crickets stop singing, so you can't listen for things creeping up. Lightning
+  shows them instead.
+
 ## Things in the dark
 
 A little while after nightfall, **shades** come out: hunched shadows with pointed ears and red
@@ -156,9 +193,15 @@ health) and back off to come again.
   minutes old, something bigger comes: a great shaggy shadow with one amber eye. It's slow, but
   **your torch doesn't scare it**, only a campfire's light does. It bites hard, claws through
   walls quickly, and takes six hits (three with the axe). Outrun it to a fire, or the cottage.
+- **Lurkers.** On moonlit nights, something waits in the **long grass**: a low dark shape with
+  yellow-green eyes that never blink. It doesn't hunt you. It sits perfectly still, and when you
+  walk within a couple of steps it springs out and bites, then slinks off to wait in another patch
+  of grass. **A torch doesn't scare it**, so watch the grass for eyes and go round, or hit it (two
+  hits, one with the axe). It won't come into a campfire's light.
 - **The moon decides how many** can be out at once: two shades on the first night's half moon,
   three on a thin moon, three and a brute with no moon or the thin moon after it, one under a full
-  moon.
+  moon. Lurkers come on the brighter nights, when the fields feel safe: one on the first thin
+  moon, two on the half and bright moons, three under the full moon.
 - **At dawn** they back away and melt into what's left of the dark.
 
 If they get you, the screen says **The dark takes you.**
@@ -177,12 +220,14 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/objects.js` | The things standing on the map, and what the action button does to each one. |
 | `js/world.js` | Builds the island from two noise maps (elevation and moisture) and places the cottage. |
 | `js/night.js` | Day and night: how long each lasts, the moon, and how dark it gets. |
+| `js/weather.js` | Clouds, rain and storms: when they come, and rain putting out campfires. |
 | `js/render.js` | Draws the world in the three-quarter view, fast enough for a phone. |
 | `js/input.js` | The thumbstick, the buttons, and the keyboard. |
 | `js/sound.js` | Every sound, made by the browser on the spot, so there are no sound files. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
-| `js/creatures.js` | The shades and brutes: when they come out, how they find you, what scares them off. |
+| `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
+| `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
 | `js/save.js` | What the game remembers between visits: your island, your pack, your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
 | `fonts/` | DejaVu Sans Mono, so every phone draws the same characters. |
@@ -210,6 +255,8 @@ run straight from the file.
   `js/survival.js` and the pack in `index.html`.
 - **The cottage.** It's drawn as text in `COTTAGE` at the top of `js/world.js`: move the bed, add
   furniture, or make it bigger.
+- **What things cost.** `cost` on each recipe in `RECIPES` (`js/crafting.js`). What an empty chest
+  gives back is `CHEST_GIVES_BACK` at the top of `js/chest.js`.
 - **A new recipe.** Add it to `RECIPES` in `js/crafting.js` and it gets its own card. A tool goes in
   `TOOLS` (look at the pick: `power: { Mine: 2 }` makes each swing count twice) and needs a slot in
   the pack in `index.html` like the axe's. To make something you build, draw it in `SPRITES`,
@@ -222,6 +269,10 @@ run straight from the file.
 - **Day and night.** `DAY_SECONDS` and `NIGHT_SECONDS` at the top of `js/night.js` (set
   `DAY_SECONDS` to 30 to see the night straight away). `DARKEST` is how black a moonless night
   gets, and `MOONS` is the moon's shape for each night, in order: add, remove or reorder them.
+- **Weather.** The numbers at the top of `js/weather.js`: `WEATHER_SECONDS` is about how long a
+  spell of weather lasts; lower `RAIN_FROM` and it rains more often; `DOUSE_SECONDS` is how long a
+  campfire lasts in the rain. How the rain looks (how many drops, how fast, their colors) is
+  `RAIN_DROPS` and its neighbours at the top of `js/render.js`.
 - **The torch.** `burns` (seconds) and `light` (how far it reaches, in tiles) on the torch in
   `TOOLS` in `js/crafting.js`. A campfire's reach is `light` in `OBJECTS`; give anything a `light`
   and it glows at night.
@@ -230,7 +281,8 @@ run straight from the file.
   (`fear`), how hard it claws at walls. The numbers under it say when they come out and how far
   off. How many of each come out each night is `creatures` on each moon in `MOONS`
   (`js/night.js`). How many scratches a wall or door takes is `claws` in `OBJECTS`. Redraw them as
-  `shade`/`shade2` and `brute`/`brute2` in `js/sprites.js`.
+  `shade`/`shade2`, `brute`/`brute2` and `lurker`/`lurker2`/`lurkerLow` (sitting in the grass) in
+  `js/sprites.js`. `SPRING_RANGE` is how close you can get to a lurker before it springs.
 - **Walking speed.** `WALK_SPEED` at the top of `js/game.js`.
 - **Sounds.** `SOUNDS` in `js/sound.js` describes each one as a burst of hiss through a filter
   and/or a tone that slides in pitch. Change the numbers to make a chop deeper or a bite harsher;
@@ -239,18 +291,20 @@ run straight from the file.
 
 ## What's next
 
-Done lately: choosing your look, flashing when hurt and falling when you die, the stone pick,
-doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
+Done lately: weather (clouds, rain, storms, and roofs to keep campfires burning), lurkers in the
+long grass, chests, and bedrolls. Before that: your look, flashing when hurt and falling when you
+die, the stone pick, doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
 
 Roughly in order:
 
 1. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
    rule that the map is drawn only in characters, so it's waiting for a yes or no.
-2. **Weather.** Clouds that roll in, rain drawn as falling characters, and the sound of it. Rain
-   could put out campfires, so a roof starts to matter.
-3. **More in the dark.** Lurkers that sit still in the tall grass, eyes open, and spring when you
-   walk too close.
-4. **More to craft.** A chest that keeps its contents when you die, and a bed to wake up beside.
+2. **A map.** The island is big. A map of where you've been, drawn in characters like everything
+   else, with your fires, chests and bedroll marked on it.
+3. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
+   berries to cook at the fire.
+4. **Lamps.** A light you can build that isn't a campfire: a lantern on a post, burning cloth, that
+   keeps the dark back from your fence and has to be filled now and then.
 5. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
    and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a
    small server running somewhere else.

@@ -50,6 +50,17 @@ const EYES_STRENGTH = 0.5; // ...but only dimly: how much of the dark your eyes 
 const FLICKER = 0.06; // how much a flame's light wavers, as a share of how far it reaches
 const WINDOW_INSET = 3; // the cottage's front windows start this many characters in from each corner
 const WINDOW_REACH = 1.6; // how far the lamplight from each window spills at night, in tiles
+const CLOUD_SHADOW = 0.38; // how dark the shadows of passing clouds are, at their darkest
+const CLOUD_TILES = 64; // the cloud shadows repeat every this many tiles (it's one small picture, tiled)
+const FLASH_LIGHTS = 0.9; // how much of the dark a flash of lightning takes away, from 0 to 1
+const FLASH_WASH = 0.16; // and how white it turns the whole picture for that moment
+const RAIN_DROPS = 0.18; // falling raindrops on the screen in pouring rain, per tile showing
+const RAIN_FALL_ROWS = [4, 10]; // how far each drop falls before it lands, in rows
+const RAIN_SPEED = 26; // how fast drops fall, in rows per second
+const RAIN_SLANT = 0.3; // how far a drop blows sideways as it falls, compared to how far it falls
+const RAIN_SPLASH = 0.35; // how many of the drops that land make a splash, from 0 to 1
+const RAIN_ALPHA = 0.85; // how solid the rain looks
+const RAIN_COLORS = ['#b4c8dc', '#d6e2ee', '#9fb6cc'];
 // The furthest any object's light reaches, in tiles, so lights just off the screen still shine in.
 const LIGHT_REACH = Math.ceil(Math.max(0, ...Object.values(OBJECTS).map((object) => object.light || 0)));
 
@@ -280,17 +291,21 @@ function screenY(tileY) {
 
 // ---- The frame ----
 
-function drawFrame(game) {
-  const { world, player } = game;
-  const ctx = view.ctx;
-  const inside = insideHouse(world, Math.floor(player.x), Math.floor(player.y));
-
-  const range = {
+// The tiles the screen shows: { left, right, top, bottom }.
+function screenRange() {
+  return {
     left: Math.floor(-view.originX / view.tw),
     right: Math.ceil((view.width - view.originX) / view.tw),
     top: Math.floor(-view.originY / view.th),
     bottom: Math.ceil((view.height - view.originY) / view.th),
   };
+}
+
+function drawFrame(game) {
+  const { world, player } = game;
+  const ctx = view.ctx;
+  const inside = insideHouse(world, Math.floor(player.x), Math.floor(player.y));
+  const range = screenRange();
 
   ctx.globalAlpha = 1;
   updateGroundCache(game, range);
@@ -298,6 +313,7 @@ function drawFrame(game) {
 
   drawShadows(game, range, inside);
   drawStanding(game, range, inside);
+  drawRain(world.house, inside);
 
   if (inside) dimOutside(world.house);
   if (view.playerCovered) drawPlayer(game, 0.4);
@@ -843,10 +859,15 @@ function drawPlayer(game, alpha) {
 
   view.playerBox = { x0: left, y0: top, x1: left + image.width, y1: top + image.height };
   markCover(left, top, left + image.width, top + image.height);
-  // Tall grass in front of the player's feet is drawn again over them, so they wade through it.
-  const footRow = Math.floor(player.y);
+  drawGrassOver(world, player.x, player.y);
+}
+
+// Tall grass in front of someone's feet at (x, y) is drawn again over them, so they wade through
+// it, and something crouching in it is half hidden.
+function drawGrassOver(world, x, y) {
+  const footRow = Math.floor(y);
   for (let ty = footRow; ty <= footRow + 1; ty++) {
-    for (let tx = Math.floor(player.x - 1); tx <= Math.floor(player.x + 1); tx++) {
+    for (let tx = Math.floor(x - 1); tx <= Math.floor(x + 1); tx++) {
       const tile = groundAt(world, tx, ty);
       if (!tile || !tile.tall) continue;
       const v = world.variants[ty * world.width + tx];
@@ -884,11 +905,12 @@ function noteDrawn(x0, y0, x1, y1) {
 // ---- Creatures ----
 
 // A creature (see creatures.js) standing at its feet, like the player: faded in or out as it comes
-// out of the dark, and shaken for a moment when it's hit.
+// out of the dark, shaken for a moment when it's hit, and crouched low while it lurks.
 function drawCreature(game, creature) {
   const kind = CREATURES[creature.kind];
   const frame = Math.floor(creature.stride / CREATURE_FRAME_TILES) % kind.frames.length;
-  const image = spriteImage(SPRITES[kind.frames[frame]]);
+  const crouched = creature.state === 'lurk' && kind.crouched;
+  const image = spriteImage(SPRITES[crouched || kind.frames[frame]]);
   const hit = game.time - creature.hurtAt < 0.18;
   const shake = hit ? Math.round(Math.sin(game.time * 70) * view.cw * 0.2) : 0;
   const left = Math.round(screenX(creature.x) - image.width / 2) + shake;
@@ -897,6 +919,7 @@ function drawCreature(game, creature) {
   view.ctx.drawImage(image, left, top);
   view.ctx.globalAlpha = 1;
   noteDrawn(left, top, left + image.width, top + image.height);
+  drawGrassOver(game.world, creature.x, creature.y);
 
   // Where its eyes are, to draw them again above the dark (see drawEyes()).
   const cells = kind.eyes.cells;
@@ -935,12 +958,14 @@ const night = {
   ctx: null,
   cut: null, // the soft round brush that rubs the dark away
   glow: null, // the same shape in firelight orange, laid back over the light from flames
+  clouds: null, // the shadows of clouds, one pixel per tile, drifting over the island (see weather.js)
   lights: [], // the lights this frame, from findLights()
 };
 
 function makeNightLayer() {
   Object.assign(night, makeCanvas(Math.ceil(view.width / NIGHT_SCALE), Math.ceil(view.height / NIGHT_SCALE)));
   if (night.cut) return;
+  night.clouds = makeCloudPicture();
   // Fully clear in the middle, fading out to nothing at the edge.
   night.cut = makeBrush([[0, 'rgba(0, 0, 0, 1)'], [0.5, 'rgba(0, 0, 0, 0.94)'], [0.8, 'rgba(0, 0, 0, 0.5)'],
     [1, 'rgba(0, 0, 0, 0)']]);
@@ -959,18 +984,26 @@ function makeBrush(stops) {
   return canvas;
 }
 
+// The same picture also carries the weather: the grey of a cloudy day is part of the sky's darkness,
+// the shadows of passing clouds are laid on before the lights are rubbed out, and a flash of
+// lightning takes most of the dark away for a moment.
 function drawNight(game, range, inside) {
   const sky = game.sky;
-  if (sky.darkness <= 0) return;
+  const cloud = sky.weather.cloud;
+  const shadows = CLOUD_SHADOW * Math.min(1, cloud * (1 - cloud) * 4); // patchy sky: most shadows
+  const flash = lightningAt(game);
+  const darkness = sky.darkness * (1 - FLASH_LIGHTS * flash);
+  if (darkness <= 0 && shadows <= 0) return;
   const { canvas, ctx } = night;
   const lights = findLights(game, range, inside);
 
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.globalAlpha = sky.darkness;
+  ctx.globalAlpha = darkness;
   ctx.fillStyle = sky.color;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (shadows > 0) drawCloudShadows(game, range, shadows * (1 - flash));
 
   ctx.globalCompositeOperation = 'destination-out';
   for (const light of lights) paintLight(night.cut, light, light.strength);
@@ -984,6 +1017,60 @@ function drawNight(game, range, inside) {
   view.ctx.imageSmoothingEnabled = false;
   view.ctx.drawImage(canvas, 0, 0, canvas.width * NIGHT_SCALE, canvas.height * NIGHT_SCALE);
   view.ctx.imageSmoothingEnabled = true;
+  if (flash > 0) {
+    view.ctx.globalAlpha = FLASH_WASH * flash;
+    view.ctx.fillStyle = '#e4ecff';
+    view.ctx.fillRect(0, 0, view.width, view.height);
+    view.ctx.globalAlpha = 1;
+  }
+}
+
+// Soft shadows of clouds blowing across the island. The picture is tiny (one pixel per tile) and
+// is stretched smooth, so the shadows have soft edges; it repeats every CLOUD_TILES tiles.
+function drawCloudShadows(game, range, alpha) {
+  const ctx = night.ctx;
+  const size = CLOUD_TILES;
+  const drift = game.dayClock * CLOUD_DRIFT;
+  const originX = drift * game.sky.weather.wind;
+  const originY = drift * 0.4;
+  const width = (size * view.tw) / NIGHT_SCALE;
+  const height = (size * view.th) / NIGHT_SCALE;
+  const firstX = originX + Math.floor((range.left - originX) / size) * size;
+  const firstY = originY + Math.floor((range.top - originY) / size) * size;
+  ctx.globalAlpha = alpha;
+  for (let tx = firstX; tx < range.right; tx += size) {
+    for (let ty = firstY; ty < range.bottom; ty += size) {
+      ctx.drawImage(night.clouds, screenX(tx) / NIGHT_SCALE, screenY(ty) / NIGHT_SCALE, width, height);
+    }
+  }
+}
+
+// Blobs of shadow, made once: smooth noise that wraps round at the edges, so copies of the picture
+// laid side by side join up without a seam.
+function makeCloudPicture() {
+  const size = CLOUD_TILES;
+  const { canvas, ctx } = makeCanvas(size, size);
+  const picture = ctx.createImageData(size, size);
+  // Value noise on a grid of `cells` across the picture, whose far edge wraps back to the near one.
+  const wrapped = (x, y, cells, seed) => {
+    const gx = (x / size) * cells;
+    const gy = (y / size) * cells;
+    const x0 = Math.floor(gx);
+    const y0 = Math.floor(gy);
+    const at = (i, j) => hash2(i % cells, j % cells, seed);
+    const sx = smoothstep(gx - x0);
+    const sy = smoothstep(gy - y0);
+    return lerp(lerp(at(x0, y0), at(x0 + 1, y0), sx), lerp(at(x0, y0 + 1), at(x0 + 1, y0 + 1), sx), sy);
+  };
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const n = wrapped(x, y, 5, 61) * 0.65 + wrapped(x, y, 10, 62) * 0.35;
+      const p = (y * size + x) * 4;
+      picture.data.set([6, 10, 20, Math.round(smoothstep(clamp01((n - 0.47) / 0.2)) * 255)], p);
+    }
+  }
+  ctx.putImageData(picture, 0, 0);
+  return canvas;
 }
 
 // Lays a brush over the dark around a light. Tiles are wider than they are tall, so the light is
@@ -1005,12 +1092,15 @@ function findLights(game, range, inside) {
   const lights = night.lights;
   lights.length = 0;
 
-  // Your torch, held up at about chest height. Without one, your eyes still pick out a little.
+  // Your torch, held up at about chest height. Without one, your eyes still pick out a little at
+  // night (but not through the grey of a cloudy day: that isn't dark enough to need it).
   const torch = torchReach(survivor);
+  const sky = game.sky;
   if (torch > 0) {
     lights.push({ x: player.x, y: player.y - 1, reach: torch * flicker(game, 0), strength: 1, warm: true });
-  } else {
-    lights.push({ x: player.x, y: player.y - 1, reach: EYES_REACH, strength: EYES_STRENGTH, warm: false });
+  } else if (sky.gloom > 0) {
+    const strength = EYES_STRENGTH * (sky.gloom / sky.darkness);
+    lights.push({ x: player.x, y: player.y - 1, reach: EYES_REACH, strength, warm: false });
   }
 
   const left = Math.max(0, range.left - LIGHT_REACH);
@@ -1044,6 +1134,100 @@ function findLights(game, range, inside) {
 // still when motion is turned down (the flame counter stops then).
 function flicker(game, seed) {
   return 1 + FLICKER * (hash2(game.flameFrame, seed, 99) * 2 - 1);
+}
+
+// ---- Rain ----
+
+// Raindrops are characters falling down the screen, each toward a spot on the ground (in tiles, so
+// they stay put as the camera moves). One that lands might splash, and another starts falling
+// somewhere else. How many there are follows how hard it's raining (weatherAt() in weather.js).
+const rain = { drops: [] };
+
+// Moves the rain on by `dt` seconds. Called every frame before drawing.
+function stepRain(game, dt) {
+  const { weather } = game.sky;
+  const drops = rain.drops;
+  const range = screenRange();
+  const tiles = (range.right - range.left + 1) * (range.bottom - range.top + 1);
+  const wanted = Math.round(weather.rain * RAIN_DROPS * tiles);
+  const fall = reducedMotion.matches ? 0 : RAIN_SPEED * dt; // with motion turned down, rain hangs still
+  const drift = (fall * RAIN_SLANT * weather.wind * view.th) / view.tw;
+  for (let n = drops.length - 1; n >= 0; n--) {
+    const drop = drops[n];
+    drop.z -= fall;
+    drop.x += drift;
+    const offScreen = drop.x < range.left - 3 || drop.x > range.right + 3 || drop.y < range.top ||
+      drop.y > range.bottom + RAIN_FALL_ROWS[1];
+    if (drop.z > drop.land && !offScreen) continue;
+    if (!offScreen && Math.random() < RAIN_SPLASH) splash(game, drop);
+    if (drops.length > wanted) drops.splice(n, 1);
+    else drops[n] = newDrop(game, range, weather, false);
+  }
+  while (drops.length < wanted) drops.push(newDrop(game, range, weather, true));
+}
+
+// A drop starting to fall toward a spot on the screen (or just below it, since it falls from higher
+// up). `anywhere` starts it partway down, for when the rain is just starting. On the cottage, drops
+// land on the roof, which stands WALL_ROWS high; with you inside, none fall in the cottage at all.
+function newDrop(game, range, weather, anywhere) {
+  const { world, player } = game;
+  const inside = insideHouse(world, Math.floor(player.x), Math.floor(player.y));
+  let x = 0;
+  let y = 0;
+  for (let tries = 0; tries < 4; tries++) {
+    x = range.left - 2 + Math.random() * (range.right - range.left + 4);
+    y = range.top + Math.random() * (range.bottom - range.top + RAIN_FALL_ROWS[1]);
+    if (!inside || !insideHouse(world, Math.floor(x), Math.floor(y))) break;
+  }
+  const land = !inside && insideHouse(world, Math.floor(x), Math.floor(y)) ? WALL_ROWS : 0;
+  const height = between(RAIN_FALL_ROWS);
+  return {
+    x,
+    y,
+    land,
+    z: land + (anywhere ? Math.random() * height : height),
+    glyph: Math.random() < 0.55 ? (weather.wind < 0 ? '/' : '\\') : '\'',
+    color: RAIN_COLORS[Math.floor(Math.random() * RAIN_COLORS.length)],
+  };
+}
+
+// A drop hitting the ground: a speck that hops up, or a ring on water.
+function splash(game, drop) {
+  const ground = groundAt(game.world, Math.floor(drop.x), Math.floor(drop.y));
+  const water = ground && ground.animated && drop.land === 0;
+  game.fx.particles.push({
+    x: drop.x,
+    y: drop.y,
+    z: drop.land,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: 0,
+    vz: water ? 0 : 1.2,
+    glyph: water ? '°' : Math.random() < 0.5 ? ',' : '.',
+    color: water ? '#b8dcf8' : '#b3c4d6',
+    life: 0.18,
+  });
+}
+
+// The drops, over everything standing. Indoors, none are drawn over the cottage, so it stays dry.
+function drawRain(house, inside) {
+  if (rain.drops.length === 0) return;
+  const ctx = view.ctx;
+  ctx.save();
+  if (inside) {
+    ctx.beginPath();
+    ctx.rect(0, 0, view.width, view.height);
+    const x0 = screenX(house.left);
+    const y0 = screenY(house.top - WALL_ROWS);
+    ctx.rect(x0, y0, screenX(house.left + house.width) - x0, screenY(house.top + house.height) - y0);
+    ctx.clip('evenodd');
+  }
+  ctx.globalAlpha = RAIN_ALPHA;
+  for (const drop of rain.drops) {
+    const x = Math.round(screenX(drop.x) - view.cw / 2);
+    const y = Math.round(screenY(drop.y - drop.z) - view.th);
+    drawGlyph(ctx, drop.glyph, drop.color, x, y, true);
+  }
+  ctx.restore();
 }
 
 // ---- The Your look panel ----
