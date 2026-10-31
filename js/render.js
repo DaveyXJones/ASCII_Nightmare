@@ -524,7 +524,7 @@ function drawShadows(game, range, inside) {
     for (let tx = Math.max(0, range.left - 1); tx <= right; tx++) {
       const key = world.objects[ty * world.width + tx];
       if (!key) continue;
-      const shadow = SPRITES[OBJECTS[key].sprite].shadow;
+      const shadow = SPRITES[objectLook(world, OBJECTS[key], tx, ty).sprite].shadow;
       if (shadow) addShadow(tx + 0.5 + shadow * 0.08, ty + 0.75, shadow * 0.32, 0.42);
     }
   }
@@ -650,16 +650,18 @@ function drawStanding(game, range, inside) {
 
 // The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
 // tile starts at a different point so two fires side by side don't flicker in step. A door stands
-// open while you're beside it or in it, and a wall clawed halfway through shows the marks.
+// open while you're beside it or in it, and a wall clawed halfway through shows the marks. Walls
+// and doors in a fence running up the screen use their side-on pictures (objectLook in world.js).
 function objectSprite(game, object, tx, ty) {
   const { player, world } = game;
-  if (object.opens && Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DOOR_OPEN_REACH) {
-    return SPRITES[object.opens];
+  const look = objectLook(world, object, tx, ty);
+  if (look.opens && Math.hypot(tx + 0.5 - player.x, ty + 0.5 - player.y) < DOOR_OPEN_REACH) {
+    return SPRITES[look.opens];
   }
-  if (object.scarred && (world.clawed.get(ty * world.width + tx) || 0) >= object.claws / 2) {
-    return SPRITES[object.scarred];
+  if (look.scarred && (world.clawed.get(ty * world.width + tx) || 0) >= object.claws / 2) {
+    return SPRITES[look.scarred];
   }
-  if (!object.frames) return SPRITES[object.sprite];
+  if (!object.frames) return SPRITES[look.sprite];
   return SPRITES[object.frames[(game.flameFrame + ty * world.width + tx) % object.frames.length]];
 }
 
@@ -1287,12 +1289,13 @@ function drawTarget(target, time, color = TARGET_COLOR) {
 }
 
 // In build mode: a see-through copy of what you're building, standing where it would go, with
-// red brackets instead of yellow if it can't go there.
+// red brackets instead of yellow if it can't go there. A wall shows the picture it would have there,
+// joined up with the walls beside it.
 function drawBuildSpot(game) {
   const spot = game.buildSpot;
   const object = OBJECTS[RECIPES[game.building].builds];
   view.ctx.globalAlpha = spot.problem ? GHOST_ALPHA / 2 : GHOST_ALPHA;
-  drawSprite(SPRITES[object.sprite], spot.x, spot.y);
+  drawSprite(SPRITES[objectLook(game.world, object, spot.x, spot.y).sprite], spot.x, spot.y);
   view.ctx.globalAlpha = 1;
   drawTarget(spot, game.time, spot.problem ? BLOCKED_COLOR : TARGET_COLOR);
 }

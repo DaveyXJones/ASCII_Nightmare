@@ -206,7 +206,7 @@ when im trying to build walls there is no way to turn them and place them on the
 side, is that possible?" README's "What's next" lists these in this order; build them each as its
 own commit, like the lists before. Notes and suggestions (Claude's, not the owner's):
 
-1. **Walls.** Two problems, both real (checked in a screenshot): a line of `woodWall` running up
+1. **Walls.** (Built; see "Walls that join" below.) Two problems, both real (checked in a screenshot): a line of `woodWall` running up
    the screen draws as a stack of `▲▲` spikes, and since walking turns you (`turnToward`), you
    can't walk along a line building beside you. Suggested: (a) walls pick a picture from their
    neighbours, like the cottage's `║`/`═` in `drawGroundTile`: a side-on fence (posts and rails)
@@ -241,6 +241,22 @@ own commit, like the lists before. Notes and suggestions (Claude's, not the owne
 
 Multiplayer still waits on the owner choosing a server host.
 
+## Walls that join, and turning in build mode (built 2026-10-31)
+
+Item 1 of the owner's list, built as the notes above suggested:
+
+- **Joins**: objects with `fence: true` (wall, door) join up. `runsUpAndDown` (world.js) is true
+  for a piece with a fence above or below and none left or right; `objectLook` then returns its
+  `side` set (`{ sprite, opens, scarred }`) instead of the object's own pictures. `objectSprite`,
+  the shadows and the build ghost all go through `objectLook`. Corners and T-joins keep the
+  front-on stakes: the side pieces above and below overlap them cleanly.
+- **Side pictures** (`woodWallSide`, `woodDoorSide`…): one cell wide, centered (`▗▖` over `▐▌`),
+  with see-through edges, so in a column only each piece's top row shows (the tip of each stake
+  over the one behind) and the nearest piece shows all the way down.
+- **Strafing**: in build mode `movePlayer` doesn't turn you. `flickOrWalk` holds a push back for
+  `FLICK_SECONDS` (0.22): let go before then and you turn that way without moving; hold longer and
+  you walk, still facing the same way. Checked one-thumbed at 667×375 with CDP touch events.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -270,7 +286,7 @@ Multiplayer still waits on the owner choosing a server host.
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
 | `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`. |
-| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`. |
+| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
 | `js/weather.js` | `weatherAt(clock, seed)` (cloud, rain, storm, wind), `updateWeather` (rain messages, the torch in rain, lightning and thunder, `soakFires`), `relightFire`, `lightningAt`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
@@ -319,7 +335,7 @@ Multiplayer still waits on the owner choosing a server host.
   `pointerdown`, so the tap that opens a panel can't land on the panel as it appears.
 - Build mode is `state.building` (a recipe key) and `state.buildSpot` (`{ x, y, problem }`,
   recomputed each update). The spot is the tile one past the front edge of the feet, so it never
-  overlaps the player. While building, `findTarget` is skipped and the action button builds once
+  overlaps the player. Walking doesn't turn you in build mode; a flick does (`flickOrWalk`). While building, `findTarget` is skipped and the action button builds once
   per press (the `'action'` press from `input.js`), not on hold. Anything built is an ordinary
   object with an `action` that takes it down again, so a misplaced wall is never a trap.
 - **Doors** are objects with `door: true` and no `solid`: the player walks through (`blockerAt`

@@ -5,6 +5,9 @@ const WALK_SPEED = 4.5; // tiles per second with the stick pushed all the way
 const FOOT_HALF_WIDTH = 0.3; // the player's feet, in tiles: what bumps into trees and walls
 const FOOT_HALF_DEPTH = 0.2;
 const CORNER_SLIP = 0.4; // how far off-center you can be and still slide around a corner or into a doorway
+// In build mode, a push of the stick (or a tap of a key) let go within this many seconds turns you to
+// face that way without walking. Walking in build mode keeps the way you face.
+const FLICK_SECONDS = 0.22;
 const WATER_FRAME_SECONDS = 0.45; // how often the water ripples
 const FLAME_FRAME_SECONDS = 0.15; // how often campfire flames flicker
 const MESSAGE_SECONDS = 3.5;
@@ -147,6 +150,8 @@ function startLife(x, y, facing) {
     act: null, // the last thing they did, { action, at }, for the swing or kneel it shows
     working: null, // the action word while the action button is held on something
     holding: null, // the action word the button was held down for, while it's held
+    pushedAt: null, // in build mode, when the stick was pushed from standing still (for a flick)
+    pushed: null, // ...and which way, { x, y }
   };
   state.sky = skyAt(state.dayClock, state.world.seed);
   state.fx = { particles: [], floaters: [], shake: null };
@@ -206,10 +211,15 @@ function update(dt) {
 function movePlayer(dt) {
   const player = state.player;
   const move = moveVector();
+  if (!state.building) player.pushedAt = null;
+  else if (!flickOrWalk(player, move)) {
+    player.moving = false;
+    return;
+  }
   player.moving = move.length > 0;
   if (!player.moving) return;
 
-  turnToward(player, move.x, move.y);
+  if (!state.building) turnToward(player, move.x, move.y);
   const step = WALK_SPEED * move.length * dt;
   const dx = move.x * step;
   const dy = move.y * step;
@@ -235,6 +245,22 @@ function movePlayer(dt) {
     state.bumpedInto = blocker;
     if (blocker.blocked) showMessage(state, blocker.blocked);
   }
+}
+
+// In build mode you keep facing the same way as you walk (you step sideways), so you can walk along
+// a line building beside you. To turn, flick the stick: push it and let go quickly. A push is held
+// back for FLICK_SECONDS to see which it is; returns true once it's a walk.
+function flickOrWalk(player, move) {
+  if (move.length > 0) {
+    if (player.pushedAt === null) player.pushedAt = player.clock;
+    player.pushed = { x: move.x, y: move.y };
+    return player.clock - player.pushedAt >= FLICK_SECONDS;
+  }
+  if (player.pushedAt !== null && player.clock - player.pushedAt < FLICK_SECONDS) {
+    turnToward(player, player.pushed.x, player.pushed.y);
+  }
+  player.pushedAt = null;
+  return false;
 }
 
 // Moves along one axis if the way is clear, and returns what's in the way if not. When this is the

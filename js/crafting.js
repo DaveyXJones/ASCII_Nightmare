@@ -121,7 +121,7 @@ const RECIPES = {
   },
 };
 
-const BUILD_HINT = 'Face where it should go and press Build.';
+const BUILD_HINT = 'Press Build to place it. You keep facing this way: flick the stick to turn.';
 const RECIPE_PICTURE_ROWS = 3; // pictures on the craft cards are at most this many rows tall
 const RECIPE_PICTURE_ROWS_SHORT = 2; // ...and this many on a short screen, like a phone held sideways
 const shortScreen = window.matchMedia('(max-height: 460px)'); // the same as in style.css

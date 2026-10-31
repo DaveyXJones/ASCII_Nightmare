@@ -28,6 +28,9 @@
 //            (`cost`), turning it back `into` a fire, once the rain has stopped
 //   bed      true for a bed you've built: you wake up on the newest one after you die (world.bed)
 //   chest    true for a chest: the action opens it, to keep things in (see chest.js)
+//   fence    true for walls and doors: pieces side by side join up into one fence
+//   side     { sprite, opens, scarred }: the pictures to use instead in a fence running up the
+//            screen (see runsUpAndDown in world.js), where it's seen from the side
 
 const OBJECTS = {
   oak: {
@@ -202,6 +205,8 @@ const OBJECTS = {
     soundDone: 'build',
     claws: 15,
     scarred: 'woodWallScarred',
+    fence: true,
+    side: { sprite: 'woodWallSide', scarred: 'woodWallSideScarred' },
   },
   // A chest keeps what's in it when you die (see chest.js). It's taken down from its own panel, once
   // it's empty.
@@ -240,5 +245,7 @@ const OBJECTS = {
     soundDone: 'build',
     claws: 20,
     scarred: 'woodDoorScarred',
+    fence: true,
+    side: { sprite: 'woodDoorSide', opens: 'woodDoorSideOpen', scarred: 'woodDoorSideScarred' },
   },
 };

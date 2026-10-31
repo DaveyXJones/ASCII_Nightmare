@@ -264,6 +264,28 @@ function objectAt(world, x, y) {
   return key ? OBJECTS[key] : null;
 }
 
+// Walls and doors (`fence` in OBJECTS) join up with each other. A piece with others above or below
+// it, and none to its left or right, is part of a fence running up the screen: it's seen from the
+// side, so it's drawn with its `side` pictures instead.
+function fenceAt(world, x, y) {
+  const object = objectAt(world, x, y);
+  return Boolean(object && object.fence);
+}
+
+function runsUpAndDown(world, x, y) {
+  return (
+    (fenceAt(world, x, y - 1) || fenceAt(world, x, y + 1)) &&
+    !fenceAt(world, x - 1, y) &&
+    !fenceAt(world, x + 1, y)
+  );
+}
+
+// Which set of pictures an object at (x, y) uses: its own, or its `side` ones in a fence running up
+// the screen. Either way the set has `sprite`, and may have `opens` and `scarred`.
+function objectLook(world, object, x, y) {
+  return object.side && runsUpAndDown(world, x, y) ? object.side : object;
+}
+
 // What stops the player at a tile, or null if they can walk there.
 function blockerAt(world, x, y) {
   const ground = groundAt(world, x, y);

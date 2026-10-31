@@ -61,7 +61,7 @@ font from a file, so some characters may look a little different.
 | Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
 | Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9` and `0` |
-| Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
+| Build | Face the spot and tap **Build**; tap **Done** to stop. Walking keeps your facing; flick the stick (push and let go) to turn | `Space` builds; tap an arrow key to turn; `C` or `Esc` stops |
 | Menu | ☰ in the top right | `Esc` |
 
 Yellow brackets `[ ]` on the map show what the action button will use.
@@ -111,8 +111,14 @@ something you can afford.
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
 front of you. Yellow brackets mean it can go there, red means it can't (the message says why).
-Tap **Build** to put it down. Walls stay in build mode so you can keep going: build, step
-sideways, build again. Tap **Done** when you've finished.
+Tap **Build** to put it down. Walls stay in build mode so you can keep going. Tap **Done** when
+you've finished.
+
+In build mode you keep facing the same way while you walk, so you can walk along a line and build
+beside you: flick the stick toward the side you want (push it and let go quickly) to turn without
+walking, then walk up, **Build**, walk up, **Build**. On a keyboard, tap an arrow key to turn and
+hold it to walk. Walls join up by themselves: a fence running up the screen is drawn from the side,
+one stake behind the next, and a door in it the same way.
 
 Changed your mind? Face the wall or door and **Break** it, or **Put out** the campfire, and you
 get the wood or stone back. Things you build stay in the world when you die.
@@ -291,26 +297,24 @@ run straight from the file.
 
 ## What's next
 
-Done lately: weather (clouds, rain, storms, and roofs to keep campfires burning), lurkers in the
-long grass, chests, and bedrolls. Before that: your look, flashing when hurt and falling when you
-die, the stone pick, doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
+Done lately: walls that join up (a fence running up the screen is seen from the side) and turning
+in place in build mode. Before that: weather (clouds, rain, storms, and roofs to keep campfires
+burning), lurkers in the long grass, chests, and bedrolls; and before that, your look, flashing
+when hurt and falling when you die, the stone pick, doors, cooked berries, brutes, walls that get
+clawed down, saving, and sound.
 
 Next, the list you picked (2026-10-31), roughly in this order:
 
-1. **Walls that turn, and building to the side.** A wall in a line running up the screen should
-   look like a fence seen from the side, not a stack of spikes; walls will pick their look from
-   the walls next to them, so there's nothing to turn by hand. And in build mode you'll be able
-   to turn to face a side without walking, so you can walk along a line and build beside you.
-2. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
+1. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
    rule that the map is drawn only in characters, so it'll come with an on/off switch in the menu
    to compare.
-3. **Lamps.** A lantern on a post that keeps the dark back without a campfire, and has to be
+2. **Lamps.** A lantern on a post that keeps the dark back without a campfire, and has to be
    filled now and then.
-4. **A map.** The island is big. A map of where you've been, drawn in characters like everything
+3. **A map.** The island is big. A map of where you've been, drawn in characters like everything
    else, with your fires, chests and bedroll marked on it.
-5. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
+4. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
    berries to cook at the fire.
-6. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
+5. **A pistol and a rifle.** Something to fight the dark with from a distance, but it changes how
    the nights play, so there are questions to settle first: found or crafted, how scarce the
    bullets are, and whether the bang draws things toward you.
 

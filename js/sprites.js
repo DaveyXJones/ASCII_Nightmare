@@ -42,7 +42,12 @@ const WOOD_INK = {
   l: ['#5e3d22', '#9c7048'],
   D: ['#4a2f1c', '#8b6239'], // the lower planks, in shade
   d: ['#4a2f1c', '#7a5230'],
-  P: ['#7a5230'], // a post seen edge-on
+  P: ['#7a5230'], // a post seen edge-on, or the shaded side of a stake
+  S: ['#b08458'], // the lit side of a stake seen from the side
+  s: ['#8b6239'], // ...lower down, in the shade of the stakes beside it
+  p: ['#5e3d22'],
+  k: ['#6b4528'], // a door seen edge-on
+  o: ['#4a2f1c'], // ...its latch side
 };
 
 // A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
@@ -497,6 +502,81 @@ const SPRITES = {
     ],
     ink: WOOD_INK,
     shadow: 2,
+  },
+  // A wall in a fence running up the screen, seen from the side (`side` in objects.js): one stake
+  // behind the next, so each tile shows the sharpened tip of its stake over the one behind it, and
+  // the nearest one shows all the way down. The lit side faces left, into the light.
+  woodWallSide: {
+    art: [
+      '▗▖',
+      '▐▌',
+      '▐▌',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  woodWallSideScarred: {
+    art: [
+      '▗▖',
+      '╱▌',
+      '▐╱',
+    ],
+    paint: [
+      'tT',
+      'SP',
+      'sp',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  // A door in a fence running up the screen, seen edge-on: a crossbar over it, and the plank door
+  // below, darker than the stakes, with its latch. Open, it's swung back out of the way.
+  woodDoorSide: {
+    art: [
+      '▄▄',
+      '▐▌',
+      '▐▌',
+    ],
+    paint: [
+      'TP',
+      'ko',
+      'kk',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  woodDoorSideScarred: {
+    art: [
+      '▄▄',
+      '╱▌',
+      '▐╱',
+    ],
+    paint: [
+      'TP',
+      'ko',
+      'kk',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
+  },
+  woodDoorSideOpen: {
+    art: [
+      '▄▄',
+      '  ',
+      ' ▏',
+    ],
+    paint: [
+      'TP',
+      '  ',
+      ' k',
+    ],
+    ink: WOOD_INK,
+    shadow: 1,
   },
   // A chest of planks with a lid, banded, with a clasp on the front.
   chest: {
