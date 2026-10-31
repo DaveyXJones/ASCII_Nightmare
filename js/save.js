@@ -138,7 +138,8 @@ function restoreWorld(world, save) {
   );
   // What's in each chest, for chests that are still standing.
   for (const [i, chest] of save.chests || []) {
-    if (valid(i) && world.objects[i] && OBJECTS[world.objects[i]].chest) world.chests.set(i, restoreChest(chest));
+    const key = valid(i) && world.objects[i];
+    if (key && OBJECTS[key].chest) world.chests.set(i, restoreChest(chest));
   }
   if (valid(save.bed)) world.bed = save.bed;
 }

@@ -25,8 +25,8 @@ let chestArmed = false;
 function setupChest(elements) {
   for (const [side, row] of [['pack', elements.chestPack], ['chest', elements.chestHeld]]) {
     const things = [
-      ...Object.keys(ITEMS).map((key) => ({ kind: 'item', key, glyph: ITEMS[key].glyph, color: ITEMS[key].color })),
-      ...Object.keys(TOOLS).map((key) => ({ kind: 'tool', key, glyph: TOOLS[key].glyph, color: TOOLS[key].color })),
+      ...Object.entries(ITEMS).map(([key, { glyph, color }]) => ({ kind: 'item', key, glyph, color })),
+      ...Object.entries(TOOLS).map(([key, { glyph, color }]) => ({ kind: 'tool', key, glyph, color })),
     ];
     for (const thing of things) {
       const button = document.createElement('button');
@@ -110,7 +110,8 @@ function refreshChest() {
 }
 
 function showThing(button, kind, key, count, enabled) {
-  const label = kind === 'item' ? String(count) : count > 1 ? `${TOOLS[key].short} ×${count}` : TOOLS[key].short;
+  let label = String(count); // items show how many; tools show their name, and how many if more than one
+  if (kind === 'tool') label = count > 1 ? `${TOOLS[key].short} ×${count}` : TOOLS[key].short;
   const name = kind === 'item' ? ITEMS[key].name : TOOLS[key].name.toLowerCase();
   button.querySelector('.thing-count').textContent = label;
   button.classList.toggle('none', count === 0);

@@ -29,7 +29,7 @@ const DOUSE_FROM = 0.25; // rain lighter than this doesn't put fires out
 const DRY_RATE = 0.5; // a fire that's been rained on dries this many seconds' worth each second
 const SPUTTER_AT = 0.4; // share of DOUSE_SECONDS after which the game warns you that a fire is in trouble
 const FIRE_NEWS_REACH = 24; // you only hear about fires going out within this many tiles of you
-const TORCH_RAIN_BURN = 1; // in pouring rain a torch outdoors burns down this much faster again (1 = twice as fast)
+const TORCH_RAIN_BURN = 1; // in pouring rain a torch outdoors burns this much faster again (1: twice as fast)
 const LIGHTNING_EVERY = 14; // seconds between flashes in the heaviest storm, on average
 const THUNDER_DELAY = [0.4, 3]; // seconds from a flash to its thunder, picked at random in this range
 
@@ -132,7 +132,8 @@ function soakFires(game, rain) {
       world.soaked.set(i, soaked);
       if (near && rain > 0) burst(fx, x + 0.5, y + 0.2, 'steam', 2); // it steams as the rain hits it
       if (near && rain > 0 && before < DOUSE_SECONDS * SPUTTER_AT && soaked >= DOUSE_SECONDS * SPUTTER_AT) {
-        showMessage(game, `The rain hisses on your ${object.name.toLowerCase()}. It won't last long without a roof.`);
+        const name = object.name.toLowerCase();
+        showMessage(game, `The rain hisses on your ${name}. It won't last long without a roof.`);
       }
       continue;
     }

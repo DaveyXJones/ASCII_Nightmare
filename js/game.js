@@ -92,7 +92,7 @@ const state = {
   building: null, // in build mode: the key in RECIPES being built, otherwise null
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
   chest: null, // while a chest is open, the tile it stands on (see chest.js)
-  tapped: false, // the action button went down since the last update (a tap quicker than a frame still counts)
+  tapped: false, // the action button went down since the last update (so even the quickest tap counts)
   time: 0, // seconds of play, paused while a menu is open
   dayClock: 0, // seconds since this world's first morning: the time of day and the moon come from it
   sky: null, // what the sky is doing right now, from skyAt() in night.js
@@ -535,7 +535,7 @@ function updateHud() {
   const daylight = sky.phase === 'day' || sky.phase === 'dusk';
   const weather = sky.weather.rain > 0.15 ? 'rain' : sky.weather.cloud > 0.6 ? 'cloud' : 'sun';
   const dayIcon = { rain: '☂', cloud: '☁', sun: '☼' }[weather];
-  const dayName = { rain: 'Raining. Daylight left', cloud: 'Cloudy. Daylight left', sun: 'Daylight left' }[weather];
+  const dayName = { rain: 'Raining. ', cloud: 'Cloudy. ', sun: '' }[weather] + 'Daylight left';
   const skyName = daylight ? dayName : `${sky.moon.name}: night left`;
   if (hud.skyName !== skyName) {
     hud.skyName = skyName;

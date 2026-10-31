@@ -118,7 +118,12 @@ of which they may want changed:
 - **Not built: the outline** (a thin dark edge so the player stands out on busy ground). It bends
   "Draw only characters on the map", so it waits for the owner's say. **Not built: multiplayer**:
   it needs a server, and GitHub Pages only hosts files, so it needs the owner to choose a host.
-  Rain was in the sound item but needs weather first; README's "What's next" now lists that.
+  Rain was in the sound item but needs weather first; that came with the next list (below).
+
+The owner then asked to "work on the Whats next" again (2026-10-31): items 2 to 4 of the new list
+(weather, lurkers, chest and bedroll) were built, each its own commit, in the sections below. The
+outline and multiplayer still wait on the owner. README's "What's next" now lists a map, fishing
+and lamps as Claude's suggestions between them.
 
 ## Weather (built 2026-10-31)
 
@@ -187,8 +192,8 @@ design:
   button acts on `pointerdown`, and some phones deliver the lift of that touch to whatever is now
   under the finger, so the panel ignores clicks until a `pointerdown` lands on it (`chestArmed`).
 - **Bedroll** (2 cloth, 1 wood): not solid, `bed: true`, action **Roll up** (gives the cloth back).
-  Building one sets `world.bed`; `wakeUp` puts you on `bedSpot(world)` if that tile still holds a
-  bed, else in the cottage. Nothing can be built over a bed. `world.bed` is saved.
+  Building one sets `world.bed`; `wakeUp` puts you on `bedSpot(world)`: that tile if it still
+  holds a bed, else any other bed on the map, else the cottage. Nothing can be built over a bed. `world.bed` is saved.
 - **Quick taps**: a press of the action button sets `state.tapped`, which counts as held for one
   update, so a tap shorter than a frame isn't lost (it was, before; Playwright's taps showed it).
 

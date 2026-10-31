@@ -21,7 +21,14 @@ const TOOLS = {
     held: ['┭', '┮'],
     power: { Chop: 2, Hit: 2 },
   },
-  pick: { name: 'Stone pick', short: 'pick', glyph: 'ϒ', color: '#c9ccc4', held: ['⌐', '¬'], power: { Mine: 2 } },
+  pick: {
+    name: 'Stone pick',
+    short: 'pick',
+    glyph: 'ϒ',
+    color: '#c9ccc4',
+    held: ['⌐', '¬'],
+    power: { Mine: 2 },
+  },
   torch: { name: 'Torch', short: 'torch', glyph: '¡', color: '#c49a62', burns: 300, light: 5 },
 };
 
@@ -222,7 +229,9 @@ function buildProblem(game, x, y, recipe) {
     if (keepClear(world, x, y)) return 'Leave the way to the door and the bed clear.';
   }
   // Things you can walk through, like stumps, are cleared away to make room. Doors and beds aren't.
-  if (object && (object.solid || object.door || object.bed)) return `The ${object.name.toLowerCase()} is in the way.`;
+  if (object && (object.solid || object.door || object.bed)) {
+    return `The ${object.name.toLowerCase()} is in the way.`;
+  }
   if (!canAfford(survivor.pack, recipe.cost)) return `You need ${shortfall(survivor.pack, recipe.cost)}.`;
   return null;
 }

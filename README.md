@@ -127,7 +127,7 @@ one thing you can build inside the cottage (anywhere but the doorway and the spo
 move it, empty it and tap **Take down** for some of the wood back.
 
 **Bedrolls.** You walk over a bedroll, and wake up on it after you die, so build one inside your
-fence by the fire. If you've made more than one, you wake on the newest. Face it and **Roll up**
+fence by the fire. If you've made more than one, you wake on the newest (or another, if you've rolled that one up). Face it and **Roll up**
 to take it back.
 
 ## Night
@@ -291,18 +291,20 @@ run straight from the file.
 
 ## What's next
 
-Done lately: choosing your look, flashing when hurt and falling when you die, the stone pick,
-doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
+Done lately: weather (clouds, rain, storms, and roofs to keep campfires burning), lurkers in the
+long grass, chests, and bedrolls. Before that: your look, flashing when hurt and falling when you
+die, the stone pick, doors, cooked berries, brutes, walls that get clawed down, saving, and sound.
 
 Roughly in order:
 
 1. **An outline for the player.** A thin dark edge so you stand out on busy ground. It bends the
    rule that the map is drawn only in characters, so it's waiting for a yes or no.
-2. **Weather.** Clouds that roll in, rain drawn as falling characters, and the sound of it. Rain
-   could put out campfires, so a roof starts to matter.
-3. **More in the dark.** Lurkers that sit still in the tall grass, eyes open, and spring when you
-   walk too close.
-4. **More to craft.** A chest that keeps its contents when you die, and a bed to wake up beside.
+2. **A map.** The island is big. A map of where you've been, drawn in characters like everything
+   else, with your fires, chests and bedroll marked on it.
+3. **Fishing.** A rod from wood and cloth, fish in the lakes and the sea, and something better than
+   berries to cook at the fire.
+4. **Lamps.** A light you can build that isn't a campfire: a lantern on a post, burning cloth, that
+   keeps the dark back from your fence and has to be filled now and then.
 5. **Multiplayer.** Because the world is built from a seed, a server only has to share the seed
    and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a
    small server running somewhere else.

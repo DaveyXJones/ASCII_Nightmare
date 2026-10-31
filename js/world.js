@@ -294,12 +294,14 @@ function setObject(world, x, y, key) {
   world.chests.delete(i);
 }
 
-// Where you wake up after dying: on the bed you built last (an object with `bed`), if it's still
-// there, as { x, y } in tiles. Null if there isn't one, and you wake in the cottage.
+// Where you wake up after dying: on the bed you built last (an object with `bed`), or if that one's
+// gone, any other you've built, as { x, y } in tiles. Null if there's none, and you wake in the
+// cottage.
 function bedSpot(world) {
-  const i = world.bed;
-  const key = Number.isInteger(i) ? world.objects[i] : null;
-  if (!key || !OBJECTS[key].bed) return null;
+  const isBed = (key) => Boolean(key && OBJECTS[key].bed);
+  let i = world.bed;
+  if (!Number.isInteger(i) || !isBed(world.objects[i])) i = world.objects.findIndex(isBed);
+  if (i < 0) return null;
   const x = i % world.width;
   return { x: x + 0.5, y: (i - x) / world.width + 0.5 };
 }
