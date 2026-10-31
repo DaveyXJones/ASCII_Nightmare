@@ -234,6 +234,10 @@ function useTarget(game) {
     relightFire(game, target);
     return;
   }
+  if (target.object.chest) {
+    openChest(game, target.y * world.width + target.x);
+    return;
+  }
 
   const object = target.object;
   const index = target.y * world.width + target.x;

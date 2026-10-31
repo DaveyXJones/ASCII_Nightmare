@@ -26,6 +26,8 @@
 //   doused   what it turns into when rain puts it out (see weather.js): a fire with no roof
 //   relight  { cost, into } for a fire that's gone out: the action lights it again with a little wood
 //            (`cost`), turning it back `into` a fire, once the rain has stopped
+//   bed      true for a bed you've built: you wake up on the newest one after you die (world.bed)
+//   chest    true for a chest: the action opens it, to keep things in (see chest.js)
 
 const OBJECTS = {
   oak: {
@@ -200,6 +202,29 @@ const OBJECTS = {
     soundDone: 'build',
     claws: 15,
     scarred: 'woodWallScarred',
+  },
+  // A chest keeps what's in it when you die (see chest.js). It's taken down from its own panel, once
+  // it's empty.
+  chest: {
+    name: 'Chest',
+    sprite: 'chest',
+    solid: true,
+    blocked: 'Your chest. Open it to put things in.',
+    action: 'Open',
+    chest: true,
+    burst: 'wood',
+  },
+  // A bedroll on the ground: you walk over it, and wake up on it after you die.
+  bedroll: {
+    name: 'Bedroll',
+    sprite: 'bedroll',
+    bed: true,
+    action: 'Roll up',
+    hits: 1,
+    gives: { cloth: 2 },
+    becomes: null,
+    burst: 'fluff',
+    sound: 'pick',
   },
   woodDoor: {
     name: 'Wooden door',

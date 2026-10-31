@@ -172,6 +172,26 @@ later). 2 hp, bite 10, `fear: { fire: 0.8, torch: 0 }` (the torch doesn't help; 
 Moons: none on the first half moon or the two brute nights; 1 on the first thin moon, 2 on the
 half and bright moons, 3 under the full moon, so bright nights have their own danger.
 
+## Chest and bedroll (built 2026-10-31)
+
+Item 4 ("A chest that keeps its contents when you die, and a bed to wake up beside"), Claude's
+design:
+
+- **Chest** (`RECIPES.chest`, 6 wood, `indoors: true`, so it's the one thing that can be built in
+  the cottage; `keepClear` refuses the doorway, the floor inside it and the spawn tile). The object
+  has `chest: true` and action **Open**: `useTarget` calls `openChest`, which pauses like the craft
+  panel. Contents live in `world.chests` (tile index → `{ items, tools }` counts), saved and
+  restored (`restoreChest`). Tapping a thing moves all of an item or one tool; **Put all in** moves
+  items only, **Take all out** items and tools you don't carry (you only ever carry one of each).
+  A torch put away goes out. **Take down** works only when empty (`CHEST_GIVES_BACK`). The action
+  button acts on `pointerdown`, and some phones deliver the lift of that touch to whatever is now
+  under the finger, so the panel ignores clicks until a `pointerdown` lands on it (`chestArmed`).
+- **Bedroll** (2 cloth, 1 wood): not solid, `bed: true`, action **Roll up** (gives the cloth back).
+  Building one sets `world.bed`; `wakeUp` puts you on `bedSpot(world)` if that tile still holds a
+  bed, else in the cottage. Nothing can be built over a bed. `world.bed` is saved.
+- **Quick taps**: a press of the action button sets `state.tapped`, which counts as held for one
+  update, so a tap shorter than a frame isn't lost (it was, before; Playwright's taps showed it).
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -182,7 +202,7 @@ half and bright moons, 3 under the full moon, so bright nights have their own da
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → night →
-  weather → render → input → sound → survival → crafting → creatures → save → game`. A file may use globals from files
+  weather → render → input → sound → survival → crafting → chest → creatures → save → game`. A file may use globals from files
   before it at load time, and from any file inside functions that run later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
   (left thumb walks, right thumb acts). Keep tap targets large and inside the safe-area insets.
@@ -199,15 +219,16 @@ half and bright moons, 3 under the full moon, so bright nights have their own da
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again). |
-| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`. |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`. |
+| `js/world.js` | `generateWorld(seed)`, the `COTTAGE` layout, lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`. |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
 | `js/weather.js` | `weatherAt(clock, seed)` (cloud, rain, storm, wind), `updateWeather` (rain messages, the torch in rain, lightning and thunder, `soakFires`), `relightFire`, `lightningAt`. No drawing. |
 | `js/render.js` | The renderer: sizing, glyph atlas, sprite images, ground cache, camera, draw order, the night layer (with cloud shadows and lightning), rain. |
 | `js/input.js` | `input` state, `moveVector()`, `actionHeld()`, `takePress()`; floating thumbstick and hold buttons. |
 | `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
-| `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`), the craft panel. |
+| `js/crafting.js` | `TOOLS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`), build mode (`findBuildSpot`, `build`, `keepClear`), the craft panel. |
+| `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
@@ -227,7 +248,8 @@ half and bright moons, 3 under the full moon, so bright nights have their own da
 - A tile is solid if its ground or its object is `solid` (`blockerAt`).
 - `world.original` is `objects` as generated (saving keeps only the differences); `damage`,
   `clawed` and `soaked` are Maps of tile index to swings, scratches or seconds of rain taken
-  (`setObject` clears all three; `soaked` isn't saved). **Anything new that should survive
+  (`setObject` clears all three, and `chests`; `soaked` isn't saved). `chests` holds what's in each
+  chest and `bed` the newest bedroll's tile; both are saved. **Anything new that should survive
   a reload** (a survivor field, a world Map) needs adding to `saveGame` and `loadGame`.
 - `world.house` is the cottage's wall rectangle plus `doorX`. The cottage is drawn specially: a roof
   and front wall from outside, a cutaway with the back wall standing from inside.
@@ -259,6 +281,7 @@ half and bright moons, 3 under the full moon, so bright nights have their own da
   `torchWantsFire`, `findTarget` returns a `Light` target instead of the object's own action.
 - **Holding the action button keeps doing one thing** (`player.holding`): if the target's label
   changes under the thumb (Light becoming Put out), working stops until the button is released.
+  A press always counts for at least one update (`state.tapped`), however quick.
 
 ## Day and night (js/night.js)
 

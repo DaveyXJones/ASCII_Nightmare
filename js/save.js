@@ -81,6 +81,8 @@ function saveGame(game) {
     damage: [...world.damage],
     clawed: [...world.clawed],
     regrowing: world.regrowing,
+    chests: [...world.chests],
+    bed: world.bed,
   });
   game.savedAt = game.time;
 }
@@ -134,6 +136,23 @@ function restoreWorld(world, save) {
   world.regrowing = (save.regrowing || []).filter(
     (entry) => valid(entry.index) && OBJECTS[entry.from] && OBJECTS[entry.into],
   );
+  // What's in each chest, for chests that are still standing.
+  for (const [i, chest] of save.chests || []) {
+    if (valid(i) && world.objects[i] && OBJECTS[world.objects[i]].chest) world.chests.set(i, restoreChest(chest));
+  }
+  if (valid(save.bed)) world.bed = save.bed;
+}
+
+// A chest's contents as saved, keeping only whole numbers of items and tools that still exist.
+function restoreChest(saved) {
+  const chest = newChest();
+  for (const [kind, table] of [['items', ITEMS], ['tools', TOOLS]]) {
+    for (const [key, count] of Object.entries((saved && saved[kind]) || {})) {
+      const n = Math.floor(finite(count, 0));
+      if (table[key] && n > 0) chest[kind][key] = n;
+    }
+  }
+  return chest;
 }
 
 // A fresh survivor with the saved numbers laid over it, keeping only items and tools that still

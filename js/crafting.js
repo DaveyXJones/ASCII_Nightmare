@@ -5,16 +5,24 @@
 // front of you, the action button says Build, and the Craft button says Done.
 
 // Tools you carry. `power` says, for each action word, how many swings one swing counts as.
-// `glyph` is its picture in the pack and the craft panel; `held` is how it looks in the player's
-// hand facing left, and facing any other way.
+// `glyph` is its picture in the pack, the craft panel and the chest, in `color`; `short` is its name
+// in the pack and the chest; `held` is how it looks in the player's hand facing left, and facing
+// any other way.
 //
 // The torch is carried in the other hand all the time (TORCH_LOOK in sprites.js). Light it at a
 // campfire and it lights up the dark `light` tiles around you for `burns` seconds; then it goes
 // out, and you light it again.
 const TOOLS = {
-  axe: { name: 'Stone axe', glyph: '┮', held: ['┭', '┮'], power: { Chop: 2, Hit: 2 } },
-  pick: { name: 'Stone pick', glyph: 'ϒ', held: ['⌐', '¬'], power: { Mine: 2 } },
-  torch: { name: 'Torch', glyph: '¡', burns: 300, light: 5 },
+  axe: {
+    name: 'Stone axe',
+    short: 'axe',
+    glyph: '┮',
+    color: '#c9ccc4',
+    held: ['┭', '┮'],
+    power: { Chop: 2, Hit: 2 },
+  },
+  pick: { name: 'Stone pick', short: 'pick', glyph: 'ϒ', color: '#c9ccc4', held: ['⌐', '¬'], power: { Mine: 2 } },
+  torch: { name: 'Torch', short: 'torch', glyph: '¡', color: '#c49a62', burns: 300, light: 5 },
 };
 
 // Everything you can make, in the order the craft panel shows them.
@@ -27,6 +35,7 @@ const TOOLS = {
 //   again    for things you build: stay in build mode afterwards, to build a row of them
 //   over     for things you build onto something already there, like a roof over a campfire: the keys
 //            in OBJECTS it can go on (it takes their place)
+//   indoors  for things you build: true if it can go inside the cottage too (a chest)
 //   gives    items it puts in your pack, e.g. { cooked: 1 }; the panel stays open to make more
 //   byFire   true if you have to be standing beside a campfire to make it (cooking)
 //   done     message shown once it's made
@@ -80,6 +89,21 @@ const RECIPES = {
     cost: { wood: 3 },
     builds: 'woodDoor',
     done: 'You hang the door. It swings open as you come near.',
+  },
+  chest: {
+    name: 'Chest',
+    about: 'What you put in it is kept when you die.',
+    cost: { wood: 6 },
+    builds: 'chest',
+    indoors: true,
+    done: 'You knock together a chest. Open it to keep things safe.',
+  },
+  bedroll: {
+    name: 'Bedroll',
+    about: 'You wake up on it after you die.',
+    cost: { cloth: 2, wood: 1 },
+    builds: 'bedroll',
+    done: 'You spread out the bedroll. If you die, you\'ll wake up here.',
   },
   cook: {
     name: 'Cooked berries',
@@ -193,11 +217,23 @@ function buildProblem(game, x, y, recipe) {
     return null;
   }
   if (!ground || ground.solid) return "You can't build there.";
-  if (insideHouse(world, x, y)) return "There's no room for that inside the cottage.";
-  // Things you can walk through, like stumps, are cleared away to make room. Doors aren't.
-  if (object && (object.solid || object.door)) return `The ${object.name.toLowerCase()} is in the way.`;
+  if (insideHouse(world, x, y)) {
+    if (!recipe.indoors) return "There's no room for that inside the cottage.";
+    if (keepClear(world, x, y)) return 'Leave the way to the door and the bed clear.';
+  }
+  // Things you can walk through, like stumps, are cleared away to make room. Doors and beds aren't.
+  if (object && (object.solid || object.door || object.bed)) return `The ${object.name.toLowerCase()} is in the way.`;
   if (!canAfford(survivor.pack, recipe.cost)) return `You need ${shortfall(survivor.pack, recipe.cost)}.`;
   return null;
+}
+
+// The tiles in the cottage that must stay clear: the doorway, the floor just inside it, and the spot
+// by the bed where you wake up.
+function keepClear(world, x, y) {
+  const { house, spawn } = world;
+  const doorY = house.top + house.height - 1;
+  if (x === house.doorX && (y === doorY || y === doorY - 1)) return true;
+  return x === Math.floor(spawn.x) && y === Math.floor(spawn.y);
 }
 
 // One press of Build.
@@ -213,8 +249,11 @@ function build(game) {
   const object = OBJECTS[recipe.builds];
   spend(survivor.pack, recipe.cost);
   setObject(game.world, spot.x, spot.y, recipe.builds);
+  const index = spot.y * game.world.width + spot.x;
+  if (object.bed) game.world.bed = index; // the newest bed is where you'll wake up
+  if (object.chest) game.world.chests.set(index, newChest());
   player.act = { action: 'Build', at: player.clock };
-  burst(game.fx, spot.x + 0.5, spot.y + 0.5, object.burst, 10);
+  if (object.burst) burst(game.fx, spot.x + 0.5, spot.y + 0.5, object.burst, 10);
   playSound('build');
   buzz(30);
   if (recipe.done) showMessage(game, recipe.done);

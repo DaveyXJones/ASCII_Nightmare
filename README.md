@@ -33,7 +33,8 @@ Next time, **Carry on** picks up where you left off: the same island, everything
 built, your pack, and the time of day. It's saved in that browser on that phone only, and private
 browsing or clearing the browser's data forgets it. **New world** asks for a second tap before it
 throws your island away. If you die, the island stays as you left it and you wake up the next
-morning with an empty pack.
+morning with an empty pack (in the cottage, or on your bedroll if you've made one), and anything
+you put in a chest is still there.
 
 GitHub Pages publishes the `main` branch there for free. Anything pushed to `main` shows up at that
 address within a couple of minutes (reload the page, or close and reopen the home-screen icon).
@@ -57,7 +58,7 @@ font from a file, so some characters may look a little different.
 | | Phone | Keyboard |
 | --- | --- | --- |
 | Walk | Put your left thumb down anywhere on the left half of the screen and drag | `W` `A` `S` `D` or the arrow keys |
-| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**. Hold it to keep going | `Space` or `E` (hold to keep going) |
+| Act | The big button on the right. It says what it will do: **Chop**, **Mine**, **Pick**, **Drink**, **Light**, **Hit**, **Open**. Hold it to keep going | `Space` or `E` (hold to keep going) |
 | Eat | The small button: eats the best food you have | `F` |
 | Craft | **Craft**, the button above the big one, then tap what to make | `C`, then `1` to `9` and `0` |
 | Build | Face the spot and tap **Build**; tap **Done** to stop | `Space` builds; `C` or `Esc` stops |
@@ -104,6 +105,8 @@ something you can afford.
 | **Roof** | 4 wood | Build it over a campfire and rain can't put the fire out (see Weather, below). |
 | **Wooden wall** | 2 wood each | A stretch of sharpened stakes. Line them up into a fence. |
 | **Wooden door** | 3 wood | Set it in a line of wall. It swings open as you walk up and shuts behind you; shades can't open it. |
+| **Chest** | 6 wood | Keeps whatever you put in it, even when you die. It can go inside the cottage. |
+| **Bedroll** | 2 cloth, 1 wood | After you die, you wake up on it instead of in the cottage. |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
@@ -115,6 +118,17 @@ Changed your mind? Face the wall or door and **Break** it, or **Put out** the ca
 get the wood or stone back. Things you build stay in the world when you die.
 
 A **roof** goes over a campfire that's already there: face the fire and tap **Build**.
+
+**Chests.** Face a chest and tap **Open**. Your pack is on the left, the chest on the right: tap
+something to move all of it across, or **Put all in** (everything but your tools) and **Take all
+out**. Tools go in one at a time, so your axe can wait at home for you; a torch put away goes out.
+The game pauses while the chest is open. Dying empties your pack, never a chest. A chest is the
+one thing you can build inside the cottage (anywhere but the doorway and the spot by the bed). To
+move it, empty it and tap **Take down** for some of the wood back.
+
+**Bedrolls.** You walk over a bedroll, and wake up on it after you die, so build one inside your
+fence by the fire. If you've made more than one, you wake on the newest. Face it and **Roll up**
+to take it back.
 
 ## Night
 
@@ -212,6 +226,7 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/sound.js` | Every sound, made by the browser on the spot, so there are no sound files. |
 | `js/survival.js` | Health, food and water, your pack, and the action button. |
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
+| `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
 | `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
 | `js/save.js` | What the game remembers between visits: your island, your pack, your look. |
 | `js/game.js` | Walking and bumping into things, the main loop, the menus. |
@@ -240,6 +255,8 @@ run straight from the file.
   `js/survival.js` and the pack in `index.html`.
 - **The cottage.** It's drawn as text in `COTTAGE` at the top of `js/world.js`: move the bed, add
   furniture, or make it bigger.
+- **What things cost.** `cost` on each recipe in `RECIPES` (`js/crafting.js`). What an empty chest
+  gives back is `CHEST_GIVES_BACK` at the top of `js/chest.js`.
 - **A new recipe.** Add it to `RECIPES` in `js/crafting.js` and it gets its own card. A tool goes in
   `TOOLS` (look at the pick: `power: { Mine: 2 }` makes each swing count twice) and needs a slot in
   the pack in `index.html` like the axe's. To make something you build, draw it in `SPRITES`,

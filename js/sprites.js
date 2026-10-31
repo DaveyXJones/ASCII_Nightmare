@@ -498,6 +498,47 @@ const SPRITES = {
     ink: WOOD_INK,
     shadow: 2,
   },
+  // A chest of planks with a lid, banded, with a clasp on the front.
+  chest: {
+    art: [
+      '▗▄▄▖',
+      '▐═¤▌',
+      '▐▄▄▌',
+    ],
+    paint: [
+      'tttt',
+      'LlCl',
+      'DddD',
+    ],
+    ink: {
+      t: ['#d8b07a'], // the lid, in the light
+      L: ['#5e3d22', '#a87a4c'], // the front, with a band across it
+      l: ['#5e3d22', '#93683e'],
+      C: ['#f0d080', '#93683e'], // the clasp
+      D: ['#3e2814', '#7a5230'], // the bottom, in shade
+      d: ['#3e2814', '#6c4828'],
+    },
+    shadow: 2,
+  },
+  // A bedroll spread on the ground: a pillow at one end and a blanket. It's flat, so it sits across
+  // the line between two rows rather than standing up.
+  bedroll: {
+    art: [
+      '▄▄▄▄',
+      '▀┄┄┄',
+    ],
+    paint: [
+      'pbbb',
+      'PBBB',
+    ],
+    ink: {
+      p: ['#efe6d2'], // the pillow
+      P: ['#bfb39a'],
+      b: ['#b0634a'], // the top of the blanket
+      B: ['#d08a6a', '#7e4232'], // its front edge, stitched
+    },
+    shadow: 0,
+  },
   // A brute: a great hunched thing with a shaggy hide and a single amber eye, three tiles wide. Its
   // legs shift between the two pictures as it lumbers along.
   brute: {
@@ -822,6 +863,8 @@ const ACTION_POSES = {
   'Put out': { pose: 'crouch', held: null, seconds: 0.4 },
   Light: { pose: 'crouch', held: null, seconds: 0.5 },
   Hit: { held: null },
+  Open: { pose: 'crouch', held: null, seconds: 0.3 },
+  'Roll up': { pose: 'crouch', held: null, seconds: 0.4 },
   Eat: { pose: 'windup', held: null, seconds: 0.4 },
 };
 

@@ -68,6 +68,13 @@ const elements = {
   lookParts: document.getElementById('look-parts'),
   lookPicture: document.getElementById('look-picture'),
   lookDone: document.getElementById('look-done'),
+  chest: document.getElementById('chest'),
+  chestPack: document.getElementById('chest-pack'),
+  chestHeld: document.getElementById('chest-held'),
+  chestPut: document.getElementById('chest-put'),
+  chestTake: document.getElementById('chest-take'),
+  chestRemove: document.getElementById('chest-remove'),
+  chestClose: document.getElementById('chest-close'),
 };
 
 const portrait = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
@@ -84,6 +91,8 @@ const state = {
   target: null,
   building: null, // in build mode: the key in RECIPES being built, otherwise null
   buildSpot: null, // in build mode: where it would go, from findBuildSpot()
+  chest: null, // while a chest is open, the tile it stands on (see chest.js)
+  tapped: false, // the action button went down since the last update (a tap quicker than a frame still counts)
   time: 0, // seconds of play, paused while a menu is open
   dayClock: 0, // seconds since this world's first morning: the time of day and the moon come from it
   sky: null, // what the sky is doing right now, from skyAt() in night.js
@@ -110,14 +119,17 @@ function newGame(seed) {
   wakeUp();
 }
 
-// Starts a life: in the cottage, beside the bed, with an empty pack, at the start of a new day.
+// Starts a life: in the cottage beside the bed (or on the bedroll you built last), with an empty
+// pack, at the start of a new day.
 function wakeUp() {
-  const spawn = state.world.spawn;
+  const bed = bedSpot(state.world);
+  const spot = bed || state.world.spawn;
   state.survivor = newSurvivor();
   state.dayClock = nextMorning(state.dayClock);
   state.lifeStarted = state.time;
-  startLife(spawn.x, spawn.y, 'down');
-  showMessage(state, 'You wake up in your cottage. Find food and water to survive.');
+  startLife(spot.x, spot.y, 'down');
+  const where = bed ? 'on your bedroll' : 'in your cottage';
+  showMessage(state, `You wake up ${where}. Find food and water to survive.`);
   saveGame(state);
 }
 
@@ -172,7 +184,7 @@ function update(dt) {
     const label = state.target ? state.target.label : null;
     // Holding the button keeps doing one thing. If the thing changes under your thumb (lighting a
     // torch turns the fire's button into Put out), it waits until you let go.
-    if (!actionHeld()) player.holding = null;
+    if (!actionHeld() && !state.tapped) player.holding = null;
     else if (!player.holding) player.holding = label;
     player.working = label && label === player.holding ? label : null;
     if (player.working && player.clock >= survivor.nextSwingAt) {
@@ -181,6 +193,7 @@ function update(dt) {
     }
   }
 
+  state.tapped = false;
   updateVitals(state, dt);
   updateTorch(state, dt);
   updateWeather(state, dt);
@@ -584,9 +597,10 @@ function frame(now) {
   for (let press = takePress(); press; press = takePress()) {
     const crafting = !elements.craft.hidden;
     if (press === 'menu' || press === 'back') {
-      // Esc backs out of one thing at a time (the craft panel, the look panel, the menu, build
-      // mode) before it opens the menu. The ☰ button and P go straight to the menu.
+      // Esc backs out of one thing at a time (the craft panel, a chest, the look panel, the menu,
+      // build mode) before it opens the menu. The ☰ button and P go straight to the menu.
       if (crafting) closeCraft();
+      else if (!elements.chest.hidden) closeChest();
       else if (!elements.look.hidden) closeLook();
       else if (!elements.menu.hidden && state.started) closeMenu();
       else if (press === 'back' && state.building && playing) stopBuilding(state);
@@ -599,6 +613,8 @@ function frame(now) {
       craft(state, Object.keys(RECIPES)[Number(press.slice(7))]);
     } else if (press === 'action' && playing && state.building) {
       build(state);
+    } else if (press === 'action' && playing) {
+      state.tapped = true;
     } else if (press === 'eat' && playing) {
       eat(state);
     }
@@ -637,6 +653,7 @@ dressPlayer(state.look);
 setupView(elements.canvas);
 setupInput(elements);
 setupCrafting(elements);
+setupChest(elements);
 setupLook();
 setupSound();
 showSoundButton();

@@ -100,6 +100,32 @@
         </div>
       </section>
 
+      <section id="chest" class="overlay" aria-labelledby="chest-title" hidden>
+        <div class="panel chest-panel">
+          <div class="craft-head">
+            <h2 id="chest-title" class="title">Chest</h2>
+            <button type="button" id="chest-close" class="button close" aria-label="Close">✕</button>
+          </div>
+          <div class="chest-sides">
+            <div class="chest-side">
+              <h3>Your pack</h3>
+              <!-- One button per item and tool, made from ITEMS and TOOLS in js/chest.js. -->
+              <div id="chest-pack" class="chest-things"></div>
+              <button type="button" id="chest-put" class="button">Put all in</button>
+            </div>
+            <div class="chest-side">
+              <h3>In the chest</h3>
+              <div id="chest-held" class="chest-things"></div>
+              <button type="button" id="chest-take" class="button">Take all out</button>
+            </div>
+          </div>
+          <div class="chest-foot">
+            <p>Tap something to move it across. A chest keeps its things when you die.</p>
+            <button type="button" id="chest-remove" class="button" title="Only once it's empty">Take down</button>
+          </div>
+        </div>
+      </section>
+
       <section id="look" class="overlay" aria-labelledby="look-title" hidden>
         <div class="panel look-panel">
           <div class="look-preview">
@@ -144,6 +170,7 @@
     <script src="js/sound.js"></script>
     <script src="js/survival.js"></script>
     <script src="js/crafting.js"></script>
+    <script src="js/chest.js"></script>
     <script src="js/creatures.js"></script>
     <script src="js/save.js"></script>
     <script src="js/game.js"></script>
