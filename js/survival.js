@@ -18,6 +18,12 @@ const ITEMS = {
   // Dug up with the spade, to plant again in a garden bed (see garden.js).
   bushCutting: { name: 'berry cuttings', glyph: 'ψ', color: '#e0475a', hideEmpty: true },
   cottonCutting: { name: 'cotton cuttings', glyph: 'ψ', color: '#e6dcc4', hideEmpty: true },
+  // Grown in the garden, from what's found in the ruins. Potatoes are planted as they are, and have
+  // to be baked to eat; a pumpkin can be eaten as it is, and has seeds in it to plant.
+  potato: { name: 'potatoes', glyph: 'ɵ', color: '#d8b070', hideEmpty: true },
+  bakedPotato: { name: 'baked potatoes', glyph: 'ɵ', color: '#f0a050', food: 35, heals: 10, hideEmpty: true },
+  pumpkinSeeds: { name: 'pumpkin seeds', glyph: '∴', color: '#efe0a8', hideEmpty: true },
+  pumpkin: { name: 'pumpkins', glyph: '◍', color: '#f08a2a', food: 30, heals: 5, hideEmpty: true },
 };
 
 const FOOD_PER_SECOND = 100 / 420; // a full stomach lasts seven minutes
@@ -52,12 +58,14 @@ function newSurvivor() {
     pack: Object.fromEntries(Object.keys(ITEMS).map((item) => [item, 0])),
     tools: {}, // tools you've made, by their key in TOOLS (crafting.js): { axe: true }
     torchLeft: 0, // seconds the torch will keep burning, or 0 when it isn't lit
+    bucket: 0, // waterings left in the bucket, if you have one (see garden.js)
+    planting: null, // what the Plant button planted last: a key in RECIPES
     guns: {}, // for each gun you carry, shots left and when it's ready (see gunState in guns.js)
     warm: false, // standing beside a campfire
     hurtBy: null, // what last hurt you: 'hunger' or 'dark', for the words when you die
     hurtAt: -Infinity, // when something last bit you, in seconds of play: you flash red for a moment
     starving: false, // true while hunger or thirst is taking your health
-    warned: { food: false, water: false, health: false, torch: false, fish: false },
+    warned: { food: false, water: false, health: false, torch: false, fish: false, planted: false },
     nextSwingAt: 0,
   };
 }
@@ -237,6 +245,14 @@ function findTarget(game) {
       } else if (object && object.fuel && lampWantsFuel(world, tx, ty, object)) {
         // A lamp burning low (or gone out) offers to be filled instead of taken down.
         candidate = { x: tx, y: ty, label: 'Fill', object, fill: true };
+      } else if (object && object.plot && plantFor(survivor)) {
+        // An empty garden bed, and something to plant in it (see garden.js).
+        candidate = { x: tx, y: ty, label: 'Plant', object, plant: true };
+      } else if (object && object.crop && cropWantsWater(world, tx, ty)) {
+        candidate = { x: tx, y: ty, label: 'Water', object, water: true };
+      } else if (object && object.drink && wantsToFill(survivor)) {
+        // At a well with a bucket that isn't full, and not thirsty: fill it.
+        candidate = { x: tx, y: ty, label: 'Fill', object, bucket: true };
       } else if (object && object.repair && world.clawed.get(ty * world.width + tx)) {
         // Something has been clawing at this wall: mend it before it gives way.
         candidate = { x: tx, y: ty, label: 'Repair', object, repair: true };
@@ -245,6 +261,8 @@ function findTarget(game) {
         candidate = { x: tx, y: ty, label: 'Dig up', object, dig: true };
       } else if (object && object.action) {
         candidate = { x: tx, y: ty, label: object.action, object };
+      } else if (!object && ground && ground.drink && wantsToFill(survivor)) {
+        candidate = { x: tx, y: ty, label: 'Fill', bucket: true };
       } else if (!object && wantsToFish(survivor, ground)) {
         // With a rod, and not thirsty, facing water fishes (see fishing.js).
         candidate = { x: tx, y: ty, label: 'Fish', fish: true };
@@ -346,6 +364,18 @@ function useTarget(game) {
 
   if (target.fish) {
     castLine(game, target);
+    return;
+  }
+  if (target.bucket) {
+    fillBucket(game, target);
+    return;
+  }
+  if (target.plant) {
+    plantHere(game, target);
+    return;
+  }
+  if (target.water) {
+    waterPlant(game, target);
     return;
   }
   if (target.drink || (target.object && target.object.drink)) {

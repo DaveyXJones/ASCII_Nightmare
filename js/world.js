@@ -70,6 +70,7 @@ function generateWorld(seed, island = WORLD_SIZE) {
     chests: new Map(), // tile index -> what's in the chest there, { items, tools } (see chest.js)
     fuel: new Map(), // tile index -> seconds a lamp there will burn in the dark (see updateLamps)
     floors: new Map(), // tile index -> the ground that was there before you laid a floor over it
+    crops: new Map(), // tile index -> how a plant in the garden is getting on (see garden.js)
     seen: new Uint8Array(size), // 1 for each tile you've seen, for the map (see map.js)
     bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
@@ -469,6 +470,7 @@ function setObject(world, x, y, key) {
   world.soaked.delete(i);
   world.chests.delete(i);
   world.fuel.delete(i);
+  world.crops.delete(i);
 }
 
 // Where you wake up after dying: on the bed you built last (an object with `bed`), or if that one's

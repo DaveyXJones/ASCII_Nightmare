@@ -285,7 +285,24 @@ button:focus-visible {
 .tins dt { color: #b8c4c8; }
 .bushCutting dt { color: #e0475a; }
 .cottonCutting dt { color: #e6dcc4; }
+.potato dt { color: #d8b070; }
+.bakedPotato dt { color: #f0a050; }
+.pumpkinSeeds dt { color: #efe0a8; }
+.pumpkin dt { color: #f08a2a; }
 .spade dt { color: #c9ccc4; }
+.bucket dt { color: #c49a62; }
+
+/* The bucket says how many plants the water in it will do, even on a phone, and turns blue with
+   water in it. */
+.pack .tool.bucket dd {
+  display: block;
+  color: var(--water);
+  font-weight: 700;
+}
+
+.bucket.full dt {
+  color: #7ab4e8;
+}
 .pistol dt { color: #aab4bc; }
 .rifle dt { color: #b08458; }
 
@@ -350,7 +367,9 @@ button:focus-visible {
 
 .toast {
   position: absolute;
-  top: calc(var(--edge-top) + 62px); /* just below the bars and the pack */
+  /* Just below the bars and the pack, or lower if a full pack has wrapped onto more rows (game.js
+     keeps --pack-bottom up to date). */
+  top: max(calc(var(--edge-top) + 62px), calc(var(--pack-bottom, 0px) + 6px));
   left: 50%;
   width: max-content;
   /* Narrow enough to stay clear of the bars on the left (and as far in from the right). */
@@ -729,7 +748,8 @@ button:focus-visible {
 
 .recipes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); /* a tab with few cards keeps them card-sized */
+  align-content: start;
   gap: 10px;
 }
 
@@ -799,6 +819,10 @@ button:focus-visible {
 .cost.cookedFish { color: #e8944e; }
 .cost.bullets { color: #e0c060; }
 .cost.tins { color: #b8c4c8; }
+.cost.bushCutting { color: #e0475a; }
+.cost.cottonCutting { color: #e6dcc4; }
+.cost.potato { color: #d8b070; }
+.cost.pumpkinSeeds { color: #efe0a8; }
 .cost.short { color: var(--health); }
 
 /* A tool you already carry: no cost to show, just a note. */

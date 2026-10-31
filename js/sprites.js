@@ -78,6 +78,28 @@ const SPIKE_INK = {
   S: ['#7a5230'],
 };
 
+// The garden's colors: dug earth, and what grows in it. Anything on the bottom row sits on the earth
+// (the second color); anything above it stands up against whatever's behind.
+const GARDEN_INK = {
+  e: ['#8f6a44', '#3c2817'], // furrows of dug earth
+  E: ['#7a5836', '#33220f'],
+  b: ['#a87c50', '#3c2817'], // the board along the bed's edge
+  g: ['#86cc5e', '#3c2817'], // new shoots, coming up out of the earth
+  G: ['#6aa84f', '#3c2817'], // leaves on the earth
+  H: ['#4f8a38', '#33220f'],
+  l: ['#7ab858'], // leaves standing up
+  L: ['#5d9a45'],
+  f: ['#e8e0a8'], // potato flowers
+  p: ['#d8b070', '#3c2817'], // potatoes, poking out of the earth
+  s: ['#6a8a3a'], // a pumpkin's stalk
+  o: ['#7a3a08', '#f08a2a'], // a pumpkin, with the grooves down it
+  O: ['#6a3008', '#d8701c'],
+  r: ['#e0475a', '#3c2817'], // a berry
+  w: ['#c8c0a8'], // a cotton boll
+  d: ['#8a7048', '#3c2817'], // a dead plant
+  D: ['#6e5838'],
+};
+
 // A lamp's colors: dark metal, glass lit from inside (two shades for the flicker), and a wooden post.
 const LAMP_INK = {
   m: ['#4a4842'], // the cap and the base
@@ -864,6 +886,106 @@ const SPRITES = {
     ],
     ink: STONE_WALL_INK,
     shadow: 1,
+  },
+  // ---- The garden (see garden.js) ----
+  // A garden bed: rows of dug earth.
+  soil: {
+    art: ['∷∷'],
+    paint: ['eE'],
+    ink: GARDEN_INK,
+    shadow: 0,
+  },
+  potatoSprout: {
+    art: [',\''],
+    paint: ['gg'],
+    ink: GARDEN_INK,
+    shadow: 0,
+  },
+  potatoPlant: {
+    art: [
+      '♣♣',
+      '╹╹',
+    ],
+    paint: [
+      'lL',
+      'GH',
+    ],
+    ink: GARDEN_INK,
+    shadow: 1,
+  },
+  // Ready to dig up: flowering, with potatoes showing at the foot.
+  potatoRipe: {
+    art: [
+      '*♣',
+      'ɵɵ',
+    ],
+    paint: [
+      'fL',
+      'pp',
+    ],
+    ink: GARDEN_INK,
+    shadow: 1,
+  },
+  pumpkinSprout: {
+    art: ['\'ʷ'],
+    paint: ['gg'],
+    ink: GARDEN_INK,
+    shadow: 0,
+  },
+  pumpkinVine: {
+    art: ['♣∽'],
+    paint: ['GH'],
+    ink: GARDEN_INK,
+    shadow: 0,
+  },
+  // A ripe pumpkin on its vine, its stalk sticking up.
+  pumpkinRipe: {
+    art: [
+      ' ╻',
+      '()',
+    ],
+    paint: [
+      ' s',
+      'oO',
+    ],
+    ink: GARDEN_INK,
+    shadow: 1,
+  },
+  bushSprout: {
+    art: [
+      ',♣',
+      '♣•',
+    ],
+    paint: [
+      'lL',
+      'Gr',
+    ],
+    ink: GARDEN_INK,
+    shadow: 1,
+  },
+  cottonSprout: {
+    art: [
+      ' ●',
+      '╲╱',
+    ],
+    paint: [
+      ' w',
+      'gG',
+    ],
+    ink: GARDEN_INK,
+    shadow: 1,
+  },
+  wilted: {
+    art: [
+      '╮,',
+      '╹∷',
+    ],
+    paint: [
+      'DD',
+      'de',
+    ],
+    ink: GARDEN_INK,
+    shadow: 0,
   },
   // A spiked barricade: stakes crossed in an X, their sharpened ends pointing out.
   spikes: {
@@ -1798,6 +1920,10 @@ const ACTION_POSES = {
   Search: { pose: 'crouch', held: null, seconds: 0.5 }, // rummaging through a cupboard or a pack
   'Cut up': { pose: 'crouch', held: null, seconds: 0.3 },
   'Dig up': { seconds: 0.25 }, // a swing of the spade (drawn in place of the rough tool)
+  Plant: { pose: 'crouch', held: null, seconds: 0.4 },
+  Water: { pose: 'crouch', held: null, seconds: 0.4 },
+  Harvest: { pose: 'crouch', held: null, seconds: 0.4 },
+  Clear: { pose: 'crouch', held: null, seconds: 0.3 },
   Eat:{ pose: 'windup', held: null, seconds: 0.4 },
 };
 

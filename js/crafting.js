@@ -41,6 +41,9 @@ const TOOLS = {
     power: { 'Dig up': 1 },
   },
   torch: { name: 'Torch', short: 'torch', glyph: '¡', color: '#c49a62', burns: 300, light: 5 },
+  // Carries water for the garden: filled at the water's edge or a well, it waters `holds` plants
+  // (survivor.bucket counts what's left; see garden.js).
+  bucket: { name: 'Bucket', short: 'bucket', glyph: '⊔', color: '#c49a62', holds: 4 },
   // The rod's `power` for Fish is only there so it's drawn in your hand while you fish.
   rod: { name: 'Fishing rod', short: 'rod', glyph: '⌠', color: '#c49a62', held: ['╲', '╱'], power: { Fish: 1 } },
   // The guns can't be made: they're found, in crates washed up on the beaches (see guns.js). `gun`
@@ -87,6 +90,11 @@ const CRAFT_TABS = { tools: 'Tools', build: 'Build', garden: 'Garden', cook: 'Co
 //   over     for things you build onto something already there, like a roof over a campfire: the keys
 //            in OBJECTS it can go on (it takes their place)
 //   indoors  for things you build: true if it can go inside the cottage too (a chest)
+//   plants   for things you plant in a garden bed (`over` it): build mode says Plant, and it's a
+//            plant that needs watering (see garden.js)
+//   picture  a key in OBJECTS whose picture the card shows, instead of what it `builds` (a plant's
+//            card shows it grown)
+//   needs    a key in TOOLS you must have to make it (a garden bed needs the spade)
 //   gives    items it puts in your pack, e.g. { cooked: 1 }; the panel stays open to make more
 //   byFire   true if you have to be standing beside a campfire to make it (cooking)
 //   done     message shown once it's made
@@ -114,6 +122,14 @@ const RECIPES = {
     cost: { wood: 2, stone: 2 },
     tool: 'spade',
     done: 'You bind a flat stone to a handle. Face a picked bush or a stump to dig it up.',
+  },
+  bucket: {
+    tab: 'tools',
+    name: 'Bucket',
+    about: 'Carries water for the garden.',
+    cost: { wood: 3 },
+    tool: 'bucket',
+    done: 'You knock together a bucket. Fill it at the water, then water your garden.',
   },
   torch: {
     tab: 'tools',
@@ -221,6 +237,59 @@ const RECIPES = {
     builds: 'bedroll',
     done: 'You spread out the bedroll. If you die, you\'ll wake up here.',
   },
+  gardenBed: {
+    tab: 'garden',
+    name: 'Garden bed',
+    about: 'Dig one, then plant in it.',
+    cost: { wood: 1 },
+    builds: 'soil',
+    needs: 'spade',
+    again: true,
+  },
+  plantPotato: {
+    tab: 'garden',
+    name: 'Plant potato',
+    about: 'Grows three more.',
+    cost: { potato: 1 },
+    builds: 'potatoSprout',
+    picture: 'potatoRipe',
+    over: ['soil'],
+    plants: true,
+    again: true,
+  },
+  plantPumpkin: {
+    tab: 'garden',
+    name: 'Plant pumpkin',
+    about: 'Grows a pumpkin, with seeds.',
+    cost: { pumpkinSeeds: 1 },
+    builds: 'pumpkinSprout',
+    picture: 'pumpkinRipe',
+    over: ['soil'],
+    plants: true,
+    again: true,
+  },
+  plantBush: {
+    tab: 'garden',
+    name: 'Plant berry bush',
+    about: 'From a cutting.',
+    cost: { bushCutting: 1 },
+    builds: 'bushSprout',
+    picture: 'bush',
+    over: ['soil'],
+    plants: true,
+    again: true,
+  },
+  plantCotton: {
+    tab: 'garden',
+    name: 'Plant cotton',
+    about: 'From a cutting.',
+    cost: { cottonCutting: 1 },
+    builds: 'cottonSprout',
+    picture: 'cotton',
+    over: ['soil'],
+    plants: true,
+    again: true,
+  },
   cook: {
     tab: 'cook',
     name: 'Cooked berries',
@@ -237,9 +306,18 @@ const RECIPES = {
     gives: { cookedFish: 1 },
     byFire: true,
   },
+  bakePotato: {
+    tab: 'cook',
+    name: 'Baked potato',
+    about: 'Fills you up, and heals.',
+    cost: { potato: 1 },
+    gives: { bakedPotato: 1 },
+    byFire: true,
+  },
 };
 
 const BUILD_HINT = 'Press Build to place it. You keep facing this way: flick the stick to turn.';
+const PLANT_HINT = 'Face a garden bed and press Plant. You keep facing this way: flick the stick to turn.';
 const RECIPE_PICTURE_ROWS = 3; // pictures on the craft cards are at most this many rows tall
 const RECIPE_PICTURE_ROWS_SHORT = 2; // ...and this many on a short screen, like a phone held sideways
 const shortScreen = window.matchMedia('(max-height: 460px)'); // the same as in style.css
@@ -262,14 +340,23 @@ function spend(pack, cost) {
   for (const [item, count] of Object.entries(cost)) pack[item] -= count;
 }
 
-// A recipe can be made if you can pay for it, it isn't a tool you already have, and you're beside
-// a fire if it needs one (`warm` is worked out each moment by updateVitals() in survival.js).
+// A recipe can be made if you can pay for it, it isn't a tool you already have, you're beside a fire
+// if it needs one (`warm` is worked out each moment by updateVitals() in survival.js), and you have
+// the tool it `needs`.
 function canMake(survivor, recipe) {
   return (
     canAfford(survivor.pack, recipe.cost) &&
     !(recipe.tool && survivor.tools[recipe.tool]) &&
-    !(recipe.byFire && !survivor.warm)
+    !(recipe.byFire && !survivor.warm) &&
+    !(recipe.needs && !survivor.tools[recipe.needs])
   );
+}
+
+// What a recipe is waiting on besides its cost, in a couple of words for its card, or null.
+function recipeNeed(survivor, recipe) {
+  if (recipe.byFire && !survivor.warm) return 'At a fire';
+  if (recipe.needs && !survivor.tools[recipe.needs]) return `Needs a ${TOOLS[recipe.needs].short}`;
+  return null;
 }
 
 // How many swings one swing counts as, with the best tool you have for the job.
@@ -291,7 +378,7 @@ function craft(game, key) {
   if (recipe.builds || recipe.floor) {
     closeCraft();
     game.building = key;
-    showMessage(game, BUILD_HINT);
+    showMessage(game, recipe.plants ? PLANT_HINT : BUILD_HINT);
     return;
   }
   spend(survivor.pack, recipe.cost);
@@ -331,7 +418,7 @@ function findBuildSpot(game) {
   if (recipe.floor && inBounds(world, x, y) && world.floors.has(y * world.width + x)) {
     return { x, y, problem: null, lift: true, label: 'Take up' };
   }
-  return { x, y, problem: buildProblem(game, x, y, recipe) };
+  return { x, y, problem: buildProblem(game, x, y, recipe), label: recipe.plants ? 'Plant' : 'Build' };
 }
 
 function buildProblem(game, x, y, recipe) {
@@ -341,7 +428,8 @@ function buildProblem(game, x, y, recipe) {
   if (recipe.over) {
     // Something that goes onto something else, like a roof over a campfire.
     if (!inBounds(world, x, y) || !recipe.over.includes(world.objects[y * world.width + x])) {
-      return `Face a ${OBJECTS[recipe.over[0]].name.toLowerCase()} to build this over it.`;
+      const onto = OBJECTS[recipe.over[0]].name.toLowerCase();
+      return recipe.plants ? `Face an empty ${onto} to plant this in it.` : `Face a ${onto} to build this over it.`;
     }
     if (!canAfford(survivor.pack, recipe.cost)) return `You need ${shortfall(survivor.pack, recipe.cost)}.`;
     return null;
@@ -351,15 +439,17 @@ function buildProblem(game, x, y, recipe) {
     // A floor goes down under things you've built (they have a `mark`) and things you walk over, but
     // not under trees, rocks and bushes; and the cottage has one already.
     if (insideHouse(world, x, y)) return 'The cottage has a floor already.';
-    if (object && object.solid && !object.mark) return `The ${object.name.toLowerCase()} is in the way.`;
+    if (object && ((object.solid && !object.mark) || object.garden)) {
+      return `The ${object.name.toLowerCase()} is in the way.`;
+    }
   } else {
     if (insideHouse(world, x, y)) {
       if (!recipe.indoors) return "There's no room for that inside the cottage.";
       if (keepClear(world, x, y)) return 'Leave the way to the door and the bed clear.';
     }
     // Things you can walk through, like stumps, are cleared away to make room. Doors and beds aren't,
-    // and nor is a dropped pack you haven't searched yet.
-    if (object && (object.solid || object.door || object.bed || object.loot)) {
+    // nor is your garden, and nor is a dropped pack you haven't searched yet.
+    if (object && (object.solid || object.door || object.bed || object.loot || object.garden)) {
       return `The ${object.name.toLowerCase()} is in the way.`;
     }
   }
@@ -389,6 +479,11 @@ function build(game) {
   const recipe = RECIPES[game.building];
   if (recipe.floor) {
     buildFloor(game, spot, recipe);
+    return;
+  }
+  if (recipe.plants) {
+    plant(game, spot.x, spot.y, game.building);
+    if (!canAfford(survivor.pack, recipe.cost)) stopBuilding(game);
     return;
   }
   const object = OBJECTS[recipe.builds];
@@ -515,10 +610,9 @@ function setupCrafting(elements) {
       cost.append(part);
     }
 
-    if (recipe.byFire) {
-      const need = document.createElement('span'); // shown while you're not beside a fire
+    if (recipe.byFire || recipe.needs) {
+      const need = document.createElement('span'); // shown while you're not beside a fire, or lack a tool
       need.className = 'recipe-need';
-      need.textContent = 'At a fire';
       cost.append(need);
     }
     card.append(picture, name, about, cost);
@@ -538,13 +632,22 @@ function openCraft() {
   for (const card of elements.recipes.children) {
     const recipe = RECIPES[card.dataset.recipe];
     if (recipe.builds) {
-      drawRecipePicture(card.querySelector('canvas'), SPRITES[OBJECTS[recipe.builds].sprite]);
+      drawRecipePicture(card.querySelector('canvas'), SPRITES[OBJECTS[recipe.picture || recipe.builds].sprite]);
     }
   }
-  showCraftTab(craftTab);
   state.paused = true;
   releaseAll();
   elements.craft.hidden = false;
+  // Every tab takes up the room of the fullest one, so the tabs don't jump about as you switch.
+  const showing = craftTab;
+  let tallest = 0;
+  elements.recipes.style.minHeight = '';
+  for (const button of elements.craftTabs.children) {
+    showCraftTab(button.dataset.tab);
+    tallest = Math.max(tallest, elements.recipes.offsetHeight);
+  }
+  elements.recipes.style.minHeight = `${tallest}px`;
+  showCraftTab(showing);
 }
 
 // Shows one tab's cards and hides the rest.
@@ -570,7 +673,9 @@ function refreshCraft() {
     const recipe = RECIPES[card.dataset.recipe];
     card.disabled = !canMake(survivor, recipe);
     card.classList.toggle('owned', Boolean(recipe.tool && survivor.tools[recipe.tool]));
-    card.classList.toggle('cold', Boolean(recipe.byFire && !survivor.warm));
+    const need = recipeNeed(survivor, recipe);
+    card.classList.toggle('cold', Boolean(need));
+    if (need) card.querySelector('.recipe-need').textContent = need;
     for (const part of card.querySelectorAll('.cost')) {
       part.classList.toggle('short', survivor.pack[part.dataset.item] < recipe.cost[part.dataset.item]);
     }

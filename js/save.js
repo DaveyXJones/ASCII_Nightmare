@@ -74,6 +74,7 @@ function saveGame(game) {
       pack: survivor.pack,
       tools: survivor.tools,
       torchLeft: survivor.torchLeft,
+      bucket: survivor.bucket,
       warned: survivor.warned,
       hurtBy: survivor.hurtBy,
     },
@@ -84,6 +85,7 @@ function saveGame(game) {
     chests: [...world.chests],
     fuel: [...world.fuel],
     floors: [...world.floors.keys()],
+    crops: [...world.crops],
     seen: packSeen(world),
     bed: world.bed,
   });
@@ -163,6 +165,17 @@ function restoreWorld(world, save) {
     const object = world.objects[i] && OBJECTS[world.objects[i]];
     if (object && object.fuel && object.light && !world.fuel.has(i)) world.fuel.set(i, object.fuel.burns);
   }
+  // How each plant in the garden is getting on, for plants still growing.
+  for (const [i, crop] of save.crops || []) {
+    const key = valid(i) && world.objects[i];
+    if (!key || !OBJECTS[key].crop || !crop) continue;
+    const seconds = (value) => Math.max(0, finite(value, 0));
+    world.crops.set(i, { grown: seconds(crop.grown), water: seconds(crop.water), dry: seconds(crop.dry) });
+  }
+  for (let i = 0; i < world.objects.length; i++) {
+    const object = world.objects[i] && OBJECTS[world.objects[i]];
+    if (object && object.crop && !world.crops.has(i)) world.crops.set(i, { grown: 0, water: 0, dry: 0 });
+  }
   // Floors you've laid. What was under each is the island's own ground, as built from its seed.
   for (const i of save.floors || []) {
     if (!valid(i) || world.floors.has(i) || TILES[world.ground[i]].solid) continue;
@@ -199,6 +212,9 @@ function restoreSurvivor(saved) {
     if (TOOLS[tool]) survivor.tools[tool] = true;
   }
   survivor.torchLeft = Math.max(0, finite(saved.torchLeft, 0));
+  if (survivor.tools.bucket) {
+    survivor.bucket = Math.max(0, Math.min(TOOLS.bucket.holds, Math.floor(finite(saved.bucket, 0))));
+  }
   for (const name of Object.keys(survivor.warned)) {
     survivor.warned[name] = Boolean(saved.warned && saved.warned[name]);
   }

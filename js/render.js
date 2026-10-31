@@ -240,9 +240,10 @@ function spriteImage(sprite, tint = null) {
   return canvas;
 }
 
-// Draws a sprite standing on a tile: its bottom row on the tile, the rest rising above it.
-function drawSprite(sprite, tx, ty, offsetX = 0) {
-  const image = spriteImage(sprite);
+// Draws a sprite standing on a tile: its bottom row on the tile, the rest rising above it, its colors
+// pushed toward `tint` if there's one (a plant gone dry).
+function drawSprite(sprite, tx, ty, offsetX = 0, tint = null) {
+  const image = spriteImage(sprite, tint);
   const left = screenX(tx) + view.cw - Math.round((sprite.width * view.cw) / 2) + offsetX;
   const top = screenY(ty + 1) - image.height;
   view.ctx.drawImage(image, left, top);
@@ -651,7 +652,8 @@ function drawStanding(game, range, inside) {
       if (!key) continue;
       const shake = game.fx.shake && game.fx.shake.index === i ? game.fx.shake : null;
       const offset = shake ? Math.round(Math.sin(game.time * 70) * view.cw * 0.2) : 0;
-      drawSprite(objectSprite(game, OBJECTS[key], tx, ty), tx, ty, offset);
+      const tint = OBJECTS[key].crop ? cropTint(world, i) : null;
+      drawSprite(objectSprite(game, OBJECTS[key], tx, ty), tx, ty, offset, tint);
     }
     if (inside && ty === house.top) drawHouseImage(backWallImage(house), house.left, house.top - WALL_ROWS);
     if (!inside && ty === house.top + house.height - 1) {

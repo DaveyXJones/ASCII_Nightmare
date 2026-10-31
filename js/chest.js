@@ -153,6 +153,7 @@ function moveThing(kind, key, intoChest) {
     if (!survivor.tools[key]) return;
     delete survivor.tools[key];
     if (key === 'torch') survivor.torchLeft = 0; // a torch shut in a chest goes out
+    if (key === 'bucket') survivor.bucket = 0; // and a bucket's emptied before it goes in
     chest.tools[key] = (chest.tools[key] || 0) + 1;
   } else {
     if (survivor.tools[key] || !chest.tools[key]) return;

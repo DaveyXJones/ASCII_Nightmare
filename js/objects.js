@@ -51,6 +51,10 @@
 //   epitaph  true for a grave: walking into it reads its stone, a line from EPITAPHS (places.js)
 //   thorns   how much it hurts a creature each time one claws at it or runs into it (the spiked
 //            barricade; see prick in creatures.js)
+//   plot     true for a garden bed: facing it with something to plant, the button says Plant
+//   crop     for a plant in the garden (see garden.js): { grows, into, says? }. It grows into `into`
+//            after `grows` seconds with water in it, saying `says` (if any) as it does
+//   garden   true for a garden bed and everything that grows in one: building can't go over it
 //   dig      { hits, gives, becomes }: with a spade (TOOLS.spade), the action button says Dig up on
 //            it, once there's nothing else to take from it, and these replace its own `hits`,
 //            `gives` and `becomes`
@@ -69,6 +73,7 @@ const MARKS = {
   wall: { glyph: '#', color: '#c49a62', name: 'wall', rank: 1 },
   stoneWall: { glyph: '#', color: '#b8b6b0', name: 'stone wall', rank: 1 },
   spikes: { glyph: '×', color: '#e8cf9a', name: 'barricade', rank: 1 },
+  garden: { glyph: 'ψ', color: '#7ac25a', name: 'garden', rank: 1 },
   wreck: { glyph: '∪', color: '#c8b08a', name: 'wreck', rank: 2 },
   crate: { glyph: '☐', color: '#e0c080', name: 'crate', rank: 4 },
   dropped: { glyph: '!', color: '#ff5a4a', name: 'your gun', rank: 6 },
@@ -109,6 +114,9 @@ const GUN_CRATE = {
   found: true,
   mark: MARKS.crate,
 };
+
+// Everything growing in a garden bed (see garden.js): you walk through it, and it's marked on the map.
+const GARDEN_PLANT = { mark: MARKS.garden, garden: true };
 
 // A wall of an old cabin (see places.js): grey, rotting logs. It joins up with walls you build, so
 // you can patch the gaps in one and make it yours.
@@ -386,6 +394,89 @@ const OBJECTS = {
     repair: { wood: 1 },
     scarred: 'spikesScarred',
     thorns: 1,
+  },
+  // ---- The garden (see garden.js) ----
+  // A garden bed: dug earth with a board along its edge, ready for planting.
+  soil: {
+    ...GARDEN_PLANT,
+    name: 'Garden bed',
+    sprite: 'soil',
+    action: 'Plant',
+    plot: true,
+    empty: 'Nothing to plant. Potatoes, pumpkin seeds and cuttings grow in a garden bed.',
+    dig: { hits: 2, gives: { wood: 1 }, becomes: null },
+  },
+  potatoSprout: {
+    ...GARDEN_PLANT,
+    name: 'Potato shoots',
+    sprite: 'potatoSprout',
+    crop: { grows: 150, into: 'potatoPlant' },
+  },
+  potatoPlant: {
+    ...GARDEN_PLANT,
+    name: 'Potato plant',
+    sprite: 'potatoPlant',
+    crop: { grows: 210, into: 'potatoRipe', says: 'The potatoes in your garden are ready to dig up.' },
+  },
+  potatoRipe: {
+    ...GARDEN_PLANT,
+    name: 'Potatoes',
+    sprite: 'potatoRipe',
+    action: 'Harvest',
+    hits: 1,
+    gives: { potato: 3 },
+    becomes: 'soil',
+    burst: 'dust',
+    sound: 'dig',
+  },
+  pumpkinSprout: {
+    ...GARDEN_PLANT,
+    name: 'Pumpkin shoots',
+    sprite: 'pumpkinSprout',
+    crop: { grows: 150, into: 'pumpkinVine' },
+  },
+  pumpkinVine: {
+    ...GARDEN_PLANT,
+    name: 'Pumpkin vine',
+    sprite: 'pumpkinVine',
+    crop: { grows: 240, into: 'pumpkinRipe', says: 'A pumpkin in your garden is ripe.' },
+  },
+  pumpkinRipe: {
+    ...GARDEN_PLANT,
+    name: 'Pumpkin',
+    sprite: 'pumpkinRipe',
+    action: 'Harvest',
+    hits: 1,
+    gives: { pumpkin: 1, pumpkinSeeds: 2 },
+    becomes: 'soil',
+    burst: 'leaf',
+    sound: 'pick',
+  },
+  // A cutting from a wild berry bush or cotton plant, taking root: it grows into one like the wild ones.
+  bushSprout: {
+    ...GARDEN_PLANT,
+    name: 'Berry seedling',
+    sprite: 'bushSprout',
+    crop: { grows: 240, into: 'bush', says: 'The berry bush in your garden has grown, and fruited.' },
+  },
+  cottonSprout: {
+    ...GARDEN_PLANT,
+    name: 'Cotton seedling',
+    sprite: 'cottonSprout',
+    crop: { grows: 180, into: 'cotton', says: 'The cotton in your garden is ready to pick.' },
+  },
+  // A plant left dry too long. Pull it up to plant something else.
+  wilted: {
+    ...GARDEN_PLANT,
+    name: 'Wilted plant',
+    sprite: 'wilted',
+    action: 'Clear',
+    hits: 1,
+    gives: {},
+    becomes: 'soil',
+    burst: 'leaf',
+    sound: 'pick',
+    says: 'You pull up the dead plant. The bed is ready again.',
   },
   // A chest keeps what's in it when you die (see chest.js). It's taken down from its own panel, once
   // it's empty.

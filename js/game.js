@@ -42,6 +42,8 @@ const elements = {
   tools: Object.fromEntries(
     Object.keys(TOOLS).map((tool) => [tool, document.getElementById(`tool-${tool}`)]),
   ),
+  pack: document.querySelector('.pack'),
+  bucketWater: document.getElementById('bucket-water'), // waterings left, beside the bucket in the pack
   toast: document.getElementById('toast'),
   actionButton: document.getElementById('btn-action'),
   actionLabel: document.getElementById('action-label'),
@@ -230,6 +232,7 @@ function update(dt) {
   updateVitals(state, dt);
   updateTorch(state, dt);
   updateLamps(state, dt);
+  updateGarden(state, dt);
   markSeen(state);
   updateWeather(state, dt);
   updateCreatures(state, dt);
@@ -601,6 +604,13 @@ function updateHud() {
     elements.tools.torch.classList.toggle('lit', torch !== 'out');
     elements.tools.torch.classList.toggle('low', torch === 'low');
   }
+  // The bucket shows how many plants the water in it will do, and turns blue while there's some.
+  const { bucket } = state.survivor;
+  if (hud.bucket !== bucket) {
+    hud.bucket = bucket;
+    elements.bucketWater.textContent = String(bucket);
+    elements.tools.bucket.classList.toggle('full', bucket > 0);
+  }
   // A gun dims in the pack while it's reloading.
   for (const key of Object.keys(TOOLS)) {
     if (!TOOLS[key].gun) continue;
@@ -759,6 +769,11 @@ new ResizeObserver(() => {
   resizeView();
   placeCamera(state.world);
 }).observe(elements.canvas);
+// On a phone a full pack wraps onto more rows: messages go below it (see .toast in style.css).
+new ResizeObserver(() => {
+  const bottom = elements.pack.getBoundingClientRect().bottom;
+  elements.game.style.setProperty('--pack-bottom', `${Math.round(bottom)}px`);
+}).observe(elements.pack);
 // Measure again once the font has loaded; until then the map is drawn in a fallback font.
 if (document.fonts) {
   const fonts = [document.fonts.load(`20px ${MAP_FONT}`), document.fonts.load(`bold 20px ${MAP_FONT}`)];
