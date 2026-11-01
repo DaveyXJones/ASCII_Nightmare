@@ -10,6 +10,9 @@
 //
 // How far each plant has got is kept in world.crops (tile index -> { grown, water, dry }, all in
 // seconds), and saved with the world (see save.js).
+//
+// A rain barrel saves the walk to the water: it fills whenever it rains, and you can drink from it or
+// fill the bucket at it. What's in each is kept in world.barrels (tile index -> waterings).
 
 const WET_SECONDS = 240; // a watering keeps a plant growing for this long
 const WILT_SECONDS = 300; // left dry this long, a plant wilts and dies
@@ -19,6 +22,8 @@ const FILL_THIRST = 75; // thirstier than this (water below it), facing water dr
 const GARDEN_NEWS_REACH = 24; // what happens in a garden is news if you're within this many tiles of it
 const GARDEN_NEWS_EVERY = 45; // seconds between reminders that the garden is drying out
 const DRY_TINT = '#b89a5a'; // a plant gone dry is drawn with its colors pushed toward this straw color
+const BARREL_HOLDS = 12; // waterings in a full rain barrel (a long drink counts as one): three bucketfuls
+const BARREL_FILL_SECONDS = 120; // seconds of pouring rain to fill one from empty; lighter rain takes longer
 
 let gardenToldAt = -Infinity; // when the game last said the garden was drying out
 
@@ -105,6 +110,66 @@ function waterPlant(game, target) {
   playSound('pour');
   floatText(fx, target.x + 0.5, target.y - 1, 'watered', '#7ab4e8');
   buzz(15);
+}
+
+// ---- Rain barrels ----
+
+// What the action button does at the rain barrel at (x, y), for findTarget (survival.js): with a
+// bucket to fill and no great thirst, fill it; otherwise drink. Empty, it's the barrel's own action
+// (Take down), so this says null.
+function barrelTarget(world, survivor, x, y, object) {
+  if ((world.barrels.get(y * world.width + x) || 0) < 1) return null;
+  const fill = wantsToFill(survivor);
+  return { x, y, label: fill ? 'Fill' : 'Drink', object, barrel: fill ? 'fill' : 'drink' };
+}
+
+// One press of the button at a barrel with water in it.
+function useBarrel(game, target) {
+  const { world, survivor, fx } = game;
+  const i = target.y * world.width + target.x;
+  const water = world.barrels.get(i) || 0;
+  let left = water;
+  if (target.barrel === 'fill') {
+    left -= Math.min(TOOLS.bucket.holds - survivor.bucket, Math.floor(water));
+    survivor.bucket += water - left;
+    playSound('pour');
+    floatText(fx, game.player.x, game.player.y - 3, 'bucket filled', '#7ab4e8');
+  } else {
+    if (survivor.vitals.water >= 99) {
+      showMessage(game, `You've had your fill. The barrel has ${Math.floor(water)} of ${BARREL_HOLDS} left.`);
+      return;
+    }
+    survivor.vitals.water = Math.min(100, survivor.vitals.water + SIP_WATER);
+    left -= 1;
+    playSound('drink');
+    floatText(fx, target.x + 0.5, target.y - 3, '+water', '#7ab4e8');
+  }
+  world.barrels.set(i, left);
+  burst(fx, target.x + 0.5, target.y - 1, 'water', 6);
+  buzz(15);
+  if (left < 1) showMessage(game, 'That\'s the last of the barrel. It will fill again when it rains.');
+}
+
+// Every moment: rain fills the barrels. A barrel that's just brimmed over is news if you're near it.
+function updateBarrels(game, dt) {
+  const { world, sky } = game;
+  if (world.barrels.size === 0 || sky.weather.rain <= 0) return;
+  const rise = (sky.weather.rain * BARREL_HOLDS * dt) / BARREL_FILL_SECONDS;
+  for (const [i, water] of world.barrels) {
+    if (water >= BARREL_HOLDS) continue;
+    const now = Math.min(BARREL_HOLDS, water + rise);
+    world.barrels.set(i, now);
+    if (now < BARREL_HOLDS) continue;
+    const x = i % world.width;
+    gardenNews(game, x, (i - x) / world.width, 'Your rain barrel is full.', true);
+  }
+}
+
+// Which picture a barrel uses, from its `levels`, emptiest first: dry, a little, and two thirds or more.
+function barrelPicture(world, i, object) {
+  const water = world.barrels.get(i) || 0;
+  if (water < 1) return object.levels[0];
+  return object.levels[water < (BARREL_HOLDS * 2) / 3 ? 1 : 2];
 }
 
 // ---- Growing ----

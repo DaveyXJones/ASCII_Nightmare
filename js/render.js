@@ -679,6 +679,7 @@ function objectSprite(game, object, tx, ty) {
   if (look.scarred && (world.clawed.get(ty * world.width + tx) || 0) >= object.claws / 2) {
     return SPRITES[look.scarred];
   }
+  if (object.levels) return SPRITES[barrelPicture(world, ty * world.width + tx, object)];
   if (!object.frames) return SPRITES[look.sprite];
   return SPRITES[object.frames[(game.flameFrame + ty * world.width + tx) % object.frames.length]];
 }

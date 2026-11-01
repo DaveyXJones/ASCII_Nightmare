@@ -250,6 +250,9 @@ function findTarget(game) {
         candidate = { x: tx, y: ty, label: 'Plant', object, plant: true };
       } else if (object && object.crop && cropWantsWater(world, tx, ty)) {
         candidate = { x: tx, y: ty, label: 'Water', object, water: true };
+      } else if (object && object.barrel && barrelTarget(world, survivor, tx, ty, object)) {
+        // A rain barrel with water in it (see garden.js).
+        candidate = barrelTarget(world, survivor, tx, ty, object);
       } else if (object && object.drink && wantsToFill(survivor)) {
         // At a well with a bucket that isn't full, and not thirsty: fill it.
         candidate = { x: tx, y: ty, label: 'Fill', object, bucket: true };
@@ -364,6 +367,10 @@ function useTarget(game) {
 
   if (target.fish) {
     castLine(game, target);
+    return;
+  }
+  if (target.barrel) {
+    useBarrel(game, target);
     return;
   }
   if (target.bucket) {

@@ -290,6 +290,14 @@ const RECIPES = {
     plants: true,
     again: true,
   },
+  rainBarrel: {
+    tab: 'garden',
+    name: 'Rain barrel',
+    about: 'Catches rain, to drink or water.',
+    cost: { wood: 5 },
+    builds: 'rainBarrel',
+    done: 'You set the barrel out under the sky. It will fill when it rains.',
+  },
   cook: {
     tab: 'cook',
     name: 'Cooked berries',
@@ -493,6 +501,7 @@ function build(game) {
   if (object.bed) game.world.bed = index; // the newest bed is where you'll wake up
   if (object.chest) game.world.chests.set(index, newChest());
   if (object.fuel) game.world.fuel.set(index, object.fuel.burns);
+  if (object.barrel) game.world.barrels.set(index, 0);
   player.act = { action: 'Build', at: player.clock };
   if (object.burst) burst(game.fx, spot.x + 0.5, spot.y + 0.5, object.burst, 10);
   playSound('build');

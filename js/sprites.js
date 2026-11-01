@@ -199,6 +199,18 @@ const STONE_INK = {
   y: ['#f0e8d0'], // candle wax
 };
 
+// A rain barrel's colors: oak staves, iron hoops, and the water showing at the top.
+const RAIN_BARREL_INK = {
+  T: ['#c49a62'], // the rim
+  d: ['#2a1e14', '#2a1e14'], // dry inside
+  w: ['#5a8ab8', '#16304c'], // a little water, low down and dark
+  W: ['#a8d8ff', '#2a6aa8'], // brimming, and catching the light
+  L: ['#a87a4c'], // the staves, in the light
+  D: ['#6c4828'], // ...in shade
+  s: ['#7a5230', '#93683e'],
+  h: ['#3a3a3a', '#7e8084'], // the hoops
+};
+
 // The lighthouse: red and white bands, a dark lantern room with a broken pane.
 const LIGHTHOUSE_INK = {
   c: ['#3a3a3a'], // the cap
@@ -1089,6 +1101,55 @@ const SPRITES = {
     ],
     ink: LAMP_INK,
     shadow: 1,
+  },
+  // A rain barrel (see garden.js): staves and two hoops, with what's in it showing at the top.
+  rainBarrelEmpty: {
+    art: [
+      '▗▄▄▖',
+      '▐══▌',
+      '▐▒▒▌',
+      '▐══▌',
+    ],
+    paint: [
+      'TddT',
+      'LhhD',
+      'LssD',
+      'LhhD',
+    ],
+    ink: RAIN_BARREL_INK,
+    shadow: 2,
+  },
+  rainBarrelLow: {
+    art: [
+      '▗≈≈▖',
+      '▐══▌',
+      '▐▒▒▌',
+      '▐══▌',
+    ],
+    paint: [
+      'TwwT',
+      'LhhD',
+      'LssD',
+      'LhhD',
+    ],
+    ink: RAIN_BARREL_INK,
+    shadow: 2,
+  },
+  rainBarrel: {
+    art: [
+      '▗≈≈▖',
+      '▐══▌',
+      '▐▒▒▌',
+      '▐══▌',
+    ],
+    paint: [
+      'TWWT',
+      'LhhD',
+      'LssD',
+      'LhhD',
+    ],
+    ink: RAIN_BARREL_INK,
+    shadow: 2,
   },
   // The wrecked boat on the beach, in three pieces (bow, middle, stern), seen from the side, bow to
   // the left: sun-bleached planks along the top, a hole stove in the side, a broken mast.

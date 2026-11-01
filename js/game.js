@@ -233,6 +233,7 @@ function update(dt) {
   updateTorch(state, dt);
   updateLamps(state, dt);
   updateGarden(state, dt);
+  updateBarrels(state, dt);
   markSeen(state);
   updateWeather(state, dt);
   updateCreatures(state, dt);

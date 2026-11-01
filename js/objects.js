@@ -58,6 +58,9 @@
 //   dig      { hits, gives, becomes }: with a spade (TOOLS.spade), the action button says Dig up on
 //            it, once there's nothing else to take from it, and these replace its own `hits`,
 //            `gives` and `becomes`
+//   barrel   true for a rain barrel: it fills when it rains (world.barrels keeps how much is in it;
+//            see garden.js). Its own `action` only shows once it's empty.
+//   levels   pictures to use by how full a barrel is, emptiest first, in place of `sprite`
 
 // How a lamp burns (see `fuel` below): a filling lasts five minutes of dark, half a night.
 const LAMP_FUEL = { burns: 300, cost: { cloth: 1 }, into: 'lamp', empty: 'lampOut' };
@@ -477,6 +480,24 @@ const OBJECTS = {
     burst: 'leaf',
     sound: 'pick',
     says: 'You pull up the dead plant. The bed is ready again.',
+  },
+  // A barrel left out in the rain (see garden.js): drink from it, or fill the bucket at it. Empty,
+  // it can be taken down.
+  rainBarrel: {
+    name: 'Rain barrel',
+    mark: MARKS.garden,
+    sprite: 'rainBarrel',
+    levels: ['rainBarrelEmpty', 'rainBarrelLow', 'rainBarrel'],
+    solid: true,
+    blocked: 'Your rain barrel.',
+    action: 'Take down',
+    hits: 3,
+    gives: { wood: 3 },
+    becomes: null,
+    burst: 'wood',
+    sound: 'chop',
+    soundDone: 'build',
+    barrel: true,
   },
   // A chest keeps what's in it when you die (see chest.js). It's taken down from its own panel, once
   // it's empty.
