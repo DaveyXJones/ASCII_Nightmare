@@ -49,6 +49,12 @@ function recallLook() {
 
 // ---- The world ----
 
+// Where the island you're on is kept: your own under SAVE_KEY, and each shared one under its code
+// (see together.js), so going to a friend's island never touches your own.
+function saveKey() {
+  return together.code ? `${TOGETHER_SAVE}${together.code}` : SAVE_KEY;
+}
+
 // Keeps where things stand. Called every SAVE_EVERY seconds, when the menu opens, when the page is
 // put away, on waking up and on dying.
 function saveGame(game) {
@@ -58,7 +64,7 @@ function saveGame(game) {
   for (let i = 0; i < world.objects.length; i++) {
     if (world.objects[i] !== world.original[i]) objects.push([i, world.objects[i]]);
   }
-  remember(SAVE_KEY, {
+  remember(saveKey(), {
     version: SAVE_VERSION,
     seed: world.seed,
     size: [world.width, world.height],
@@ -97,7 +103,7 @@ function saveGame(game) {
 // Puts back the world saved last time. Returns true if there was one to carry on, false if not (or
 // it couldn't be read), in which case nothing is changed.
 function loadGame(game) {
-  const save = recall(SAVE_KEY);
+  const save = recall(saveKey());
   if (!save || save.version !== SAVE_VERSION || !Number.isInteger(save.seed)) return false;
   try {
     const world = generateWorld(save.seed, savedIsland(save));

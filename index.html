@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap">
-    <link rel="stylesheet" href="css/style.css?v=13">
+    <link rel="stylesheet" href="css/style.css?v=14">
   </head>
   <body>
     <div class="game" id="game">
@@ -83,6 +83,7 @@
             <div class="menu-buttons">
               <button type="button" id="start" class="button primary">Wake up</button>
               <button type="button" id="look-button" class="button">Your look</button>
+              <button type="button" id="together-button" class="button" hidden>Play together</button>
               <button type="button" id="new-world" class="button">New world</button>
               <button type="button" id="sound-button" class="button" aria-pressed="true">Sound on</button>
               <button type="button" id="outline-button" class="button" aria-pressed="true">Outline on</button>
@@ -192,6 +193,31 @@
         </div>
       </section>
 
+      <!-- Playing with other people (see js/together.js). -->
+      <section id="together" class="overlay" aria-labelledby="together-title" hidden>
+        <div class="panel together-panel">
+          <div class="craft-head">
+            <h2 id="together-title" class="title">Together</h2>
+            <button type="button" id="together-close" class="button close" aria-label="Close">✕</button>
+          </div>
+          <div id="together-off" class="together-part">
+            <p class="tagline">Start a new island and share its code, or type a friend's code to join them. Your own island stays safe.</p>
+            <button type="button" id="together-start" class="button primary">Start an island</button>
+            <form id="together-form" class="together-join">
+              <input id="together-code" class="together-code" type="text" maxlength="5" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="CODE" aria-label="Island code">
+              <button type="submit" class="button">Join</button>
+            </form>
+          </div>
+          <div id="together-on" class="together-part" hidden>
+            <p class="tagline">Share this code with anyone you want on your island:</p>
+            <p id="together-shown" class="together-shown"></p>
+            <p id="together-count" class="tagline"></p>
+            <button type="button" id="together-leave" class="button">Back to my own island</button>
+          </div>
+          <p id="together-status" class="together-status" role="status"></p>
+        </div>
+      </section>
+
       <section id="death" class="overlay" aria-labelledby="death-title" hidden>
         <div class="panel panel-small">
           <h1 id="death-title" class="title">You collapse.</h1>
@@ -214,27 +240,28 @@
          every change to the code or the styles. Browsers keep files for a while, and a new page with
          an old map.js still in the browser's memory is a broken game; a new number makes them all
          fetch fresh. -->
-    <script src="js/random.js?v=13"></script>
-    <script src="js/tiles.js?v=13"></script>
-    <script src="js/sprites.js?v=13"></script>
-    <script src="js/objects.js?v=13"></script>
-    <script src="js/world.js?v=13"></script>
-    <script src="js/places.js?v=13"></script>
-    <script src="js/night.js?v=13"></script>
-    <script src="js/weather.js?v=13"></script>
-    <script src="js/render.js?v=13"></script>
-    <script src="js/input.js?v=13"></script>
-    <script src="js/sound.js?v=13"></script>
-    <script src="js/survival.js?v=13"></script>
-    <script src="js/crafting.js?v=13"></script>
-    <script src="js/chest.js?v=13"></script>
-    <script src="js/fishing.js?v=13"></script>
-    <script src="js/garden.js?v=13"></script>
-    <script src="js/lighthouse.js?v=13"></script>
-    <script src="js/guns.js?v=13"></script>
-    <script src="js/map.js?v=13"></script>
-    <script src="js/creatures.js?v=13"></script>
-    <script src="js/save.js?v=13"></script>
-    <script src="js/game.js?v=13"></script>
+    <script src="js/random.js?v=14"></script>
+    <script src="js/tiles.js?v=14"></script>
+    <script src="js/sprites.js?v=14"></script>
+    <script src="js/objects.js?v=14"></script>
+    <script src="js/world.js?v=14"></script>
+    <script src="js/places.js?v=14"></script>
+    <script src="js/night.js?v=14"></script>
+    <script src="js/weather.js?v=14"></script>
+    <script src="js/render.js?v=14"></script>
+    <script src="js/input.js?v=14"></script>
+    <script src="js/sound.js?v=14"></script>
+    <script src="js/survival.js?v=14"></script>
+    <script src="js/crafting.js?v=14"></script>
+    <script src="js/chest.js?v=14"></script>
+    <script src="js/fishing.js?v=14"></script>
+    <script src="js/garden.js?v=14"></script>
+    <script src="js/lighthouse.js?v=14"></script>
+    <script src="js/guns.js?v=14"></script>
+    <script src="js/map.js?v=14"></script>
+    <script src="js/creatures.js?v=14"></script>
+    <script src="js/save.js?v=14"></script>
+    <script src="js/together.js?v=14"></script>
+    <script src="js/game.js?v=14"></script>
   </body>
 </html>

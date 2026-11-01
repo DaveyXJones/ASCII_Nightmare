@@ -633,6 +633,14 @@ function drawStanding(game, range, inside) {
       drawCreature(game, creatures[nextCreature++]);
     }
   };
+  // Other people on a shared island (see together.js) are placed the same way.
+  const others = [...together.others.values()]
+    .filter((o) => o.x > left - 1 && o.x < right + 2 && o.y > top - 1 && o.y < bottom + 2)
+    .sort((a, b) => a.y - b.y);
+  let nextOther = 0;
+  const placeOthers = (line) => {
+    while (nextOther < others.length && others[nextOther].y < line) drawOtherPlayer(game, others[nextOther++]);
+  };
 
   for (let ty = top; ty <= bottom; ty++) {
     for (let tx = left; tx <= right; tx++) {
@@ -648,6 +656,7 @@ function drawStanding(game, range, inside) {
     // their feet are behind that line, so they pass behind a tree's trunk and in front of it.
     if (!playerDrawn && player.y < ty + 0.5) placePlayer();
     placeCreatures(ty + 0.5);
+    placeOthers(ty + 0.5);
     for (let tx = left; tx <= right; tx++) {
       const i = ty * world.width + tx;
       const key = world.objects[i];
@@ -663,9 +672,11 @@ function drawStanding(game, range, inside) {
     }
     if (!playerDrawn && player.y < ty + 1) placePlayer();
     placeCreatures(ty + 1);
+    placeOthers(ty + 1);
   }
   if (!playerDrawn) placePlayer();
   placeCreatures(Infinity);
+  placeOthers(Infinity);
 }
 
 // The picture for an object. Ones with `frames`, like a campfire, flicker between pictures; each
@@ -813,6 +824,7 @@ function playerPose(game) {
   const { player, survivor } = game;
   const set = PLAYER_SPRITES[player.facing];
   const pose = (name, action) => ({
+    name,
     sprite: set[name],
     held: action ? heldGlyph(action, player.facing, survivor, player.act && player.act.tool) : null,
     spot: set.held[name],
@@ -826,7 +838,7 @@ function playerPose(game) {
   if (game.dying) {
     if (game.dying.seconds < KNEEL_SECONDS) return { ...pose('crouch'), torch: null };
     const side = player.facing === 'left' || player.facing === 'up' ? 'left' : 'right';
-    return { sprite: PLAYER_SPRITES[side].fallen, held: null, torch: null, lift: 0 };
+    return { name: 'fallen', sprite: PLAYER_SPRITES[side].fallen, held: null, torch: null, lift: 0 };
   }
 
   // Just did something: swinging, reaching, kneeling to drink.
@@ -841,7 +853,8 @@ function playerPose(game) {
   }
   if (player.moving) {
     const step = Math.floor(player.stride / WALK_FRAME_TILES) % set.walk.length;
-    return { ...pose('stand'), sprite: set.walk[step], lift: step % 2 ? Math.round(view.th * WALK_BOB) : 0 };
+    const lift = step % 2 ? Math.round(view.th * WALK_BOB) : 0;
+    return { ...pose('stand'), name: 'walk', sprite: set.walk[step], lift };
   }
   if (set.blink && blinking(player.clock)) return pose('blink');
   return pose('stand');
@@ -902,7 +915,9 @@ function drawFigure(ctx, game, look, image, left, top) {
     const [col, row] = look.spot;
     drawGlyph(ctx, look.held, TOOL_COLOR, left + col * view.cw, top + row * view.th, true);
   }
-  if (look.torch) drawTorch(ctx, game, left + look.torch[0] * view.cw, top + look.torch[1] * view.th);
+  if (look.torch) {
+    drawTorch(ctx, game, left + look.torch[0] * view.cw, top + look.torch[1] * view.th, game.survivor.torchLeft > 0);
+  }
 }
 
 // The player with a thin dark edge round them, so they stand out on busy ground. The figure is drawn
@@ -966,11 +981,11 @@ function drawGrassOver(world, x, y) {
   }
 }
 
-// The torch in the player's hand at (x, y): its stick, and above that the rag wrapped round its
-// top, or a flickering flame once it's lit.
-function drawTorch(ctx, game, x, y) {
+// A torch in someone's hand at (x, y): its stick, and above that the rag wrapped round its top, or a
+// flickering flame if it's `lit`.
+function drawTorch(ctx, game, x, y, lit) {
   const flames = TORCH_LOOK.flames;
-  const head = game.survivor.torchLeft > 0 ? flames[game.flameFrame % flames.length] : TORCH_LOOK.rag;
+  const head = lit ? flames[game.flameFrame % flames.length] : TORCH_LOOK.rag;
   drawGlyph(ctx, TORCH_LOOK.stick[0], TORCH_LOOK.stick[1], x, y, true);
   drawGlyph(ctx, head[0], head[1], x, y - view.th, true);
 }
@@ -990,6 +1005,35 @@ function noteDrawn(x0, y0, x1, y1) {
   if (x0 < box.x1 - view.cw / 2 && x1 > box.x0 + view.cw / 2 && y0 < box.y1 && y1 > box.y0 + view.th / 2) {
     view.playerCovered = true;
   }
+}
+
+// Someone else on a shared island (see together.js), drawn at their feet in their own colors, doing
+// whatever they last said they were doing.
+function drawOtherPlayer(game, other) {
+  const pictures = picturesFor(other.look);
+  const set = pictures[other.facing];
+  let sprite = set[other.pose] || set.stand;
+  let lift = 0;
+  if (other.pose === 'walk') {
+    const step = Math.floor(other.stride / WALK_FRAME_TILES) % set.walk.length;
+    sprite = set.walk[step];
+    lift = step % 2 ? Math.round(view.th * WALK_BOB) : 0;
+  } else if (other.pose === 'fallen') {
+    sprite = pictures[other.facing === 'left' || other.facing === 'up' ? 'left' : 'right'].fallen;
+  }
+  const image = spriteImage(sprite);
+  const left = Math.round(screenX(other.x) - image.width / 2);
+  const top = Math.round(screenY(other.y) + view.th * 0.25) - image.height - lift;
+  const ctx = view.ctx;
+  ctx.drawImage(image, left, top);
+  const spot = set.held[other.pose];
+  if (other.held && spot) drawGlyph(ctx, other.held, TOOL_COLOR, left + spot[0] * view.cw, top + spot[1] * view.th, true);
+  if (other.hasTorch && other.pose !== 'fallen') {
+    const torch = set.torch[other.pose] || set.torch.stand;
+    drawTorch(ctx, game, left + torch[0] * view.cw, top + torch[1] * view.th, other.lit);
+  }
+  noteDrawn(left, top, left + image.width, top + image.height);
+  drawGrassOver(game.world, other.x, other.y);
 }
 
 // ---- Creatures ----
@@ -1270,6 +1314,15 @@ function findLights(game, range, inside) {
       if (!inside && insideHouse(world, tx, ty)) continue;
       lights.push({ x: tx + 0.5, y: ty, reach: light * flicker(game, i), strength: 1, warm: true });
     }
+  }
+
+  // Other people's torches, on a shared island.
+  for (const other of together.others.values()) {
+    if (!other.lit) continue;
+    const reach = TOOLS.torch.light;
+    if (other.x < range.left - reach || other.x > range.right + reach) continue;
+    if (other.y < range.top - reach || other.y > range.bottom + reach) continue;
+    lights.push({ x: other.x, y: other.y - 1, reach: reach * flicker(game, 0), strength: 1, warm: true });
   }
 
   // The lighthouse, once it's lit: light round the lamp high up, and round the foot of the tower.

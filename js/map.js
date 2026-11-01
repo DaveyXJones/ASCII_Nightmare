@@ -23,6 +23,7 @@ const MAP_MAX_CSS = [1100, 760]; // the map's window is at most this big, in CSS
 const MAP_UNSEEN = '#05080c'; // land you haven't seen yet
 const MAP_YOU = { glyph: '@', color: '#fff6c8', background: '#7a1f1f', name: 'you' };
 const MAP_COTTAGE = { glyph: '⌂', color: '#ffb08a', background: '#5a2a1e', name: 'cottage' };
+const MAP_OTHER = { glyph: '@', color: '#d8f0ff', background: '#1f4a7a', name: 'someone else' };
 
 const mapView = {
   markedAt: -Infinity, // when what's around you was last added, in seconds of play
@@ -96,7 +97,7 @@ function setupMap(elements) {
   // The key: you, the cottage, and one line for each kind of mark (a lit fire and a cold one share
   // a name, so only the first is listed). Only the marks on land you've seen are shown (see
   // showKeyLines), so it grows as you explore.
-  const marks = [MAP_YOU, MAP_COTTAGE];
+  const marks = [MAP_YOU, MAP_OTHER, MAP_COTTAGE];
   for (const object of Object.values(OBJECTS)) {
     if (object.mark && !marks.some((mark) => mark.name === object.mark.name)) marks.push(object.mark);
   }
@@ -149,6 +150,7 @@ function openMap() {
 // you and the cottage).
 function showKeyLines(world) {
   const names = new Set([MAP_YOU.name, MAP_COTTAGE.name]);
+  if (together.others.size > 0) names.add(MAP_OTHER.name);
   for (let i = 0; i < world.objects.length; i++) {
     const key = world.objects[i];
     if (key && world.seen[i] && OBJECTS[key].mark) names.add(OBJECTS[key].mark.name);
@@ -332,6 +334,9 @@ function drawMap(game) {
   const houseY = house.top + house.height / 2;
   if (world.seen[Math.floor(houseY) * world.width + Math.floor(houseX)]) {
     put(MAP_COTTAGE, Math.floor(houseX / block), Math.floor(houseY / (block * 2)));
+  }
+  for (const other of together.others.values()) {
+    put(MAP_OTHER, Math.floor(other.x / block), Math.floor(other.y / (block * 2)));
   }
   put(MAP_YOU, Math.floor(player.x / block), Math.floor(player.y / (block * 2)));
 }

@@ -858,6 +858,57 @@ button:focus-visible {
 /* ---- A note found in a ruin ---- */
 
 /* Old paper: a pale page with faded ink, in the middle of the dark. */
+/* Playing together: start an island, or type a code to join one. */
+.together-panel {
+  flex-direction: column;
+  gap: 10px;
+  width: min(420px, 100%);
+}
+
+.together-part {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.together-part[hidden] {
+  display: none;
+}
+
+.together-join {
+  display: flex;
+  gap: 8px;
+}
+
+.together-code {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+  font: inherit;
+  font-size: 18px; /* at 16px and up, phones don't zoom the page in when you tap the box */
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.together-shown {
+  margin: 0;
+  color: var(--lantern);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-align: center;
+}
+
+.together-status {
+  min-height: 1.3em;
+  margin: 0;
+  color: var(--fog);
+}
+
 .note-panel {
   flex-direction: column;
   align-items: center;

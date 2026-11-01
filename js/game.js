@@ -87,6 +87,18 @@ const elements = {
   lookParts: document.getElementById('look-parts'),
   lookPicture: document.getElementById('look-picture'),
   lookDone: document.getElementById('look-done'),
+  togetherButton: document.getElementById('together-button'), // playing with other people (together.js)
+  together: document.getElementById('together'),
+  togetherClose: document.getElementById('together-close'),
+  togetherOff: document.getElementById('together-off'),
+  togetherOn: document.getElementById('together-on'),
+  togetherStart: document.getElementById('together-start'),
+  togetherForm: document.getElementById('together-form'),
+  togetherCode: document.getElementById('together-code'),
+  togetherShown: document.getElementById('together-shown'),
+  togetherCount: document.getElementById('together-count'),
+  togetherLeave: document.getElementById('together-leave'),
+  togetherStatus: document.getElementById('together-status'),
   chest: document.getElementById('chest'),
   chestPack: document.getElementById('chest-pack'),
   chestHeld: document.getElementById('chest-held'),
@@ -415,7 +427,7 @@ function openMenu() {
   saveGame(state);
   elements.startButton.textContent = state.started ? 'Resume' : state.resumed ? 'Carry on' : 'Wake up';
   const day = Math.floor(state.dayClock / CYCLE_SECONDS) + 1;
-  elements.seedLabel.textContent = `${state.world.seed}, day ${day}`;
+  elements.seedLabel.textContent = `${together.code || state.world.seed}, day ${day}`;
   confirmNewWorld(false);
   elements.menu.hidden = false;
 }
@@ -521,6 +533,7 @@ function setupLook() {
         state.look[part] = choice.color;
         dressPlayer(state.look);
         remember(LOOK_KEY, state.look);
+        togetherLookChanged();
         showLook();
       });
       row.append(swatch);
@@ -699,6 +712,7 @@ function frame(now) {
       else if (!elements.chest.hidden) closeChest();
       else if (!elements.note.hidden) closeNote();
       else if (!elements.look.hidden) closeLook();
+      else if (!elements.together.hidden) closeTogether();
       else if (!elements.menu.hidden && state.started) closeMenu();
       else if (press === 'back' && state.building && playing) stopBuilding(state);
       else if (!state.dead && !state.dying) openMenu();
@@ -727,6 +741,7 @@ function frame(now) {
   else state.player.moving = false;
   if (state.dying && !state.paused && !portrait.matches) updateDying(dt);
 
+  updateTogether(state, dt);
   updateEffects(state.fx, dt);
   if (state.fx.shake && state.time > state.fx.shake.until) state.fx.shake = null;
   if (!reducedMotion.matches) {
@@ -759,6 +774,7 @@ setupChest(elements);
 setupMap(elements);
 setupNote(elements);
 setupLook();
+setupTogether(elements);
 setupSound();
 showSoundButton();
 outline.on = recall(OUTLINE_KEY) !== false;

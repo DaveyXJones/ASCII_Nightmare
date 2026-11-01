@@ -1967,21 +1967,50 @@ function defaultLook() {
 // which every picture of the player shares, then throws away the pictures drawn in the old colors
 // so they're drawn again in the new ones.
 function dressPlayer(look) {
-  const { hat, hair, skin, shirt, trousers } = { ...defaultLook(), ...look };
-  PLAYER_INK.T = [shade(hat, 0.22)]; // the hat's crown catches the light
-  PLAYER_INK.B = [hat];
-  PLAYER_INK.b = [shade(hat, -0.14)];
-  PLAYER_INK.r = [hair];
-  PLAYER_INK.R = [shade(hair, -0.5), hair];
-  PLAYER_INK.F = [shade(skin, -0.75), skin]; // eyes and mouth: a deep shade of the skin
-  PLAYER_INK.f = [skin];
-  PLAYER_INK.g = [shade(skin, -0.12)];
-  PLAYER_INK.C = [shade(shirt, -0.18), shirt]; // folds in the shirt
-  PLAYER_INK.P = [PACK_STRAPS, shirt];
-  PLAYER_INK.p = [trousers];
+  Object.assign(PLAYER_INK, lookInk(look));
   forEachPlayerPicture((picture) => {
     picture.imageAtlas = null; // see spriteImage() in render.js
   });
+}
+
+// The colors a look ({ hat: color, hair: color, ... }) puts in the player's pictures.
+function lookInk(look) {
+  const { hat, hair, skin, shirt, trousers } = { ...defaultLook(), ...look };
+  return {
+    T: [shade(hat, 0.22)], // the hat's crown catches the light
+    B: [hat],
+    b: [shade(hat, -0.14)],
+    r: [hair],
+    R: [shade(hair, -0.5), hair],
+    F: [shade(skin, -0.75), skin], // eyes and mouth: a deep shade of the skin
+    f: [skin],
+    g: [shade(skin, -0.12)],
+    C: [shade(shirt, -0.18), shirt], // folds in the shirt
+    P: [PACK_STRAPS, shirt],
+    p: [trousers],
+  };
+}
+
+// A copy of every picture of the player in someone else's colors, for drawing other people on a shared
+// island (see together.js). Each look is only made once; a picture is only drawn when it's needed.
+const otherPictures = new Map();
+
+function picturesFor(look) {
+  const key = Object.values(look).join();
+  if (otherPictures.has(key)) return otherPictures.get(key);
+  if (otherPictures.size >= OTHERS_KEPT) otherPictures.clear();
+  const ink = { ...PLAYER_INK, ...lookInk(look) };
+  const copy = (picture) => ({ ...picture, ink, images: null, imageAtlas: null });
+  const pictures = {};
+  for (const [facing, set] of Object.entries(PLAYER_SPRITES)) {
+    pictures[facing] = {};
+    for (const [pose, shown] of Object.entries(set)) {
+      if (pose === 'held' || pose === 'torch') pictures[facing][pose] = shown;
+      else pictures[facing][pose] = Array.isArray(shown) ? shown.map(copy) : copy(shown);
+    }
+  }
+  otherPictures.set(key, pictures);
+  return pictures;
 }
 
 function forEachPlayerPicture(visit) {
