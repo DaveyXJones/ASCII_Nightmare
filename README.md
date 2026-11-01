@@ -127,9 +127,11 @@ is open. The Craft button lights up when there's something you can afford.
 | **Bedroll** | 2 cloth, 1 wood | After you die, you wake up on it instead of in the cottage. |
 | **Garden bed** | 1 wood | Needs the spade. Dug earth to plant in (see The garden, below). |
 | **Plant potato**, **pumpkin**, **berry bush**, **cotton** | 1 potato, pumpkin seed, or cutting | Plants a row of them in garden beds, in build mode. |
+| **Rain barrel** | 5 wood | Fills itself when it rains. Drink from it, or fill the bucket at it (see The garden, below). |
 | **Cooked berries** | 2 berries | Only beside a campfire. Fills you up more, and heals a little. The panel stays open to cook more. |
 | **Cooked fish** | 1 fish | Only beside a campfire. Fills you up the most (45), and heals 15. |
 | **Baked potato** | 1 potato | Only beside a campfire. Fills you up (35), and heals 10. |
+| **Lamp oil** | 2 fish | Only beside a campfire. Fish boiled down, for the lighthouse's lamp (see Lighting the lighthouse, below). |
 
 Choosing a campfire or a wall starts **build mode**: a see-through copy appears on the tile in
 front of you. Yellow brackets mean it can go there, red means it can't (the message says why).
@@ -226,6 +228,14 @@ to take it back.
    right there in your garden. The game tells you when something's ready, if you're nearby.
 
 You walk through your garden, and nothing gets built over it by mistake. The map marks it `ψ`.
+
+**A rain barrel** saves the walk to the water. Set one out (Garden tab, 5 wood) and it fills whenever
+it rains: about two minutes of pouring rain fills it from empty, and most days bring enough. The water
+shows at the top, dark when it's low and bright once it's two-thirds full. It holds twelve waterings,
+which is three bucketfuls. Face it and tap **Fill** to fill your bucket, or **Drink** if you're thirsty
+(each long drink counts as one watering). Once it's empty you can **Take down** the barrel and get 3
+wood back. So a garden with a barrel beside it, and a camp with one, need no trip to the river, until
+a dry spell.
 
 ## Night
 
@@ -365,6 +375,42 @@ old walls the same as yours, and the old ones give way sooner.
 What's in each cupboard is worked out from the island's seed, and the game saves the moment you've
 searched something, so there's no reloading for a second helping.
 
+## Lighting the lighthouse
+
+The lighthouse has stood dark since its keeper ran out of oil, and the notes round the island say
+that's when things got bad. You can light it again. Here's how it goes:
+
+1. **Find lamp oil** (⚱ in the pack). Sealed cans of it stand in the keeper's hut, in the old village's
+   hall and on the sand by the wreck, 2 oil each. Or catch fish and boil them down at a fire: 2 fish
+   make 1 oil (Cook tab). Oil in your pack is lost if you die, like anything else.
+2. **Pry the door open.** Face the foot of the tower and hold **Pry open**.
+3. **Pour the oil in.** **Fill** pours all you carry into the tank at the foot of the stairs, where it
+   stays safe even if you die. It wants 3 oil the first time, and holds 5.
+4. **Hold Pump.** It takes about 13 seconds of pumping to send the oil up the pipe to the lamp. The
+   first time, *what the keeper wrote about comes down the stairs while you do it*, by day as well as
+   by night: shades, and a brute. They'll keep coming until the lamp catches, and then they all burn
+   away. Whatever you've pumped stays pumped if you're driven off or killed, so you can come back and
+   finish. A lit torch keeps the shades back but not the brute. **A campfire built right by the door
+   keeps them all back**, if you think to bring the wood and stone.
+
+While it burns:
+
+- **Two beams sweep round the island at night**, one coming by every twelve seconds. You can see them
+  from most of the island, and for a moment you can see the ground they cross. Anything a beam catches
+  within 150 tiles of the tower turns and runs.
+- **Nothing comes within about 32 tiles of the tower**, so the point is the safest place on the island.
+- **Fewer things come out anywhere on the island**: half as many shades and lurkers (rounded up), and
+  no brutes at all.
+- A horn sounds at nightfall, and the map shows the lighthouse in gold.
+
+**It needs keeping.** It burns about one oil a night, so a full tank is about five nights. Come back and
+**Fill** it. At nightfall the game says if it's low. Tap **Look** at the tower to see what's left. If it
+runs dry it goes out, and everything comes back. Lighting it again only takes a few strokes of the
+pump, and nothing comes down the stairs the second time.
+
+(Only islands with places to find have a lighthouse: if your map doesn't show `♜`, your island is an
+older one, and you'd need a new world from the menu to try this.)
+
 ## How it's put together
 
 Plain HTML, CSS and JavaScript, with nothing to install or build.
@@ -388,7 +434,8 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/crafting.js` | What you can craft and what it costs, build mode, and the craft panel. |
 | `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
 | `js/fishing.js` | Fishing: casting, the bite, and landing a fish (or losing it). |
-| `js/garden.js` | The garden: planting, the bucket, watering, plants growing, and wilting. |
+| `js/garden.js` | The garden: planting, the bucket, watering, plants growing, wilting, and rain barrels. |
+| `js/lighthouse.js` | Lighting the lighthouse: the door, the tank, the pump, what comes down the stairs, and what its beams do. |
 | `js/guns.js` | The pistol and rifle: aiming, shooting, reloading, the bang, and bullets washing up. |
 | `js/map.js` | The map: which tiles you've seen, and the map panel drawn in characters. |
 | `js/creatures.js` | The shades, brutes and lurkers: when they come out, how they find you, what scares them off. |
@@ -465,7 +512,8 @@ old copies they've kept.
 
 ## What's next
 
-Done lately, your list of 2026-10-31 evening: building and gardening. The craft panel on tabs; a
+Done lately, 2026-11-01: lighting the lighthouse (find oil, force the door, survive the stairs, then
+keep it burning), and a rain barrel. Before that, your list of 2026-10-31 evening: building and gardening. The craft panel on tabs; a
 stone wall, a gate, a spiked barricade and wooden floors; **Repair** for clawed walls and fallen
 cabin logs; a spade to dig up bushes and stumps; and a garden of potatoes, pumpkins, berry bushes
 and cotton that needs watering from a bucket. Before that: an island four times bigger again, with
@@ -481,14 +529,11 @@ walls that get clawed down, saving, and sound.
 
 Ideas for next (Claude's suggestions):
 
-- **Light the lighthouse.** The notes hint at it: find oil (in the keeper's hut, the village, the
-  wreck) and carry it up to the lamp. Lit, it could keep the dark back across a whole stretch of
-  coast, or change what comes out at night.
 - **A book of notes.** Keep the notes you've found, to read again from the menu.
 - **Jack-o'-lanterns.** Carve a pumpkin from the garden into a little lantern with a candle in it:
   a lamp that needs no filling, but goes soft and rots after a few nights.
-- **A rain barrel.** Fills itself when it rains, so the garden by your camp can be watered without
-  a walk to the water.
+- **Something comes for the light.** On moonless nights, something climbs out of the sea and makes for
+  the tower, so walls and spikes round it start to matter.
 
 Later: **multiplayer**. Because the world is built from a seed, a server only has to share the seed
 and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a small

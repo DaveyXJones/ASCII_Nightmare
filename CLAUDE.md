@@ -540,6 +540,57 @@ its own commit. Everything beyond those answers is Claude's design:
   `--pack-bottom` up to date (a ResizeObserver) and `.toast` sits below it. The chest panel on short
   screens is six to a row, each count under its glyph, so 23 things fit (357 of 375 px).
 
+## The rain barrel and the lighthouse (built 2026-11-01, on the owner's PC)
+
+The owner said "light the lighthouse sounds fun, and the water barrel would be a great addition". For
+the lighthouse they chose, from offered options: a beam plus safe coast plus a calmer island; oil
+upkeep ("you're the keeper"); and a fight the first time ("force the door, survive the stairs"). Each
+is its own commit. Everything beyond those answers is Claude's design:
+
+- **The rain barrel** (`OBJECTS.rainBarrel`, `RECIPES.rainBarrel`, 5 wood, on the Garden tab, in
+  js/garden.js): `world.barrels` (tile index -> waterings, fractional, saved as `barrels`, cleared by
+  `setObject`). `updateBarrels` adds `rain * BARREL_HOLDS / BARREL_FILL_SECONDS` a second; simulated
+  over 20 cycles on four seeds, most day-night cycles fill it and about one in five leaves it empty.
+  `barrelTarget` (from `findTarget`) gives Fill when `wantsToFill`, else Drink; under 1 watering it
+  says null, so the object's own action (Take down) shows. A long drink counts as one watering; Fill
+  takes up to what the bucket has room for. `levels` in OBJECTS picks the picture (`barrelPicture`,
+  through `objectSprite`). It uses `MARKS.garden`, so the map's key didn't grow.
+- **Oil** (`ITEMS.oil`): `placeOilCans` (places.js), at the end of `placePlaces`, puts `oilCans` (2 oil)
+  beside the keeper's cupboard, beside the village strongbox and by the wreck. **It uses no random
+  numbers and only empty tiles**, because the village shares one stream of them with every place after
+  it: changing a layout would move places on saved islands. That's why cans aren't in the layouts, and
+  why `LOOT` wasn't touched. `RECIPES.boilOil`: 2 fish to 1 oil, by a fire. Checked on six seeds:
+  every island got a tower and three lots of cans, each with an open side to reach them from.
+- **The tower's state** is its objects (`TOWER_KEYS`: shut, dark, lit, a pair of each, with `tower` in
+  OBJECTS), so it's saved as ordinary object changes. `world.tower` (`{ x, y, oil, kindled }`, the left
+  half's tile, made in `placeLighthouse`, saved as `tower` with just `oil` and `kindled`) holds the
+  tank, in oil. `towerTarget`/`useTower` (lighthouse.js) drive the button: Pry open, Fill, Pump or
+  Look, with `w: 2` so the brackets go round both halves (`useTarget`'s `faceToward` allows for `w`).
+  Strokes count in `world.damage` on the left half, so they survive dying and reloading.
+- **The stairs** (`game.stairs`, not saved, cleared by `startLife`): the first stroke of the first
+  lighting starts it; `updateStairs` sends `STAIRS_ORDER` (then shades) every `STAIRS_EVERY`, at most
+  `STAIRS_MOST` at once, and stops if you go `STAIRS_LEAVE` away or don't pump for `STAIRS_PATIENCE`.
+  These creatures have `stairs: true`, which `moveCreature` lets past the daylight fade.
+  `stairsComeOut` picks from every spot in the ring that fits, since the tower is often on a thin spit
+  of sand (random tries missed there). `kindle` removes every creature within `TOWER_REACH`. Measured
+  holding Pump from full health with no torch and no fighting back: about 13 s, 21 health left.
+- **Lit**: `towerLight` adds the tower to `lightsToFear` with reach `TOWER_REACH` (40; the object has no
+  `light`, since `LIGHT_REACH` sets how far `findLights` scans each frame and 40 would make that scan
+  far bigger). `findLights` adds two ordinary lights, at the lamp and the foot. `kindToComeOut` scales
+  each kind by `lit` in CREATURES (rounded up): half for shades and lurkers, none for brutes.
+- **The beams**: `beamAngle` (held still under reduced motion), `beamCatches` (from `moveCreature`, sends
+  anything within `BEAM_SCARES` running) and `paintBeams` (render.js, inside `drawNight`): each beam
+  rubs out a wedge in `BEAM_LAYERS` for a soft edge, then a pale haze goes back along it, all on the
+  small night canvas. It's skipped when a beam can't reach the screen, so it usually costs nothing.
+- **Burning**: `updateTower` burns `dt / OIL_BURNS` of oil while `sky.darkness` is over
+  `LAMP_BURNS_DARKER`, and sets it back to `dark` when the tank's empty. Relighting needs 1 oil and
+  `PUMPS_AGAIN` strokes, with nothing on the stairs. `towerNews` adds to the nightfall message.
+- **Sound**: `foghorn` has `held: true`, a new field that gives `envelope` a swell and a hold instead of
+  a strike. Levelled offline: its peak sits under thunder's. It plays at full on lighting, at 0.25 at
+  each nightfall, and at 0.2 when the lamp runs dry.
+- **Islands without places** have no tower (`world.tower` is null), so everything here does nothing on
+  them, though the Lamp oil card still shows on the Cook tab.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -550,8 +601,8 @@ its own commit. Everything beyond those answers is Claude's design:
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → places →
-  night → weather → render → input → sound → survival → crafting → chest → fishing → garden → guns →
-  map → creatures → save → game`. A file
+  night → weather → render → input → sound → survival → crafting → chest → fishing → garden → lighthouse →
+  guns → map → creatures → save → game`. A file
   may use globals from files before it at load time, and from any file inside functions that run
   later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
@@ -569,7 +620,7 @@ its own commit. Everything beyond those answers is Claude's design:
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
 | `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
-| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print), `loot` (searched: a table in `LOOT`, places.js), `epitaph` (a grave), `repair` and `thorns` (mending claw marks; spikes), `dig` (with the spade), and `plot`, `crop` and `garden` (the garden). |
+| `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print), `loot` (searched: a table in `LOOT`, places.js), `epitaph` (a grave), `repair` and `thorns` (mending claw marks; spikes), `dig` (with the spade), `plot`, `crop` and `garden` (the garden), `barrel` and `levels` (a rain barrel), and `tower` (the lighthouse). |
 | `js/world.js` | `WORLD_SIZE` and `FIRST_WORLD_SIZE`, `generateWorld(seed, island)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
 | `js/places.js` | Places to find on islands with `places`: `PLACES` (layouts as text, how many, where), `PLACE_LEGEND`, `LOOT`, `NOTES`, `PLACE_NOTES`, `EPITAPHS`; `placePlaces` (and `placeLighthouse`, `siteFits`, `buildPlace`, `handOutNotes`), `searchLoot`, `readScrap`, `epitaphNear`, the note panel (`setupNote`, `openNote`, `closeNote`). |
 | `js/night.js` | The day and night cycle: phase lengths, `MOONS` (each with how many of each kind of `creatures` come out), `skyAt(clock, seed)` (phase, darkness, color of the dark, share left, the weather), `nextMorning`, `skyMessage`. No drawing. |
@@ -579,7 +630,8 @@ its own commit. Everything beyond those answers is Claude's design:
 | `js/sound.js` | `SOUNDS` (synthesized: noise through a filter and/or a sliding tone), `playSound`, `playSoundAt`, `updateSound` (wind, rain, birds, crickets, crackle), `setSoundOn`. |
 | `js/guns.js` | Shooting (`findShot`, `clearShot`, `gunFor`, `shoot`, `hearShot`), reloading (`gunState`, `updateGuns`), `dropGuns` on death, `washUp` of bullet tins. Placement of the wreck and crates is `placeFinds` in world.js; the streak and flash are `drawShot` and `findLights` in render.js. |
 | `js/fishing.js` | `wantsToFish`, `castLine`, `updateFishing` (bite, hook, catch or lose). The bobber and line are drawn in render.js (`drawBobber`, `drawFishingLine`). |
-| `js/garden.js` | The garden: `plantFor`, `plant`, `plantHere`, the bucket (`wantsToFill`, `fillBucket`, `waterPlant`), `cropWantsWater`, `cropTint`, `updateGarden` (growing, drying, wilting) and `grow`. |
+| `js/garden.js` | The garden: `plantFor`, `plant`, `plantHere`, the bucket (`wantsToFill`, `fillBucket`, `waterPlant`), `cropWantsWater`, `cropTint`, `updateGarden` (growing, drying, wilting) and `grow`; rain barrels (`barrelTarget`, `useBarrel`, `updateBarrels`, `barrelPicture`). |
+| `js/lighthouse.js` | Lighting the lighthouse: `towerTarget`, `useTower`, `pourOil`, `pumpStroke`, `kindle`; `updateTower` (burning oil), `updateStairs` and `stairsComeOut`; `towerLight`, `beamAngle`, `beamCatches`. The beams are drawn by `paintBeams` in render.js. |
 | `js/survival.js` | `ITEMS` (with `food`/`heals` for things you eat, `hideEmpty` for pack slots shown only while you have some), vitals and drain rates, `besideFire`, the torch (`torchWantsFire`, `lightTorch`, `updateTorch`, `torchReach`), `findTarget`, `useTarget`, `eat`, `BURSTS`, particles and floating text. |
 | `js/crafting.js` | `TOOLS`, `CRAFT_TABS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`, `recipeNeed`), build mode (`findBuildSpot`, `build`, `buildFloor`, `keepClear`), the craft panel and its tabs. |
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
@@ -609,7 +661,8 @@ its own commit. Everything beyond those answers is Claude's design:
   seconds of rain taken; `fuel` holds each lamp's seconds left; `seen` is the map's explored tiles
   (`setObject` clears `damage`, `clawed`, `soaked`, `chests`, `fuel` and `crops`; `soaked` isn't
   saved). `chests` holds what's in each chest and `bed` the newest bedroll's tile. `crops` holds how
-  each plant in the garden is getting on, and `floors` the ground under each board you've laid (the
+  each plant in the garden is getting on, `barrels` the water in each rain barrel, `tower` the
+  lighthouse's tank, and `floors` the ground under each board you've laid (the
   only ground that changes in play; the floor itself is `planks` in `ground`). `beaches` (open sand by
   the sea you can walk to) is rebuilt with the island, not saved; so are `places` (`{ kind, x, y,
   search }`) and `notes` (tile index → note), and `hasPlaces` comes from the save's `places` flag.
@@ -667,7 +720,7 @@ its own commit. Everything beyond those answers is Claude's design:
 ## Creatures (js/creatures.js)
 
 - `state.creatures` is a list of free-moving things (`{ kind, x, y, hp, state, timer, fade, … }`,
-  feet position in tiles like the player), cleared on waking. `state.hunt` remembers when night
+  feet position in tiles like the player; `addCreature` makes one), cleared on waking. `state.hunt` remembers when night
   fell, when the next one comes out and which once-a-night messages have shown. `updateCreatures`
   runs every update after the vitals; it does nothing by day once they've all gone. Each tick of
   `CREATURE_EVERY`, `kindToComeOut` picks a kind the moon allows more of whose `after` has passed.
