@@ -591,18 +591,70 @@ is its own commit. Everything beyond those answers is Claude's design:
 - **Islands without places** have no tower (`world.tower` is null), so everything here does nothing on
   them, though the Lamp oil card still shows on the Cook tab.
 
+## Playing together, stage one (built 2026-11-01, on the owner's PC)
+
+The owner asked for options, then said it's "for whoever downloads it, eventually the island can keep
+going when no one is playing, but for now i don't have a dedicated server to run it on 24/7". They
+chose Cloudflare Durable Objects and islands with join codes. Stage one: join by code and see each
+other. **It isn't online yet**: `TOGETHER_SERVER` (together.js) is only set on localhost, so the Play
+together button is hidden everywhere else, including the live game.
+
+- **The rooms** (`server/`, run with `npx wrangler dev`): one `Island` Durable Object per code (`/new`
+  makes one, `/island/CODE` joins; both WebSockets, so the game needs no CORS). It keeps `{ code, seed,
+  width, height, born }` and passes on where everyone is, using the hibernation API, so an idle room
+  costs nothing. It doesn't run the game. Each person's notes are in their socket's attachment.
+  Everything is tidied before it's passed on (`tidyLook`, `tidyPlace`), with at most `ISLAND_MOST` (8)
+  people and `SENDS_PER_SECOND` (30) each. Known gaps, for later: anyone with a code can hold slots open
+  without saying `hi`, and a turned-away socket only closes once the client closes it (the game does).
+- **The messages**: from the game, `hi` (look and place), `at` (place: `x, y, f, n, h, k, l` for
+  position, facing, pose, what's in hand, has a torch, torch lit) and `look`. From the room, `welcome`
+  (with the island and `others`), `joined`, `left`, `at`, `look`, `no-island` and `full`.
+- **The game** (js/together.js): `enterIsland` saves your own island first, then sets `together.code`,
+  which `saveKey` (save.js) uses to save the shared island apart (`TOGETHER_SAVE` + code). `leaveIsland`
+  goes back. New world is hidden on a shared island (`showWorldButtons`). The last code is kept under
+  `TOGETHER_KEY` to fill the box next time, but you aren't rejoined automatically on reloading.
+- **The clock**: `togetherClock` works out `dayClock` from the island's `born` and the server's time, so
+  everyone shares the time of day, and moon and weather follow. `updateTogether` sets it every frame,
+  so menus don't stop it, and dying no longer skips to the next morning there. This is also what will
+  let an island "go on" with nobody connected.
+- **Sending**: `updateTogether` runs from `frame()` even while paused, says where you are every
+  `SEND_SECONDS` (0.2) only if something changed (`together.sent`), so standing still sends nothing
+  (blinks are sent as `stand`). A `ping` every `PING_SECONDS` keeps the line open; the room answers
+  without waking. `lineLost` retries after `RETRY_SECONDS`, doubling, and the game carries on meanwhile.
+- **Drawing others**: `picturesFor(look)` (sprites.js) copies the player's pictures with their own `ink`
+  (`lookInk`, now shared with `dressPlayer`), made once per look. `drawOtherPlayer` (render.js) is placed
+  in `drawStanding` like creatures (`placeOthers`). No outline or ghost, to keep the frame cost down.
+  They glide toward where they last said they were (`stepOther`). `findLights` adds their lit torches.
+  What arrives is checked again on the phone: `cleanLook` keeps only colors in `LOOKS`, and `HELD_GLYPHS`
+  only things someone can hold, so nobody can make your phone draw whatever they like. `MAP_OTHER`
+  (map.js) marks them, with a key line only while someone's here.
+- **The cost**, as my sums: at 5 updates a second a player-hour is 900 billed requests while walking, and
+  nothing while still. Prices and limits as read on 2026-11-01 are in the brain, not here.
+- **Not shared yet**: objects, floors, chests, crops, barrels, the tower, creatures. Each phone still
+  runs its own. Panels still pause your own game. The print isn't compared, so two game versions that
+  build different islands from one seed wouldn't notice yet. Do these in stage two.
+- **Going online** needs the owner: `npx wrangler login` opens a Cloudflare page they allow themselves,
+  `npx wrangler deploy` prints the address, and that goes in `TOGETHER_SERVER` as `wss://...`.
+- **Checked** with a script talking to the server (join, leaving, rubbish ignored, a flood cut down, a
+  full room) and in the browser pane with two tabs, with no login needed: real clicks and typing,
+  reconnecting, leaving and coming back. A background tab gets no frames, so one tab was stepped by hand
+  (`update(0.05); updateTogether(state, 0.05)`). Not checked: two real phones, or the phone's on-screen
+  keyboard over the code box.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
   `index.html`, sharing globals. The game must keep working when `index.html` is opened straight
   from disk (file://), where modules and font loading are blocked. Don't add a bundler, a
-  framework, npm packages or `import`/`export`.
+  framework, npm packages or `import`/`export`. (`server/` isn't the game: it runs on Cloudflare, and
+  it may use `import` and its one npm tool, Wrangler. The game must never need anything from it to
+  play alone.)
 - **Relative paths only.** The live game sits in a subfolder (`/ASCII_Nightmare/`), not at the site
   root, so a path starting with `/` works on a local server but breaks online. Write `js/game.js`,
   `../fonts/…` in CSS, and keep the manifest's `start_url` and `scope` as `./`.
 - **Load order matters** (see `index.html`): `random → tiles → sprites → objects → world → places →
   night → weather → render → input → sound → survival → crafting → chest → fishing → garden → lighthouse →
-  guns → map → creatures → save → game`. A file
+  guns → map → creatures → save → together → game`. A file
   may use globals from files before it at load time, and from any file inside functions that run
   later.
 - **Phone first.** Every feature needs a touch control that works one-thumb-each-side in landscape
@@ -619,7 +671,7 @@ is its own commit. Everything beyond those answers is Claude's design:
 | --- | --- |
 | `js/random.js` | `hash2`, `valueNoise`, `fractalNoise`. Seeded: same seed, same world. |
 | `js/tiles.js` | `TILES`: ground types (glyphs, colors, background shades, `solid`, `animated`, `drink`, `tall`, `raised`, `step`). |
-| `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors). Validated at load by `prepareSprite`. |
+| `js/sprites.js` | `SPRITES` (ASCII art for standing things), the player's `PLAYER_SPRITES`/`PLAYER_INK`, `ACTION_POSES`, and `LOOKS` with `dressPlayer` (the Your look colors) and `picturesFor` (other people's). Validated at load by `prepareSprite`. |
 | `js/objects.js` | `OBJECTS`: things standing on tiles and what the action button does to them (`action`, `hits`, `gives`, `becomes`, `regrow`, `drink`, `burst`), plus `frames` (flicker between sprites), `warmth` (heal faster nearby), `light` (reach at night, in tiles), `flame` (a torch can be lit at it), `door` and `opens` (a door you've built), `doused` and `relight` (rain putting a fire out, and lighting it again), `bed` and `chest`, `fuel` (lamps), `map` and `mark` (the map), `fence` and `side` (walls that join), `tool` and `says` (a crate with a gun), `found` (left out of the island's print), `loot` (searched: a table in `LOOT`, places.js), `epitaph` (a grave), `repair` and `thorns` (mending claw marks; spikes), `dig` (with the spade), `plot`, `crop` and `garden` (the garden), `barrel` and `levels` (a rain barrel), and `tower` (the lighthouse). |
 | `js/world.js` | `WORLD_SIZE` and `FIRST_WORLD_SIZE`, `generateWorld(seed, island)`, the `COTTAGE` layout, `placeFinds` (the wreck and gun crates, `world.beaches`), lookups: `groundAt`, `objectAt`, `blockerAt`, `insideHouse`, `setGround`, `setObject`, `bedSpot`, `objectLook` (which pictures a wall in a fence uses). |
 | `js/places.js` | Places to find on islands with `places`: `PLACES` (layouts as text, how many, where), `PLACE_LEGEND`, `LOOT`, `NOTES`, `PLACE_NOTES`, `EPITAPHS`; `placePlaces` (and `placeLighthouse`, `siteFits`, `buildPlace`, `handOutNotes`), `searchLoot`, `readScrap`, `epitaphNear`, the note panel (`setupNote`, `openNote`, `closeNote`). |
@@ -637,6 +689,8 @@ is its own commit. Everything beyond those answers is Claude's design:
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
 | `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `layoutMap`, `centreMap`, `zoomMap`, `panMap`, `setupMapGestures`, `drawMap`, `readCell`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
+| `js/together.js` | Playing together: `together`, the panel (`setupTogether`, `openTogether`), the line (`connectTo`, `say`, `hear`, `lineLost`), `enterIsland`, `leaveIsland`, everyone else (`addOther`, `heardPlace`, `stepOther`), `togetherClock`, `updateTogether`, `whereIAm`. Drawn by `drawOtherPlayer` in render.js. |
+| `server/` | The rooms for playing together, run by Cloudflare: `src/index.js` (`Island`, a Durable Object per join code), `wrangler.toml`. Not part of the game, and not loaded by it. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
 | `css/style.css` | HUD overlay, buttons, menus, the portrait "turn sideways" screen. |
@@ -848,6 +902,10 @@ python3 -m http.server 8000   # then open http://localhost:8000 (`python` on the
 To check it the way GitHub Pages serves it, run the server from the folder *above* the repo and
 open http://localhost:8000/ASCII_Nightmare/ — a missing file there (a 404 in the console) means a
 path isn't relative.
+
+To check playing together, also run the rooms: `cd server`, `npm install` the first time, then
+`npx wrangler dev`. No Cloudflare login is needed for that. Open the game in two browser windows side
+by side (a hidden window or background tab gets no frames).
 
 To see it as a phone would, use the preinstalled Playwright (`require('playwright')`) with
 `viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true`,

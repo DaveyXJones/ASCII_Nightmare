@@ -411,6 +411,21 @@ pump, and nothing comes down the stairs the second time.
 (Only islands with places to find have a lighthouse: if your map doesn't show `♜`, your island is an
 older one, and you'd need a new world from the menu to try this.)
 
+## Playing together
+
+*Not online yet: the Play together button only shows on a copy of the game running on your own PC.*
+
+In the menu, **Play together** lets you **Start an island**, which gives you a five-letter code to
+share, or type someone's code and **Join**. There's nothing to sign up for. Up to eight people can be on
+an island. Your own island stays exactly as it was, and **Back to my own island** returns you to it.
+What you do on a shared island is saved on your phone under its code, so you can come back to it.
+
+So far you can see each other walking about, in your own colors with your own torches, and you share
+the same time of day, moon and weather. Other people show on your map as a blue `@`.
+
+**Not shared yet:** everything else. If you chop a tree, your friend still sees it standing, and
+things in the dark only come for you on your own screen. That's the next stage.
+
 ## How it's put together
 
 Plain HTML, CSS and JavaScript, with nothing to install or build.
@@ -435,6 +450,8 @@ Plain HTML, CSS and JavaScript, with nothing to install or build.
 | `js/chest.js` | Chests: what's in each one, and the panel for moving things in and out. |
 | `js/fishing.js` | Fishing: casting, the bite, and landing a fish (or losing it). |
 | `js/garden.js` | The garden: planting, the bucket, watering, plants growing, wilting, and rain barrels. |
+| `js/together.js` | Playing together: the Play together panel, the line to the room, and everyone else on the island. |
+| `server/` | The rooms for playing together, which run on Cloudflare, not in the game. |
 | `js/lighthouse.js` | Lighting the lighthouse: the door, the tank, the pump, what comes down the stairs, and what its beams do. |
 | `js/guns.js` | The pistol and rifle: aiming, shooting, reloading, the bang, and bullets washing up. |
 | `js/map.js` | The map: which tiles you've seen, and the map panel drawn in characters. |
@@ -535,6 +552,11 @@ Ideas for next (Claude's suggestions):
 - **Something comes for the light.** On moonless nights, something climbs out of the sea and makes for
   the tower, so walls and spikes round it start to matter.
 
-Later: **multiplayer**. Because the world is built from a seed, a server only has to share the seed
-and what's changed, not the whole map. GitHub Pages only hosts files, though, so this needs a small
-server running somewhere else, and you to pick where.
+**Playing together**, in stages. Stage one is built (see Playing together, above), and it isn't online
+yet. Then:
+
+2. A shared world: chopping, building and chests all shared, and menus that don't pause the game on a
+   shared island.
+3. Things in the dark that hunt everyone.
+4. An island that goes on while nobody's there: when someone comes back, the game works out what
+   happened (plants grown, barrels filled, oil burnt), with no server needed around the clock.
