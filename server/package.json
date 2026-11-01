@@ -1,0 +1,13 @@
+{
+  "name": "ascii-nightmare-server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The rooms that let people play ASCII Nightmare together. Not part of the game itself: only Cloudflare runs this.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.156.0"
+  }
+}

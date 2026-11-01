@@ -1,0 +1,14 @@
+# The rooms that let people play together, run by Cloudflare. See src/index.js.
+name = "ascii-nightmare"
+main = "src/index.js"
+compatibility_date = "2026-10-15"
+
+# One Island (a Durable Object) for each island people are playing on, found by its join code.
+[[durable_objects.bindings]]
+name = "ISLANDS"
+class_name = "Island"
+
+# Cloudflare's free plan only allows Durable Objects that keep their things in SQLite.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Island"]
