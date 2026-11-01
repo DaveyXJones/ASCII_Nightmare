@@ -596,12 +596,14 @@ is its own commit. Everything beyond those answers is Claude's design:
 The owner asked for options, then said it's "for whoever downloads it, eventually the island can keep
 going when no one is playing, but for now i don't have a dedicated server to run it on 24/7". They
 chose Cloudflare Durable Objects and islands with join codes. Stage one: join by code and see each
-other. **It's online, behind a special link**: the rooms run at
+other. **It's online and open to everyone**: the rooms run at
 `wss://ascii-nightmare.daveyxjones.workers.dev` (`TOGETHER_SERVER`, together.js; on localhost it uses
-`npx wrangler dev` instead). While `TOGETHER_OPEN` is false the Play together button only shows on
-localhost, or once a browser has opened the game with `?together` on its address (`TOGETHER_ON_KEY`).
-Set it to true to open it to everyone. To put a change to the rooms online: `cd server`, `npx wrangler
-deploy`.
+`npx wrangler dev` instead). The owner tried it behind a special link first, with three players in one
+cottage, then asked for the button to show for everyone, since a home-screen icon drops the link's
+`?together`. Set `TOGETHER_OPEN` to false to hide it again: then it only shows on localhost, or once a
+browser has opened the game with `?together` on its address (`TOGETHER_ON_KEY`). To put a change to
+the rooms online: `cd server`, `npx wrangler deploy`. On the Free plan, going over a daily limit stops
+the rooms until midnight UTC; solo play doesn't touch them.
 
 - **The rooms** (`server/`, run with `npx wrangler dev`): one `Island` Durable Object per code (`/new`
   makes one, `/island/CODE` joins; both WebSockets, so the game needs no CORS). It keeps `{ code, seed,

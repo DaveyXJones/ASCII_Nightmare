@@ -15,9 +15,10 @@
 // Where the rooms are: on your own PC while working on the game (see server/), otherwise online.
 const TOGETHER_ON_THIS_PC = ['localhost', '127.0.0.1'].includes(location.hostname);
 const TOGETHER_SERVER = TOGETHER_ON_THIS_PC ? 'ws://localhost:8787' : 'wss://ascii-nightmare.daveyxjones.workers.dev';
-// Not open to everyone yet. Until this is true, the Play together button only shows on your own PC, or
-// once you've opened the game with ?together on the end of its address (that browser remembers).
-const TOGETHER_OPEN = false;
+// Whether the Play together button shows for everyone. Set this to false to hide it again: then it only
+// shows on your own PC, or once you've opened the game with ?together on the end of its address (that
+// browser remembers).
+const TOGETHER_OPEN = true;
 const TOGETHER_ON_KEY = 'ascii-nightmare-together-on'; // true once this browser has used that address
 const TOGETHER_KEY = 'ascii-nightmare-together'; // the code of the island you were last on
 const TOGETHER_SAVE = 'ascii-nightmare-island-'; // each shared island is saved under this and its code
