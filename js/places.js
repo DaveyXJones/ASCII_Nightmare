@@ -392,6 +392,31 @@ function placePlaces(world, steps, sea) {
     }
   }
   handOutNotes(world, steps);
+  placeOilCans(world, steps);
+}
+
+// Which thing in a place the oil cans stand beside.
+const OIL_BESIDE = { keeper: 'cupboard', village: 'strongbox' };
+
+// Cans of lamp oil for the lighthouse (see lighthouse.js): beside the keeper's cupboard, beside the
+// strongbox in the village hall, and on the sand by the wreck. They go on tiles with nothing on them,
+// after everything else, and use none of the island's random numbers, so nothing else moves on an
+// island you're already playing.
+function placeOilCans(world, steps) {
+  for (const [kind, key] of Object.entries(OIL_BESIDE)) {
+    const place = world.places.find((other) => other.kind === kind);
+    const beside = place && place.search.find((i) => world.objects[i] === key);
+    if (beside === undefined) continue;
+    const spot = [beside + 1, beside - 1].find((i) => world.objects[i] === null);
+    if (spot !== undefined) world.objects[spot] = 'oilCans';
+  }
+  const wreck = world.objects.indexOf('wreckMid');
+  if (wreck < 0) return;
+  const { width } = world;
+  const spots = [wreck - 2, wreck + 2, wreck + width - 1, wreck + width + 1, wreck - width - 1, wreck - width + 1];
+  const open = (i) => world.objects[i] === null && world.ground[i] === 'sand' && steps[i] >= 0;
+  const spot = spots.find(open);
+  if (spot !== undefined) world.objects[spot] = 'oilCans';
 }
 
 // The lighthouse stands on a point of land with the sea on as many sides as possible, a good walk
@@ -422,6 +447,7 @@ function placeLighthouse(world, steps, sea) {
     const hut = findKeeperSite(world, steps, x, y);
     if (!hut) continue;
     buildPlace(world, 'lighthouse', layout, x, y, () => 0);
+    world.tower = { x, y, oil: 0, kindled: false };
     buildPlace(world, 'keeper', PLACES.keeper.layouts[0], hut.left, hut.top, placeRandom(world.seed + i));
     revealAround(world, x + 1, y, LIGHTHOUSE_SEEN);
     return;

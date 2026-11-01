@@ -31,6 +31,8 @@
 //           you; it springs when you come within SPRING_RANGE, and afterwards slinks off to lurk
 //           somewhere else
 //   spawn   how far from you, in tiles, it comes out (SPAWN_DISTANCE if left out)
+//   lit     the share of them that still come out, rounded up, while the lighthouse burns (see
+//           lighthouse.js)
 //   seen    what the game says the first time one comes out each night
 //   sound   the noise it makes as it comes out, from where it is: a name in SOUNDS (sound.js), or
 //           null to come out without a sound
@@ -49,6 +51,7 @@ const CREATURES = {
     knock: 0.5,
     claw: 1,
     after: 0,
+    lit: 0.5,
     seen: 'Something is moving out there in the dark.',
     sound: 'growl',
   },
@@ -65,6 +68,7 @@ const CREATURES = {
     knock: 0.2,
     claw: 4,
     after: 150,
+    lit: 0,
     seen: 'Something big is crashing about in the dark. A torch won\'t scare it off.',
     sound: 'roar',
   },
@@ -83,6 +87,7 @@ const CREATURES = {
     claw: 0,
     after: 0,
     lurks: true,
+    lit: 0.5,
     spawn: [7, 15],
     seen: 'Eyes are watching you from the long grass.',
     sound: null,
@@ -164,14 +169,17 @@ function updateCreatures(game, dt) {
   game.creatures = game.creatures.filter((creature) => !creature.gone);
 }
 
-// Which kind comes out next: one that tonight's moon allows more of than are out now, and whose
-// time has come (`after`). Picked at random if there's more than one, or null if there's none.
+// Which kind comes out next: one that tonight's moon allows more of than are out now (fewer while
+// the lighthouse burns), and whose time has come (`after`). Picked at random if there's more than
+// one, or null if there's none.
 function kindToComeOut(game) {
   const allowed = game.sky.moon.creatures;
   const sinceNightfall = game.time - game.hunt.nightAt;
+  const lit = towerBurning(game.world);
   const ready = Object.keys(allowed).filter((kind) => {
     const out = game.creatures.filter((c) => c.kind === kind && c.state !== 'fade').length;
-    return out < allowed[kind] && sinceNightfall >= CREATURES[kind].after;
+    const most = lit ? Math.ceil(allowed[kind] * CREATURES[kind].lit) : allowed[kind];
+    return out < most && sinceNightfall >= CREATURES[kind].after;
   });
   return ready.length ? ready[Math.floor(Math.random() * ready.length)] : null;
 }
@@ -188,24 +196,7 @@ function comeOut(game, fears, kind) {
     const ty = Math.floor(player.y + Math.sin(angle) * distance);
     if (!creatureCanStand(world, tx, ty) || inLight(fears, tx + 0.5, ty + 0.5, { fire: 1, torch: 1 })) continue;
     if (type.lurks && !groundAt(world, tx, ty).tall) continue;
-    game.creatures.push({
-      kind,
-      x: tx + 0.5,
-      y: ty + 0.5,
-      hp: CREATURES[kind].hp,
-      // creep toward you, 'lunge' at you, 'run' away, 'claw' at a wall, or 'fade' at dawn; one that
-      // lurks sits still ('lurk'), lunges, runs, then goes to 'hide' in the grass again
-      state: type.lurks ? 'lurk' : 'creep',
-      timer: 0, // seconds left of a lunge or a run, or until the next scratch at a wall
-      clawing: null, // the wall it's clawing at: { x, y, index, key }
-      den: null, // for one that lurks: the tile of long grass it's heading for, { x, y }
-      fade: 0, // how solid it is, from 0 (not there) to 1
-      stride: 0, // distance walked, for its walking pictures
-      side: Math.random() < 0.5 ? -1 : 1, // which way it paces round a light
-      blink: Math.random() * 10, // so they don't all blink together
-      hurtAt: -Infinity,
-    });
-    if (type.sound) playSoundAt(game, type.sound, tx + 0.5, ty + 0.5);
+    addCreature(game, kind, tx + 0.5, ty + 0.5);
     if (!game.hunt.seen[kind]) {
       game.hunt.seen[kind] = true;
       showMessage(game, CREATURES[kind].seen);
@@ -214,13 +205,39 @@ function comeOut(game, fears, kind) {
   }
 }
 
+// Puts one on the island at (x, y), with the noise it makes as it comes out. Returns it.
+function addCreature(game, kind, x, y) {
+  const type = CREATURES[kind];
+  const creature = {
+    kind,
+    x,
+    y,
+    hp: type.hp,
+    // creep toward you, 'lunge' at you, 'run' away, 'claw' at a wall, or 'fade' at dawn; one that
+    // lurks sits still ('lurk'), lunges, runs, then goes to 'hide' in the grass again
+    state: type.lurks ? 'lurk' : 'creep',
+    timer: 0, // seconds left of a lunge or a run, or until the next scratch at a wall
+    clawing: null, // the wall it's clawing at: { x, y, index, key }
+    den: null, // for one that lurks: the tile of long grass it's heading for, { x, y }
+    fade: 0, // how solid it is, from 0 (not there) to 1
+    stride: 0, // distance walked, for its walking pictures
+    side: Math.random() < 0.5 ? -1 : 1, // which way it paces round a light
+    blink: Math.random() * 10, // so they don't all blink together
+    hurtAt: -Infinity,
+    stairs: false, // true for one from the lighthouse's stairs: daylight doesn't send it off (lighthouse.js)
+  };
+  game.creatures.push(creature);
+  if (type.sound) playSoundAt(game, type.sound, x, y);
+  return creature;
+}
+
 function moveCreature(game, creature, dt, fears, night) {
   const { player } = game;
   const kind = CREATURES[creature.kind];
   creature.timer -= dt;
 
   // At dawn they back away from you and melt into what's left of the dark.
-  if (!night) creature.state = 'fade';
+  if (!night && !creature.stairs) creature.state = 'fade';
   if (creature.state === 'fade') {
     creature.fade -= dt / FADE_SECONDS;
     if (creature.fade <= 0) creature.gone = true;
@@ -235,8 +252,9 @@ function moveCreature(game, creature, dt, fears, night) {
     return;
   }
 
-  // Caught in the light (you lit a torch beside it, or walked up with one): it runs.
-  const light = lightAround(fears, creature.x, creature.y, kind.fear);
+  // Caught in the light (you lit a torch beside it, or walked up with one, or the lighthouse's beam
+  // swept over it): it runs.
+  const light = lightAround(fears, creature.x, creature.y, kind.fear) || beamCatches(game, creature.x, creature.y);
   if (light && creature.state !== 'run') {
     creature.state = 'run';
     creature.timer = RUN_SECONDS;
@@ -643,12 +661,17 @@ function stepsAt(tx, ty) {
 
 // ---- Light ----
 
-// Every light they might keep away from: the campfires and candles noted by mapSteps(), and your
-// torch (marked `torch`, since a brute isn't afraid of it).
+// Every light they might keep away from: the campfires and candles noted by mapSteps(), the
+// lighthouse while it burns (it's too far-reaching for mapSteps to find), and your torch (marked
+// `torch`, since a brute isn't afraid of it).
 function lightsToFear(game) {
   const reach = torchReach(game.survivor);
-  if (reach <= 0) return field.lights;
-  return [...field.lights, { x: game.player.x, y: game.player.y, reach, torch: true }];
+  const tower = towerLight(game.world);
+  if (reach <= 0 && !tower) return field.lights;
+  const lights = [...field.lights];
+  if (tower) lights.push(tower);
+  if (reach > 0) lights.push({ x: game.player.x, y: game.player.y, reach, torch: true });
+  return lights;
 }
 
 // The light that scares a creature off (x, y), or null if none does. `fear` is the creature's (see

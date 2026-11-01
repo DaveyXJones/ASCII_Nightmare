@@ -37,6 +37,7 @@ const QUIET_IN_RAIN = 0.3; // rain heavier than this (0 to 1) quietens the crick
 //           tone, so those need bigger numbers.
 //   vary    how much the pitch changes at random each time (0.1 is up to 10% either way), so the
 //           same sound over and over doesn't sound like a machine
+//   held    true for a sound that swells up and holds, like a horn, instead of dying away at once
 const SOUNDS = {
   chop: {
     volume: 1.8,
@@ -137,6 +138,13 @@ const SOUNDS = {
     tone: { seconds: 0.3, wave: 'triangle', hz: 130, to: 50 },
   },
   collapse: { volume: 0.85, tone: { seconds: 1.3, wave: 'sine', hz: 220, to: 50 } },
+  // The lighthouse's horn (lighthouse.js): a long, low blast, with the air rushing under it.
+  foghorn: {
+    volume: 0.65,
+    held: true,
+    noise: { seconds: 3.2, filter: 'lowpass', hz: 340, to: 220 },
+    tone: { seconds: 3.2, wave: 'sawtooth', hz: 92, to: 84 },
+  },
   thunder: {
     volume: 2.2,
     vary: 0.2,
@@ -277,7 +285,7 @@ function playSound(name, { volume = 1, pan = 0 } = {}) {
     filter.frequency.setValueAtTime(hz * pitch, start);
     if (to) filter.frequency.exponentialRampToValueAtTime(to * pitch, start + seconds);
     filter.Q.value = q;
-    source.connect(filter).connect(envelope(start, seconds)).connect(out);
+    source.connect(filter).connect(envelope(start, seconds, sound.held)).connect(out);
     source.start(start, Math.random() * 1.5, seconds + 0.05);
   }
   if (sound.tone) {
@@ -286,16 +294,23 @@ function playSound(name, { volume = 1, pan = 0 } = {}) {
     oscillator.type = wave;
     oscillator.frequency.setValueAtTime(hz * pitch, start);
     if (to) oscillator.frequency.exponentialRampToValueAtTime(to * pitch, start + seconds);
-    oscillator.connect(envelope(start, seconds)).connect(out);
+    oscillator.connect(envelope(start, seconds, sound.held)).connect(out);
     oscillator.start(start);
     oscillator.stop(start + seconds + 0.05);
   }
 }
 
-// A volume that jumps up at `start` and dies away over `seconds`, like something struck.
-function envelope(start, seconds) {
+// A volume that jumps up at `start` and dies away over `seconds`, like something struck. If it's
+// `held`, it swells up instead, stays up, and only falls away at the end, like a horn.
+function envelope(start, seconds, held = false) {
   const gain = audio.ctx.createGain();
   gain.gain.setValueAtTime(0.0001, start);
+  if (held) {
+    gain.gain.exponentialRampToValueAtTime(1, start + seconds * 0.15);
+    gain.gain.setValueAtTime(1, start + seconds * 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + seconds);
+    return gain;
+  }
   gain.gain.exponentialRampToValueAtTime(1, start + 0.005);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + seconds);
   return gain;

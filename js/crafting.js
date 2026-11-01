@@ -322,6 +322,14 @@ const RECIPES = {
     gives: { bakedPotato: 1 },
     byFire: true,
   },
+  boilOil: {
+    tab: 'cook',
+    name: 'Lamp oil',
+    about: 'Boiled fish, for the lighthouse.',
+    cost: { fish: 2 },
+    gives: { oil: 1 },
+    byFire: true,
+  },
 };
 
 const BUILD_HINT = 'Press Build to place it. You keep facing this way: flick the stick to turn.';

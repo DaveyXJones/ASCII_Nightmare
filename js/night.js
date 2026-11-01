@@ -189,7 +189,7 @@ function skyMessage(game, sky) {
     if (survivor.torchLeft <= 0) return 'The sun is going down. Light your torch at a campfire.';
     return 'The sun is going down.';
   }
-  if (sky.phase === 'night') return `Night falls. ${sky.moon.rises}`;
+  if (sky.phase === 'night') return `Night falls. ${sky.moon.rises}${towerNews(game.world)}`;
   if (sky.phase === 'dawn') return 'The sky begins to grow light.';
   return 'Morning. You made it through the night.';
 }

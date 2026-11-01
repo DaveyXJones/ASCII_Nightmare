@@ -183,6 +183,7 @@ function startLife(x, y, facing) {
   state.weather.raining = state.sky.weather.rain > 0.15; // waking up in the rain isn't news
   stopBuilding(state);
   state.fishing = null;
+  state.stairs = null;
   state.shot = null;
   state.dying = null;
   elements.game.classList.remove('collapsing');
@@ -202,6 +203,7 @@ function update(dt) {
   if (sky.phase !== state.sky.phase) {
     showMessage(state, skyMessage(state, sky));
     if (sky.phase === 'day') washUp(state); // some mornings the sea brings something in
+    if (sky.phase === 'night') towerAtNightfall(state);
   }
   state.sky = sky;
 
@@ -232,6 +234,7 @@ function update(dt) {
   updateVitals(state, dt);
   updateTorch(state, dt);
   updateLamps(state, dt);
+  updateTower(state, dt);
   updateGarden(state, dt);
   updateBarrels(state, dt);
   markSeen(state);

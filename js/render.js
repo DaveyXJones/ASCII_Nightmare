@@ -51,6 +51,8 @@ const NIGHT_SCALE = 4; // the dark is drawn this many times smaller than the scr
 const EYES_REACH = 2; // with no light at all you can still make out this far around you, in tiles
 const EYES_STRENGTH = 0.5; // ...but only dimly: how much of the dark your eyes see through
 const FLICKER = 0.06; // how much a flame's light wavers, as a share of how far it reaches
+// The lighthouse's beam is drawn in layers, for a soft edge: [how much of its width, how strongly].
+const BEAM_LAYERS = [[1, 0.35], [0.7, 0.5], [0.4, 0.7]];
 const WINDOW_INSET = 3; // the cottage's front windows start this many characters in from each corner
 const WINDOW_REACH = 1.6; // how far the lamplight from each window spills at night, in tiles
 const CLOUD_SHADOW = 0.38; // how dark the shadows of passing clouds are, at their darkest
@@ -1095,6 +1097,7 @@ function drawNight(game, range, inside) {
 
   ctx.globalCompositeOperation = 'destination-out';
   for (const light of lights) paintLight(night.cut, light, light.strength);
+  paintBeams(game, range);
   // Firelight is warm: tint what it lights orange, more so the darker the night around it.
   ctx.globalCompositeOperation = 'source-over';
   for (const light of lights) if (light.warm) paintLight(night.glow, light, sky.darkness);
@@ -1110,6 +1113,66 @@ function drawNight(game, range, inside) {
     view.ctx.fillStyle = '#e4ecff';
     view.ctx.fillRect(0, 0, view.width, view.height);
     view.ctx.globalAlpha = 1;
+  }
+}
+
+// The lighthouse's two beams (see lighthouse.js), from the lamp out across the ground: each rubs out
+// a long soft wedge of the dark, then lays a little pale haze back along it, so you can see the beam
+// itself as well as what it lights. Most of the time they're nowhere near the screen, and cost nothing.
+function paintBeams(game, range) {
+  if (!towerBurning(game.world) || game.sky.darkness < LAMP_BURNS_DARKER) return;
+  const { tower } = game.world;
+  const ctx = night.ctx;
+  const baseX = tower.x + 1;
+  const baseY = tower.y + 0.5;
+  const fromX = screenX(baseX) / NIGHT_SCALE;
+  const fromY = screenY(baseY - TOWER_LAMP_ROWS) / NIGHT_SCALE;
+  const angle = beamAngle(game);
+  // A circle round the screen, in tiles, to tell whether a beam comes anywhere near it.
+  const toScreenX = (range.left + range.right) / 2 - baseX;
+  const toScreenY = (range.top + range.bottom) / 2 - baseY;
+  const screenRound = Math.hypot(range.right - range.left, range.bottom - range.top) / 2 + TOWER_LAMP_ROWS;
+  for (const turn of [angle, angle + Math.PI]) {
+    const along = toScreenX * Math.cos(turn) + toScreenY * Math.sin(turn);
+    const across = Math.abs(toScreenX * Math.sin(turn) - toScreenY * Math.cos(turn));
+    if (along < -screenRound || along > BEAM_REACH + screenRound) continue;
+    if (across > screenRound + Math.max(0, along) * Math.tan(BEAM_SPREAD)) continue;
+    // Where a line at this angle gets to at the beam's far end, on the night canvas.
+    const end = (at) => [
+      screenX(baseX + Math.cos(at) * BEAM_REACH) / NIGHT_SCALE,
+      screenY(baseY + Math.sin(at) * BEAM_REACH) / NIGHT_SCALE,
+    ];
+    const [farX, farY] = end(turn);
+    const wedge = (spread) => {
+      const [ax, ay] = end(turn - spread);
+      const [bx, by] = end(turn + spread);
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.closePath();
+      ctx.fill();
+    };
+    // It's brightest by the lamp and fades out along its length: a wide faint wedge with narrower,
+    // stronger ones inside it, for a soft edge.
+    const cut = ctx.createLinearGradient(fromX, fromY, farX, farY);
+    cut.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
+    cut.addColorStop(0.25, 'rgba(0, 0, 0, 0.75)');
+    cut.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = cut;
+    for (const [share, alpha] of BEAM_LAYERS) {
+      ctx.globalAlpha = alpha;
+      wedge(BEAM_SPREAD * share);
+    }
+    const haze = ctx.createLinearGradient(fromX, fromY, farX, farY);
+    haze.addColorStop(0, 'rgba(255, 244, 200, 0.28)');
+    haze.addColorStop(0.3, 'rgba(255, 244, 200, 0.1)');
+    haze.addColorStop(1, 'rgba(255, 244, 200, 0)');
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = haze;
+    ctx.globalAlpha = game.sky.darkness;
+    wedge(BEAM_SPREAD * BEAM_LAYERS[1][0]);
+    ctx.globalCompositeOperation = 'destination-out';
   }
 }
 
@@ -1206,6 +1269,17 @@ function findLights(game, range, inside) {
       // Lights indoors, like the candle, are hidden under the roof until you go in.
       if (!inside && insideHouse(world, tx, ty)) continue;
       lights.push({ x: tx + 0.5, y: ty, reach: light * flicker(game, i), strength: 1, warm: true });
+    }
+  }
+
+  // The lighthouse, once it's lit: light round the lamp high up, and round the foot of the tower.
+  if (towerBurning(world)) {
+    const x = world.tower.x + 1;
+    const y = world.tower.y + 0.5;
+    const near = TOWER_FOOT_GLOW + TOWER_LAMP_ROWS;
+    if (x > range.left - near && x < range.right + near && y > range.top - near && y < range.bottom + near) {
+      lights.push({ x, y: y - TOWER_LAMP_ROWS, reach: TOWER_LAMP_GLOW, strength: 1, warm: true });
+      lights.push({ x, y, reach: TOWER_FOOT_GLOW, strength: 0.8, warm: true });
     }
   }
 

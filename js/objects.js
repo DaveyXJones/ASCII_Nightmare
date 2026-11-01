@@ -58,6 +58,8 @@
 //   dig      { hits, gives, becomes }: with a spade (TOOLS.spade), the action button says Dig up on
 //            it, once there's nothing else to take from it, and these replace its own `hits`,
 //            `gives` and `becomes`
+//   tower    which state the lighthouse is in, on each of its two tiles: 'shut', 'dark' or 'lit' (see
+//            lighthouse.js)
 //   barrel   true for a rain barrel: it fills when it rains (world.barrels keeps how much is in it;
 //            see garden.js). Its own `action` only shows once it's empty.
 //   levels   pictures to use by how full a barrel is, emptiest first, in place of `sprite`
@@ -85,6 +87,7 @@ const MARKS = {
   camp: { glyph: 'Λ', color: '#d8c8a0', name: 'old camp', rank: 4 }, // over its cold campfire
   stones: { glyph: '∩', color: '#c8c4e0', name: 'standing stones', rank: 2 },
   lighthouse: { glyph: '♜', color: '#f0e8e0', name: 'lighthouse', rank: 5 },
+  lighthouseLit: { glyph: '♜', color: '#ffd75e', name: 'lighthouse', rank: 5 },
   graves: { glyph: '†', color: '#a8a8a0', name: 'graves', rank: 1 },
 };
 
@@ -143,11 +146,23 @@ const LOG_WALL = {
   map: ['#', '#9a8a72'],
 };
 
-// One half of the lighthouse (see places.js): it stands two tiles wide.
+// One half of the lighthouse (see lighthouse.js): it stands two tiles wide. Each state has its own
+// pair of objects, so that it's saved like anything else on the map.
 const LIGHTHOUSE_HALF = {
   name: 'Lighthouse',
   solid: true,
+  tower: 'shut',
   blocked: 'The lighthouse. Its door has rusted shut, and its lamp went out long ago.',
+};
+const LIGHTHOUSE_DARK = {
+  ...LIGHTHOUSE_HALF,
+  tower: 'dark',
+  blocked: 'The door hangs open. Stairs wind up into the dark.',
+};
+const LIGHTHOUSE_LIT = {
+  ...LIGHTHOUSE_HALF,
+  tower: 'lit',
+  blocked: 'The lighthouse. Its light turns slowly, far above you.',
 };
 
 const OBJECTS = {
@@ -791,6 +806,24 @@ const OBJECTS = {
   },
   lighthouseLeft: { ...LIGHTHOUSE_HALF, sprite: 'lighthouseLeft', mark: MARKS.lighthouse },
   lighthouseRight: { ...LIGHTHOUSE_HALF, sprite: 'lighthouseRight' },
+  lighthouseOpenLeft: { ...LIGHTHOUSE_DARK, sprite: 'lighthouseOpenLeft', mark: MARKS.lighthouse },
+  lighthouseOpenRight: { ...LIGHTHOUSE_DARK, sprite: 'lighthouseOpenRight' },
+  lighthouseLitLeft: { ...LIGHTHOUSE_LIT, sprite: 'lighthouseLitLeft', mark: MARKS.lighthouseLit },
+  lighthouseLitRight: { ...LIGHTHOUSE_LIT, sprite: 'lighthouseLitRight' },
+  // Lamp oil somebody put by and never got to use (see placeOilCans in places.js).
+  oilCans: {
+    name: 'Oil cans',
+    sprite: 'oilCans',
+    solid: true,
+    blocked: 'Cans of lamp oil, sealed and heavy.',
+    action: 'Take',
+    hits: 1,
+    gives: { oil: 2 },
+    becomes: null,
+    burst: 'stone',
+    sound: 'pick',
+    says: 'Lamp oil, still sealed. The lighthouse went dark for want of this.',
+  },
   woodDoor: {
     name: 'Wooden door',
     mark: MARKS.wall,

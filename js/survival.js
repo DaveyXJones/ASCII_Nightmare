@@ -15,6 +15,8 @@ const ITEMS = {
   bullets: { name: 'bullets', glyph: '‣', color: '#e0c060', hideEmpty: true }, // for both guns (guns.js)
   // Tinned food, found in the ruins (see LOOT in places.js). Eat it anywhere, no fire needed.
   tins: { name: 'tins', glyph: '◘', color: '#b8c4c8', food: 35, heals: 5, hideEmpty: true },
+  // For the lighthouse's lamp (see lighthouse.js): in cans round the island, or boiled down from fish.
+  oil: { name: 'lamp oil', glyph: '⚱', color: '#d8b84a', hideEmpty: true },
   // Dug up with the spade, to plant again in a garden bed (see garden.js).
   bushCutting: { name: 'berry cuttings', glyph: 'ψ', color: '#e0475a', hideEmpty: true },
   cottonCutting: { name: 'cotton cuttings', glyph: 'ψ', color: '#e6dcc4', hideEmpty: true },
@@ -250,6 +252,8 @@ function findTarget(game) {
         candidate = { x: tx, y: ty, label: 'Plant', object, plant: true };
       } else if (object && object.crop && cropWantsWater(world, tx, ty)) {
         candidate = { x: tx, y: ty, label: 'Water', object, water: true };
+      } else if (object && object.tower) {
+        candidate = towerTarget(world, survivor, object); // see lighthouse.js
       } else if (object && object.barrel && barrelTarget(world, survivor, tx, ty, object)) {
         // A rain barrel with water in it (see garden.js).
         candidate = barrelTarget(world, survivor, tx, ty, object);
@@ -363,8 +367,12 @@ function useTarget(game) {
     return;
   }
   player.act = { action: target.label, at: player.clock };
-  faceToward(player, target.x + 0.5, target.y + 0.5);
+  faceToward(player, target.x + (target.w || 1) / 2, target.y + 0.5);
 
+  if (target.tower) {
+    useTower(game, target);
+    return;
+  }
   if (target.fish) {
     castLine(game, target);
     return;

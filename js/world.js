@@ -75,6 +75,7 @@ function generateWorld(seed, island = WORLD_SIZE) {
     seen: new Uint8Array(size), // 1 for each tile you've seen, for the map (see map.js)
     bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
+    tower: null, // the lighthouse: { x, y, oil, kindled }, its left half's tile (see lighthouse.js)
     places: [], // the places to find, { kind, x, y, search }, and the notes left in them (places.js)
     notes: new Map(),
     house: null,

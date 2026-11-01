@@ -283,6 +283,7 @@ button:focus-visible {
 .rod dt { color: #c49a62; }
 .bullets dt { color: #e0c060; }
 .tins dt { color: #b8c4c8; }
+.oil dt { color: #d8b84a; }
 .bushCutting dt { color: #e0475a; }
 .cottonCutting dt { color: #e6dcc4; }
 .potato dt { color: #d8b070; }
@@ -819,6 +820,7 @@ button:focus-visible {
 .cost.cookedFish { color: #e8944e; }
 .cost.bullets { color: #e0c060; }
 .cost.tins { color: #b8c4c8; }
+.cost.oil { color: #d8b84a; }
 .cost.bushCutting { color: #e0475a; }
 .cost.cottonCutting { color: #e6dcc4; }
 .cost.potato { color: #d8b070; }

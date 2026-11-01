@@ -87,6 +87,7 @@ function saveGame(game) {
     floors: [...world.floors.keys()],
     crops: [...world.crops],
     barrels: [...world.barrels],
+    tower: world.tower && { oil: world.tower.oil, kindled: world.tower.kindled },
     seen: packSeen(world),
     bed: world.bed,
   });
@@ -176,6 +177,11 @@ function restoreWorld(world, save) {
   for (let i = 0; i < world.objects.length; i++) {
     const object = world.objects[i] && OBJECTS[world.objects[i]];
     if (object && object.crop && !world.crops.has(i)) world.crops.set(i, { grown: 0, water: 0, dry: 0 });
+  }
+  // What's in the lighthouse's tank, and whether it's been lit before.
+  if (world.tower && save.tower) {
+    world.tower.oil = Math.max(0, Math.min(TANK_HOLDS, finite(save.tower.oil, 0)));
+    world.tower.kindled = Boolean(save.tower.kindled);
   }
   // What's in each rain barrel still standing.
   for (const [i, water] of save.barrels || []) {

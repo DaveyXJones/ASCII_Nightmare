@@ -217,14 +217,19 @@ const LIGHTHOUSE_INK = {
   F: ['#2a2a2a'], // the lantern's frame
   g: ['#506070', '#1a2028'], // its glass, dark
   G: ['#a0b0c0', '#1a2028'], // ...broken
+  Y: ['#fff6c0', '#ffd75e'], // ...and lit, with the pane mended by the glare
   k: ['#4a4a4a', '#e8e4dc'], // the gallery round it, over the top of the tower
   K: ['#4a4a4a', '#a8a49c'],
   W: ['#e8e4dc'], // white band, in the light
   w: ['#a8a49c', '#d0ccc4'], // ...in shade
   R: ['#b5474f'], // red band, in the light
   r: ['#7a2e34', '#9a3a42'], // ...in shade
-  D: ['#e8e4dc', '#2a1e14'], // the door's arch
-  d: ['#a8a49c', '#2a1e14'],
+  D: ['#e8e4dc', '#6b4a2e'], // the door's arch, round a door rusted shut
+  d: ['#a8a49c', '#5a3c24'],
+  O: ['#e8e4dc', '#050403'], // ...forced open, on the dark inside
+  o: ['#a8a49c', '#050403'],
+  E: ['#e8e4dc', '#7a5420'], // ...with lamplight coming down the stairs
+  e: ['#a8a49c', '#664618'],
 };
 
 // A brute's colors: bigger and heavier than a shade, with a shaggy hide and one amber eye.
@@ -1647,6 +1652,50 @@ const SPRITES = {
     ink: LIGHTHOUSE_INK,
     shadow: 3,
   },
+  // With the door forced, on the dark inside.
+  lighthouseOpenLeft: {
+    art: [' ▗', '▐▒', '▀▀', '▐█', '▐█', '▐█', '▐█', '▐█', '▐▛'],
+    paint: [' c', 'Fg', 'kk', 'WW', 'RR', 'WW', 'RR', 'WW', 'WO'],
+    ink: LIGHTHOUSE_INK,
+    shadow: 2,
+  },
+  lighthouseOpenRight: {
+    art: ['▖ ', '╳▌', '▀▀', '▓▌', '▓▌', '▓▌', '▓▌', '▓▌', '▜▌'],
+    paint: ['c ', 'GF', 'KK', 'ww', 'rr', 'ww', 'rr', 'ww', 'ow'],
+    ink: LIGHTHOUSE_INK,
+    shadow: 3,
+  },
+  // Lit: the lantern room blazing, and the light coming down the stairs to the door.
+  lighthouseLitLeft: {
+    art: [' ▗', '▐▓', '▀▀', '▐█', '▐█', '▐█', '▐█', '▐█', '▐▛'],
+    paint: [' c', 'FY', 'kk', 'WW', 'RR', 'WW', 'RR', 'WW', 'WE'],
+    ink: LIGHTHOUSE_INK,
+    shadow: 2,
+  },
+  lighthouseLitRight: {
+    art: ['▖ ', '▓▌', '▀▀', '▓▌', '▓▌', '▓▌', '▓▌', '▓▌', '▜▌'],
+    paint: ['c ', 'YF', 'KK', 'ww', 'rr', 'ww', 'rr', 'ww', 'ew'],
+    ink: LIGHTHOUSE_INK,
+    shadow: 3,
+  },
+  // Cans of lamp oil, a pair of them, rust-red with a pale cap.
+  oilCans: {
+    art: [
+      '▗┐▗┐',
+      '█▌█▌',
+    ],
+    paint: [
+      'tTtT',
+      'LDLD',
+    ],
+    ink: {
+      t: ['#d8d0b8'], // the cap
+      T: ['#8a8470'], // the handle
+      L: ['#a8483a'], // the can, in the light
+      D: ['#6e2e26'], // ...in shade
+    },
+    shadow: 1,
+  },
   // A brute: a great hunched thing with a shaggy hide and a single amber eye, three tiles wide. Its
   // legs shift between the two pictures as it lumbers along.
   brute: {
@@ -1984,6 +2033,9 @@ const ACTION_POSES = {
   Plant: { pose: 'crouch', held: null, seconds: 0.4 },
   Water: { pose: 'crouch', held: null, seconds: 0.4 },
   Harvest: { pose: 'crouch', held: null, seconds: 0.4 },
+  Take: { pose: 'crouch', held: null, seconds: 0.4 },
+  Pump: { held: null, seconds: 0.25 }, // both hands on the pump handle
+  Look: { pose: 'windup', held: null, seconds: 0.2 },
   Clear: { pose: 'crouch', held: null, seconds: 0.3 },
   Eat:{ pose: 'windup', held: null, seconds: 0.4 },
 };
