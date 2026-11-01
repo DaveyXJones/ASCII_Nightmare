@@ -12,8 +12,13 @@
 //
 // This only uses the WebSocket that's built into every browser, so the game still has no add-ons.
 
-// Where the rooms are, or '' if there aren't any yet: then the Play together button stays hidden.
-const TOGETHER_SERVER = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'ws://localhost:8787' : '';
+// Where the rooms are: on your own PC while working on the game (see server/), otherwise online.
+const TOGETHER_ON_THIS_PC = ['localhost', '127.0.0.1'].includes(location.hostname);
+const TOGETHER_SERVER = TOGETHER_ON_THIS_PC ? 'ws://localhost:8787' : 'wss://ascii-nightmare.daveyxjones.workers.dev';
+// Not open to everyone yet. Until this is true, the Play together button only shows on your own PC, or
+// once you've opened the game with ?together on the end of its address (that browser remembers).
+const TOGETHER_OPEN = false;
+const TOGETHER_ON_KEY = 'ascii-nightmare-together-on'; // true once this browser has used that address
 const TOGETHER_KEY = 'ascii-nightmare-together'; // the code of the island you were last on
 const TOGETHER_SAVE = 'ascii-nightmare-island-'; // each shared island is saved under this and its code
 const CODE_PATTERN = /^[A-Z2-9]{5}$/; // see CODE_LETTERS in server/src/index.js
@@ -45,7 +50,8 @@ for (const tool of Object.values(TOOLS)) (tool.held || []).forEach((glyph) => HE
 // ---- The panel ----
 
 function setupTogether(elements) {
-  elements.togetherButton.hidden = !TOGETHER_SERVER;
+  if (new URLSearchParams(location.search).has('together')) remember(TOGETHER_ON_KEY, true);
+  elements.togetherButton.hidden = !(TOGETHER_OPEN || TOGETHER_ON_THIS_PC || recall(TOGETHER_ON_KEY));
   elements.togetherButton.addEventListener('click', openTogether);
   elements.togetherClose.addEventListener('click', closeTogether);
   elements.together.addEventListener('click', (event) => {

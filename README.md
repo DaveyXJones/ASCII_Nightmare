@@ -413,7 +413,8 @@ older one, and you'd need a new world from the menu to try this.)
 
 ## Playing together
 
-*Not online yet: the Play together button only shows on a copy of the game running on your own PC.*
+*Being tried out: the Play together button is hidden from everyone else for now. To see it, open the
+game once at https://daveyxjones.github.io/ASCII_Nightmare/?together and that browser remembers.*
 
 In the menu, **Play together** lets you **Start an island**, which gives you a five-letter code to
 share, or type someone's code and **Join**. There's nothing to sign up for. Up to eight people can be on
@@ -552,8 +553,8 @@ Ideas for next (Claude's suggestions):
 - **Something comes for the light.** On moonless nights, something climbs out of the sea and makes for
   the tower, so walls and spikes round it start to matter.
 
-**Playing together**, in stages. Stage one is built (see Playing together, above), and it isn't online
-yet. Then:
+**Playing together**, in stages. Stage one is built and online, behind a special link (see Playing
+together, above). Then:
 
 2. A shared world: chopping, building and chests all shared, and menus that don't pause the game on a
    shared island.

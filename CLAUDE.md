@@ -596,8 +596,12 @@ is its own commit. Everything beyond those answers is Claude's design:
 The owner asked for options, then said it's "for whoever downloads it, eventually the island can keep
 going when no one is playing, but for now i don't have a dedicated server to run it on 24/7". They
 chose Cloudflare Durable Objects and islands with join codes. Stage one: join by code and see each
-other. **It isn't online yet**: `TOGETHER_SERVER` (together.js) is only set on localhost, so the Play
-together button is hidden everywhere else, including the live game.
+other. **It's online, behind a special link**: the rooms run at
+`wss://ascii-nightmare.daveyxjones.workers.dev` (`TOGETHER_SERVER`, together.js; on localhost it uses
+`npx wrangler dev` instead). While `TOGETHER_OPEN` is false the Play together button only shows on
+localhost, or once a browser has opened the game with `?together` on its address (`TOGETHER_ON_KEY`).
+Set it to true to open it to everyone. To put a change to the rooms online: `cd server`, `npx wrangler
+deploy`.
 
 - **The rooms** (`server/`, run with `npx wrangler dev`): one `Island` Durable Object per code (`/new`
   makes one, `/island/CODE` joins; both WebSockets, so the game needs no CORS). It keeps `{ code, seed,
@@ -633,8 +637,10 @@ together button is hidden everywhere else, including the live game.
 - **Not shared yet**: objects, floors, chests, crops, barrels, the tower, creatures. Each phone still
   runs its own. Panels still pause your own game. The print isn't compared, so two game versions that
   build different islands from one seed wouldn't notice yet. Do these in stage two.
-- **Going online** needs the owner: `npx wrangler login` opens a Cloudflare page they allow themselves,
-  `npx wrangler deploy` prints the address, and that goes in `TOGETHER_SERVER` as `wss://...`.
+- **Going online**: `npx wrangler login` opened a Cloudflare page the owner allowed themselves. Cloudflare
+  names a new account's workers.dev address after its email, so the name was changed to `daveyxjones`,
+  their public GitHub name, before it went into this public code. The API won't rename: it's `DELETE` then
+  `PUT` on `/accounts/{id}/workers/subdomain`, then `npx wrangler deploy` again to attach the worker.
 - **Checked** with a script talking to the server (join, leaving, rubbish ignored, a flood cut down, a
   full room) and in the browser pane with two tabs, with no login needed: real clicks and typing,
   reconnecting, leaving and coming back. A background tab gets no frames, so one tab was stepped by hand
