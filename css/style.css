@@ -244,7 +244,10 @@ button:focus-visible {
 
 .pack {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
+  max-width: calc(100vw - 300px); /* past this, it goes onto a second row instead of over the bars */
   margin: 0;
   padding: 7px 12px;
   border: 1px solid var(--rule);
