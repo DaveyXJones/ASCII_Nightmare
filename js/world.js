@@ -75,6 +75,7 @@ function generateWorld(seed, island = WORLD_SIZE) {
     seen: new Uint8Array(size), // 1 for each tile you've seen, for the map (see map.js)
     bed: null, // tile index of the bed you built last: you wake up there after dying
     regrowing: [], // { index, at, into } for picked bushes
+    shared: false, // true on a shared island: changes to it are told to everyone there (see together.js)
     tower: null, // the lighthouse: { x, y, oil, kindled }, its left half's tile (see lighthouse.js)
     places: [], // the places to find, { kind, x, y, search }, and the notes left in them (places.js)
     notes: new Map(),
@@ -467,6 +468,7 @@ function setObject(world, x, y, key) {
   if (!inBounds(world, x, y)) return;
   const i = y * world.width + x;
   world.objects[i] = key;
+  if (world.shared) tellIsland(`o${i}`, key);
   world.damage.delete(i);
   world.clawed.delete(i);
   world.soaked.delete(i);

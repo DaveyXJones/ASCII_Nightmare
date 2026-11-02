@@ -106,6 +106,7 @@ function waterPlant(game, target) {
   const crop = world.crops.get(target.y * world.width + target.x);
   crop.water = WET_SECONDS;
   crop.dry = 0;
+  tellIsland(`p${target.y * world.width + target.x}`, crop);
   burst(fx, target.x + 0.5, target.y + 0.5, 'water', 8);
   playSound('pour');
   floatText(fx, target.x + 0.5, target.y - 1, 'watered', '#7ab4e8');
@@ -145,6 +146,7 @@ function useBarrel(game, target) {
     floatText(fx, target.x + 0.5, target.y - 3, '+water', '#7ab4e8');
   }
   world.barrels.set(i, left);
+  tellIsland(`b${i}`, left);
   burst(fx, target.x + 0.5, target.y - 1, 'water', 6);
   buzz(15);
   if (left < 1) showMessage(game, 'That\'s the last of the barrel. It will fill again when it rains.');
@@ -196,10 +198,11 @@ function updateGarden(game, dt) {
       crop.water = Math.max(0, crop.water - dt);
       crop.grown += dt;
       if (crop.water === 0) gardenNews(game, x, y, 'Your garden is drying out. Water it, or it will wilt.');
-      if (crop.grown >= object.crop.grows) grow(game, i, x, y, object.crop);
+      // On a shared island, one phone says when a plant has grown or wilted (see together.js).
+      if (crop.grown >= object.crop.grows && worldIsMine()) grow(game, i, x, y, object.crop);
     } else {
       crop.dry += dt;
-      if (crop.dry >= WILT_SECONDS) {
+      if (crop.dry >= WILT_SECONDS && worldIsMine()) {
         setObject(world, x, y, 'wilted');
         gardenNews(game, x, y, 'A plant in your garden has wilted for want of water.', true);
       }
@@ -217,6 +220,7 @@ function grow(game, i, x, y, stage) {
   if (next.crop) {
     world.objects[i] = stage.into; // the same plant, bigger, with the water it had
     world.crops.get(i).grown = 0;
+    tellIsland(`o${i}`, stage.into);
   } else {
     setObject(world, x, y, stage.into);
   }

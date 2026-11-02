@@ -180,6 +180,11 @@ function updateLamps(game, dt) {
       world.fuel.set(i, left - dt);
       continue;
     }
+    // On a shared island, one phone says when a lamp goes out (see worldIsMine in together.js).
+    if (!worldIsMine()) {
+      world.fuel.set(i, 0);
+      continue;
+    }
     const x = i % world.width;
     const y = Math.floor(i / world.width);
     setObject(world, x, y, OBJECTS[world.objects[i]].fuel.empty);
@@ -207,18 +212,23 @@ function fillLamp(game, target) {
     playSound('pick');
   }
   world.fuel.set(index, burns);
+  tellIsland(`f${index}`, burns);
   burst(fx, target.x + 0.5, target.y - 1, 'spark', 6);
   floatText(fx, target.x + 0.5, target.y - 2, 'filled', '#ffd75e');
   showMessage(game, `The lamp burns bright. It's good for ${Math.round(burns / 60)} minutes of dark.`);
   buzz(30);
 }
 
-// Picked bushes grow their berries back after a while.
+// Picked bushes grow their berries back after a while. `time` is what `at` was worked out from: see
+// worldTime in together.js.
 function updateRegrowth(world, time) {
   for (let n = world.regrowing.length - 1; n >= 0; n--) {
     const entry = world.regrowing[n];
-    if (time < entry.at) continue;
-    if (world.objects[entry.index] === entry.from) world.objects[entry.index] = entry.into;
+    if (world.objects[entry.index] === entry.from) {
+      if (time < entry.at || !worldIsMine()) continue;
+      const x = entry.index % world.width;
+      setObject(world, x, (entry.index - x) / world.width, entry.into);
+    }
     world.regrowing.splice(n, 1);
   }
 }
@@ -470,7 +480,7 @@ function useTarget(game) {
   if (object.loot) saveGame(game); // so reloading the page can't put back what you just took
   const regrow = object.becomes && OBJECTS[object.becomes].regrow;
   if (regrow) {
-    world.regrowing.push({ index, at: game.time + regrow.after, from: object.becomes, into: regrow.into });
+    world.regrowing.push({ index, at: worldTime(game) + regrow.after, from: object.becomes, into: regrow.into });
   }
   burst(game.fx, target.x + 0.5, target.y + 0.5, object.burst, 10);
   buzz(30);

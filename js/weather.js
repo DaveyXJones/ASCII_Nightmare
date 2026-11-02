@@ -137,6 +137,7 @@ function soakFires(game, rain) {
       }
       continue;
     }
+    if (!worldIsMine()) continue; // on a shared island, one phone says when a fire's gone out
     setObject(world, x, y, object.doused);
     if (near) {
       burst(fx, x + 0.5, y + 0.2, 'steam', 10);

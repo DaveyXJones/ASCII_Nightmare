@@ -5,10 +5,15 @@
 // accounts and no chat, so there's nothing to sign up for and nothing to moderate. Your own island is
 // kept safe, and you go back to it when you leave.
 //
-// So far you see each other and share the time of day. Everything else (trees chopped, walls built,
-// things in the dark) still happens only on your own phone: that's the next job. What you do on a
-// shared island is saved on your phone under its code, apart from your own island (see saveKey in
-// save.js).
+// You see each other and share the time of day and the island itself. Every change anyone makes is told
+// to the room (tellIsland), which keeps it and passes it on to everyone, and the changes are applied in
+// the order the room saw them, so every phone ends up the same. Things that happen by themselves, like
+// plants growing and lamps going out, are worked out on every phone so they look right, but only one
+// phone at a time, the keeper (whoever's been there longest), says when they've happened
+// (worldIsMine). Things in the dark still only come for you on your own phone: that's the next job.
+//
+// On your phone, a shared island only saves your own part: you, what you've seen, your bed (see saveKey
+// and saveGame in save.js).
 //
 // This only uses the WebSocket that's built into every browser, so the game still has no add-ons.
 
@@ -29,6 +34,10 @@ const RETRY_SECONDS = [2, 15]; // lose the line, and it tries again after this l
 const OTHER_FOLLOW = 8; // how quickly others glide to where they last said they were (higher is quicker)
 const OTHER_JUMP = 8; // further than this from where they said, in tiles, and they just appear there
 const OTHERS_KEPT = 32; // how many different looks to keep pictures of (see picturesFor in sprites.js)
+const CHANGES_PER_SECOND = 15; // at most this many changes are sent each second, to stay under the room's limit
+const TICK_SECONDS = 30; // how often the keeper says how the plants, lamps and barrels are getting on
+const TICKS_MOST = 250; // ...about this many of each at most, to stay under the room's limit on a message
+const NEWS_REACH = 40; // somebody else's change further off than this, in tiles, makes no sound or splash
 
 const together = {
   code: null, // the island you're on, or null when you're on your own
@@ -41,6 +50,15 @@ const together = {
   sent: null, // what it said last, so it says nothing if nothing's changed
   retry: RETRY_SECONDS[0],
   retryTimer: null,
+  you: null, // your id, and the keeper's: the phone that says what happens by itself on the island
+  keeper: null,
+  arriving: null, // between the room's welcome and its ready: { welcome, part }, the island's changes so far
+  greeted: false, // true once you've said hi on this line: the room ignores anything sent before that
+  outbox: new Map(), // changes not sent yet: key -> value (a newer change to one thing replaces an older)
+  waiting: new Map(), // changes sent that the room hasn't passed back yet: key -> how many
+  budget: 0, // how many changes can be sent right now (see sendChanges)
+  tickIn: TICK_SECONDS, // seconds until the keeper next says how things are getting on
+  ticked: null, // what it said last
 };
 
 // Things someone can be holding (TOOLS in crafting.js, and the rough tool). Anything else is ignored,
@@ -109,6 +127,7 @@ function sayTogether(words) {
 
 function connectTo(path) {
   hangUp();
+  together.greeted = false;
   let socket;
   try {
     socket = new WebSocket(TOGETHER_SERVER + path);
@@ -160,6 +179,11 @@ function hear(text) {
     return;
   }
   if (message.t === 'welcome') heardWelcome(message);
+  else if (message.t === 'world') heardPart(message);
+  else if (message.t === 'ready') heardReady(message);
+  else if (message.t === 'set') heardChange(message);
+  else if (message.t === 'ticks') heardTicks(message, true);
+  else if (message.t === 'keeper') together.keeper = message.id;
   else if (message.t === 'no-island') turnedAway('There\'s no island with that code.');
   else if (message.t === 'full') turnedAway('That island is full.');
   else if (message.t === 'joined') heardJoined(message);
@@ -177,17 +201,36 @@ function turnedAway(words) {
   sayTogether(words);
 }
 
+// The room says hello, and then sends the island's changes so far, a page at a time, then says ready.
 function heardWelcome(welcome) {
   together.retry = RETRY_SECONDS[0];
+  together.you = welcome.id;
   together.born = welcome.born;
   together.clockOffset = welcome.now - Date.now();
-  if (together.code !== welcome.code) enterIsland(welcome);
-  else showMessage(state, 'Back in touch with the others.');
+  together.arriving = { welcome, part: [] };
   together.others.clear();
   for (const other of welcome.others) addOther(other);
+}
+
+function heardPart(message) {
+  if (together.arriving && Array.isArray(message.part)) together.arriving.part.push(...message.part);
+}
+
+function heardReady(message) {
+  const arrival = together.arriving;
+  if (!arrival) return;
+  together.arriving = null;
+  together.waiting.clear();
+  if (together.code !== arrival.welcome.code) {
+    enterIsland(arrival.welcome, arrival.part, message.ticks);
+  } else {
+    hearTheIsland(arrival.part, message.ticks);
+    showMessage(state, 'Back in touch with the others.');
+  }
   // Tell them what you look like and where you are, which is when they see you arrive.
   together.sent = null;
-  say({ t: 'hi', look: state.look, ...whereIAm(state) });
+  say({ t: 'hi', look: state.look, print: state.world.print, ...whereIAm(state) });
+  together.greeted = true;
 }
 
 function heardJoined(message) {
@@ -202,13 +245,16 @@ function heardLeft(message) {
 // ---- Coming and going ----
 
 // You're on a shared island now. Your own island is saved first, and stays as it is.
-function enterIsland(welcome) {
+function enterIsland(welcome, part, ticks) {
   saveGame(state);
   together.code = welcome.code;
   remember(TOGETHER_KEY, welcome.code);
   // Been here before on this phone? Carry on. If not, wake up in the island's cottage.
-  if (!loadGame(state)) {
+  if (loadGame(state)) {
+    hearTheIsland(part, ticks);
+  } else {
     state.world = generateWorld(welcome.seed, { width: welcome.width, height: welcome.height, places: true });
+    hearTheIsland(part, ticks);
     state.lifeStarted = state.time;
     wakeUp();
   }
@@ -218,13 +264,21 @@ function enterIsland(welcome) {
   showWorldButtons();
   closeTogether();
   closeMenu();
-  showMessage(state, `You're on island ${welcome.code}. Share the code from the menu.`);
+  const different = welcome.print && welcome.print !== state.world.print;
+  showMessage(state, different
+    ? 'This island was made by another version of the game, so things may have moved.'
+    : `You're on island ${welcome.code}. Share the code from the menu.`);
 }
 
 function leaveIsland() {
+  sendChanges(0, true);
   saveGame(state);
   hangUp();
   together.code = null;
+  together.keeper = null;
+  together.arriving = null;
+  together.outbox.clear();
+  together.waiting.clear();
   together.others.clear();
   if (!loadGame(state)) newGame(DEFAULT_SEED);
   snapCamera(state.world, state.player);
@@ -242,6 +296,227 @@ function showWorldButtons() {
 // Your look has changed: tell the others.
 function togetherLookChanged() {
   if (together.code) say({ t: 'look', look: state.look });
+}
+
+// ---- The island itself ----
+
+// True if what happens by itself on the island is this phone's to say: always on your own island, and
+// on a shared one, if you're the keeper.
+function worldIsMine() {
+  return !together.code || together.keeper === together.you;
+}
+
+// The clock that things waiting to happen on the island go by. Your own seconds of play won't do on a
+// shared island, since everybody's are different.
+function worldTime(game) {
+  return together.code ? game.dayClock : game.time;
+}
+
+// Whether somebody else is standing on tile (x, y).
+function otherOnTile(x, y) {
+  for (const other of together.others.values()) {
+    if (Math.floor(other.toX) === x && Math.floor(other.toY) === y) return true;
+  }
+  return false;
+}
+
+// A change you've made: to be told to the room, and through it everyone. It does nothing except on a
+// shared island. They wait in the outbox, so several to one chest in a moment only send the last, and
+// nothing's lost if the line drops. See heardChange for what the keys mean.
+function tellIsland(key, value) {
+  if (state.world.shared) together.outbox.set(key, value);
+}
+
+// Sends what's in the outbox, a few at a time (or all of it, leaving the island).
+function sendChanges(dt, all = false) {
+  together.budget = Math.min(CHANGES_PER_SECOND, together.budget + dt * CHANGES_PER_SECOND);
+  const socket = together.socket;
+  if (!socket || socket.readyState !== WebSocket.OPEN || !together.greeted) return;
+  for (const [k, v] of together.outbox) {
+    if (!all && together.budget < 1) break;
+    together.budget--;
+    say({ t: 'set', k, v });
+    together.waiting.set(k, (together.waiting.get(k) || 0) + 1);
+    together.outbox.delete(k);
+  }
+}
+
+// The island's changes so far, from the room. What stands on each tile goes first, since a chest or a
+// plant needs its tile ready. Anything you've changed since and not sent yet stays as you have it.
+function hearTheIsland(part, ticks) {
+  const world = state.world;
+  world.shared = false;
+  const standing = part.filter(([key]) => key[0] === 'o');
+  const rest = part.filter(([key]) => key[0] !== 'o');
+  for (const [key, value] of [...standing, ...rest]) {
+    if (!together.outbox.has(key)) applyChange(key, value, false);
+  }
+  if (ticks) heardTicks(ticks, false);
+  world.shared = true;
+  groundCache.world = null; // floors may have changed: draw the ground again
+}
+
+// A change from the room, in the order the room saw them all. Your own come back too. If you've
+// changed the same thing again since, the newer one's on its way and this is out of date.
+function heardChange({ k, v, by }) {
+  if (together.arriving) {
+    together.arriving.part.push([k, v]);
+    return;
+  }
+  const mine = by === together.you;
+  if (mine) {
+    const left = (together.waiting.get(k) || 1) - 1;
+    if (left > 0) together.waiting.set(k, left);
+    else together.waiting.delete(k);
+  }
+  if (together.waiting.has(k) || together.outbox.has(k)) return;
+  applyChange(k, v, !mine);
+}
+
+// Puts a change onto the island. A key is a letter and a tile (see CHANGES), or `t` for the lighthouse's
+// tank. `live` if it's somebody else's and it's happening now, so it should look and sound like it.
+function applyChange(key, value, live) {
+  const world = state.world;
+  const shared = world.shared;
+  world.shared = false; // what you've just heard doesn't need telling back
+  if (key === 't') {
+    if (world.tower && value) {
+      world.tower.oil = Math.max(0, Number(value.oil) || 0);
+      world.tower.kindled = value.kindled === true;
+    }
+  } else {
+    const i = Number(key.slice(1));
+    const change = CHANGES[key[0]];
+    if (change && Number.isInteger(i) && i >= 0 && i < world.objects.length) change(world, i, value, live);
+  }
+  world.shared = shared;
+}
+
+const CHANGES = {
+  o: heardObject, // what stands on the tile (null if nothing)
+  g: heardFloor, // a floor laid there (null if it's been taken up)
+  c: heardChest, // what's in the chest there
+  p: heardCrop, // how the plant there is getting on
+  f: heardFuel, // a lamp's seconds of fuel
+  b: heardBarrel, // a rain barrel's waterings
+};
+
+function heardObject(world, i, key, live) {
+  if (key !== null && !OBJECTS[key]) return; // something this version of the game doesn't know about
+  const before = world.objects[i];
+  if (before === key) return;
+  const x = i % world.width;
+  const y = (i - x) / world.width;
+  const was = before && OBJECTS[before];
+  const now = key && OBJECTS[key];
+  if (state.chest === i) closeChest(); // somebody's taken down the chest you were looking in
+  if (was && was.crop && now && now.crop) {
+    world.objects[i] = key; // the same plant, bigger, with the water it had
+    if (world.crops.has(i)) world.crops.get(i).grown = 0;
+  } else {
+    setObject(world, x, y, key);
+    if (now && now.chest) world.chests.set(i, newChest());
+    if (now && now.fuel && now.light) world.fuel.set(i, now.fuel.burns);
+    if (now && now.barrel) world.barrels.set(i, 0);
+    if (now && now.crop) world.crops.set(i, { grown: 0, water: 0, dry: 0 });
+    if (now && now.regrow) {
+      world.regrowing.push({ index: i, at: worldTime(state) + now.regrow.after, from: key, into: now.regrow.into });
+    }
+  }
+  if (!live) return;
+  field.at = -Infinity; // there may be a new way through, or a new wall: creatures work it out again
+  if (was && was.crop && was.crop.into === key && was.crop.says) gardenNews(state, x, y, was.crop.says, true);
+  if (key === 'wilted') gardenNews(state, x, y, 'A plant in your garden has wilted for want of water.', true);
+  if (Math.hypot(x + 0.5 - state.player.x, y + 0.5 - state.player.y) > NEWS_REACH) return;
+  burst(state.fx, x + 0.5, y + 0.5, (was && was.burst) || (now && now.burst) || 'dust', 6);
+  const sound = was ? was.soundDone || was.sound : 'build';
+  if (sound) playSoundAt(state, sound, x + 0.5, y + 0.5);
+}
+
+function heardFloor(world, i, key, live) {
+  const x = i % world.width;
+  const y = (i - x) / world.width;
+  if (key && TILES[key] && !world.floors.has(i)) {
+    world.floors.set(i, world.ground[i]);
+    world.ground[i] = key;
+  } else if (!key && world.floors.has(i)) {
+    world.ground[i] = world.floors.get(i);
+    world.floors.delete(i);
+  } else {
+    return;
+  }
+  if (live) redrawGround(world, x, y);
+}
+
+function heardChest(world, i, value) {
+  const key = world.objects[i];
+  if (!key || !OBJECTS[key].chest) return;
+  world.chests.set(i, restoreChest(value));
+  if (state.chest === i) refreshChest();
+}
+
+function heardCrop(world, i, value) {
+  const key = world.objects[i];
+  if (!key || !OBJECTS[key].crop || !value) return;
+  const seconds = (n) => Math.max(0, finite(n, 0));
+  world.crops.set(i, { grown: seconds(value.grown), water: seconds(value.water), dry: seconds(value.dry) });
+}
+
+function heardFuel(world, i, value) {
+  const key = world.objects[i];
+  if (key && OBJECTS[key].fuel && OBJECTS[key].light) world.fuel.set(i, Math.max(0, finite(value, 0)));
+}
+
+function heardBarrel(world, i, value) {
+  const key = world.objects[i];
+  if (key && OBJECTS[key].barrel) world.barrels.set(i, Math.max(0, Math.min(BARREL_HOLDS, finite(value, 0))));
+}
+
+// Every phone works out plants growing, lamps burning and barrels filling for itself, and every so often
+// the keeper says how they stand, so they don't drift apart and a newcomer starts close to right. While
+// it's `live`, a number that's gone up here is left alone, in case it's somebody's watering that the
+// keeper hadn't heard about yet when it spoke.
+function heardTicks(ticks, live) {
+  if (live && worldIsMine()) return;
+  const { world } = state;
+  const keep = (here, told) => (live ? Math.max(here, told) : told);
+  const rows = (list) => (Array.isArray(list) ? list : []);
+  for (const [i, grown, water, dry] of rows(ticks.crops)) {
+    const crop = world.crops.get(i);
+    if (!crop) continue;
+    crop.grown = grown;
+    crop.water = keep(crop.water, water);
+    crop.dry = crop.water > 0 ? 0 : dry;
+  }
+  for (const [i, left] of rows(ticks.fuel)) {
+    if (world.fuel.has(i)) world.fuel.set(i, keep(world.fuel.get(i), left));
+  }
+  for (const [i, water] of rows(ticks.barrels)) {
+    if (world.barrels.has(i)) world.barrels.set(i, keep(world.barrels.get(i), water));
+  }
+  if (world.tower && Number.isFinite(ticks.oil)) world.tower.oil = keep(world.tower.oil, ticks.oil);
+}
+
+// The keeper says how things stand.
+function sendTicks(world) {
+  const tenth = (n) => Math.round(n * 10) / 10;
+  const crops = [...world.crops].slice(0, TICKS_MOST).map(([i, c]) => [i, tenth(c.grown), tenth(c.water), tenth(c.dry)]);
+  const fuel = [...world.fuel].slice(0, TICKS_MOST).map(([i, left]) => [i, tenth(left)]);
+  const barrels = [...world.barrels].slice(0, TICKS_MOST).map(([i, water]) => [i, tenth(water)]);
+  const ticks = { crops, fuel, barrels };
+  if (world.tower && world.tower.oil > 0) ticks.oil = Math.round(world.tower.oil * 1000) / 1000;
+  const words = JSON.stringify(ticks);
+  if (words === together.ticked) return;
+  together.ticked = words;
+  say({ t: 'ticks', ...ticks });
+}
+
+// A phone put away stops running the game, so it hangs up, and the room picks a new keeper if it has
+// to. It comes back when it's picked up again.
+function togetherVisibility() {
+  if (!together.code) return;
+  if (document.visibilityState === 'hidden') hangUp();
+  else if (!together.socket) connectTo(`/island/${together.code}`);
 }
 
 // ---- Everyone else ----
@@ -309,12 +584,18 @@ function updateTogether(game, dt) {
   if (!together.code) return;
   game.dayClock = togetherClock();
   for (const other of together.others.values()) stepOther(other, dt);
+  sendChanges(dt);
+  together.tickIn -= dt;
+  if (together.tickIn <= 0) {
+    together.tickIn = TICK_SECONDS;
+    if (worldIsMine() && together.greeted) sendTicks(game.world);
+  }
   together.sendIn -= dt;
   if (together.sendIn <= 0) {
     together.sendIn = SEND_SECONDS;
     const place = whereIAm(game);
     const words = JSON.stringify(place);
-    if (words !== together.sent) {
+    if (words !== together.sent && together.greeted) {
       together.sent = words;
       say({ t: 'at', ...place });
       together.pingIn = PING_SECONDS;

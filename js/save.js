@@ -60,10 +60,24 @@ function saveKey() {
 function saveGame(game) {
   const { world, player, survivor } = game;
   if (!world || !player) return;
+  // A shared island's changes are kept by its room (see together.js), so a phone only saves its own
+  // part: you, what you've seen, your bed and how far you'd got through a job.
+  const shared = world.shared;
   const objects = []; // [tile index, object key or null] for every tile that's changed
-  for (let i = 0; i < world.objects.length; i++) {
+  for (let i = 0; i < world.objects.length && !shared; i++) {
     if (world.objects[i] !== world.original[i]) objects.push([i, world.objects[i]]);
   }
+  const changes = shared ? {} : {
+    objects,
+    clawed: [...world.clawed],
+    regrowing: world.regrowing,
+    chests: [...world.chests],
+    fuel: [...world.fuel],
+    floors: [...world.floors.keys()],
+    crops: [...world.crops],
+    barrels: [...world.barrels],
+    tower: world.tower && { oil: world.tower.oil, kindled: world.tower.kindled },
+  };
   remember(saveKey(), {
     version: SAVE_VERSION,
     seed: world.seed,
@@ -84,16 +98,8 @@ function saveGame(game) {
       warned: survivor.warned,
       hurtBy: survivor.hurtBy,
     },
-    objects,
+    ...changes,
     damage: [...world.damage],
-    clawed: [...world.clawed],
-    regrowing: world.regrowing,
-    chests: [...world.chests],
-    fuel: [...world.fuel],
-    floors: [...world.floors.keys()],
-    crops: [...world.crops],
-    barrels: [...world.barrels],
-    tower: world.tower && { oil: world.tower.oil, kindled: world.tower.kindled },
     seen: packSeen(world),
     bed: world.bed,
   });
@@ -111,7 +117,8 @@ function loadGame(game) {
     // builds a different island now, and the changes saved for the old one would land in the wrong
     // places. Keep what you carry, but not the changes to the land, and wake up in the cottage.
     const sameIsland = save.print === world.print;
-    if (sameIsland) restoreWorld(world, save);
+    // On a shared island the room says what's changed, whatever this phone last saw (see together.js).
+    if (sameIsland) restoreWorld(world, together.code ? { damage: save.damage, seen: save.seen, bed: save.bed } : save);
     game.world = world;
     game.time = finite(save.time, 0);
     game.dayClock = finite(save.dayClock, 0);

@@ -161,6 +161,7 @@ function moveThing(kind, key, intoChest) {
     chest.tools[key]--;
     if (chest.tools[key] <= 0) delete chest.tools[key];
   }
+  tellIsland(`c${state.chest}`, chest);
   playSound('pick');
   refreshChest();
 }

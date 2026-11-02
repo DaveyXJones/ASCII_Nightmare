@@ -214,13 +214,20 @@ function update(dt) {
   const sky = skyAt(state.dayClock, state.world.seed);
   if (sky.phase !== state.sky.phase) {
     showMessage(state, skyMessage(state, sky));
-    if (sky.phase === 'day') washUp(state); // some mornings the sea brings something in
+    if (sky.phase === 'day' && worldIsMine()) washUp(state); // some mornings the sea brings something in
     if (sky.phase === 'night') towerAtNightfall(state);
   }
   state.sky = sky;
 
-  movePlayer(dt);
-  if (state.building) {
+  // Behind a menu on a shared island the world carries on, but you can't do anything (see frame()).
+  const free = !state.paused && !portrait.matches;
+  if (free) movePlayer(dt);
+  if (!free) {
+    player.moving = false;
+    player.working = null;
+    player.holding = null;
+    state.target = null;
+  } else if (state.building) {
     // In build mode the action button builds (see the 'action' press in frame()) instead.
     state.target = null;
     state.buildSpot = findBuildSpot(state);
@@ -245,18 +252,23 @@ function update(dt) {
   state.tapped = false;
   updateVitals(state, dt);
   updateTorch(state, dt);
-  updateLamps(state, dt);
-  updateTower(state, dt);
-  updateGarden(state, dt);
-  updateBarrels(state, dt);
+  updateIsland(dt);
   markSeen(state);
   updateWeather(state, dt);
   updateCreatures(state, dt);
-  updateRegrowth(state.world, state.time);
   updateFishing(state);
   updateGuns(state);
   if (survivor.vitals.health <= 0) collapse();
   if (state.time - state.savedAt >= SAVE_EVERY) saveGame(state);
+}
+
+// What goes on on the island by itself, whatever you're up to: lamps burning, plants growing.
+function updateIsland(dt) {
+  updateLamps(state, dt);
+  updateTower(state, dt);
+  updateGarden(state, dt);
+  updateBarrels(state, dt);
+  updateRegrowth(state.world, worldTime(state));
 }
 
 function movePlayer(dt) {
@@ -274,6 +286,12 @@ function movePlayer(dt) {
   const step = WALK_SPEED * move.length * dt;
   const dx = move.x * step;
   const dy = move.y * step;
+  // On a shared island something can appear right on top of you. Nothing stops you walking out of it.
+  if (together.code && blockerFor(player.x, player.y)) {
+    player.x += dx;
+    player.y += dy;
+    return;
+  }
   const startX = player.x;
   const startY = player.y;
 
@@ -381,6 +399,7 @@ function faceToward(player, x, y) {
 // Health has run out. The player sinks to their knees and falls (see playerPose() in render.js)
 // while the screen darkens, and then the death screen comes up.
 function collapse() {
+  if (together.code) closeEverything(); // a shared island doesn't wait for your menu (see frame())
   state.dropped = dropGuns(state);
   state.dying = { seconds: 0 };
   state.player.moving = false;
@@ -447,6 +466,18 @@ function closeMenu() {
   elements.menu.hidden = true;
   state.paused = false;
   state.started = true;
+}
+
+// Shuts every panel, for when something's happened that you need to see.
+function closeEverything() {
+  closeCraft();
+  closeMap();
+  closeChest();
+  closeNote();
+  closeLook();
+  closeTogether();
+  elements.menu.hidden = true;
+  state.paused = false;
 }
 
 // On phones, starting the game goes full screen and turns sideways where the browser allows it.
@@ -737,8 +768,17 @@ function frame(now) {
     playing = !state.paused && !state.dead && !state.dying && !portrait.matches;
   }
 
-  if (playing) update(dt);
-  else state.player.moving = false;
+  // A shared island doesn't stop because you've opened a menu, and doesn't wait for you to wake up.
+  if (playing || (together.code && !state.dead && !state.dying)) {
+    update(dt);
+  } else {
+    state.player.moving = false;
+    if (together.code && state.dead) {
+      state.time += dt;
+      state.sky = skyAt(state.dayClock, state.world.seed);
+      updateIsland(dt);
+    }
+  }
   if (state.dying && !state.paused && !portrait.matches) updateDying(dt);
 
   updateTogether(state, dt);
@@ -759,7 +799,7 @@ function frame(now) {
 
   updateSound(state, playing);
   followCamera(state.world, state.player, dt);
-  stepRain(state, state.paused ? 0 : dt);
+  stepRain(state, state.paused && !together.code ? 0 : dt);
   drawFrame(state);
   updateHud();
   requestAnimationFrame(frame);
@@ -806,6 +846,7 @@ if (document.fonts) {
 // might not come back.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') saveGame(state);
+  togetherVisibility();
 });
 window.addEventListener('pagehide', () => saveGame(state));
 requestAnimationFrame(frame);

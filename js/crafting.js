@@ -451,6 +451,7 @@ function buildProblem(game, x, y, recipe) {
     return null;
   }
   if (!ground || ground.solid) return "You can't build there.";
+  if (!recipe.floor && otherOnTile(x, y)) return 'Somebody is standing there.';
   if (recipe.floor) {
     // A floor goes down under things you've built (they have a `mark`) and things you walk over, but
     // not under trees, rocks and bushes; and the cottage has one already.
@@ -532,12 +533,14 @@ function buildFloor(game, spot, recipe) {
   if (spot.lift) {
     setGround(world, spot.x, spot.y, world.floors.get(index));
     world.floors.delete(index);
+    tellIsland(`g${index}`, null);
     for (const [item, count] of Object.entries(recipe.cost)) survivor.pack[item] += count;
     floatText(fx, spot.x + 0.5, spot.y - 1, `+${recipe.cost.wood} wood`, ITEMS.wood.color);
   } else {
     spend(survivor.pack, recipe.cost);
     world.floors.set(index, world.ground[index]);
     setGround(world, spot.x, spot.y, recipe.floor);
+    tellIsland(`g${index}`, recipe.floor);
   }
   redrawGround(world, spot.x, spot.y);
   burst(fx, spot.x + 0.5, spot.y + 0.5, 'wood', 6);

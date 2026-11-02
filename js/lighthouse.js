@@ -47,6 +47,11 @@ const TOWER_KEYS = {
   lit: ['lighthouseLitLeft', 'lighthouseLitRight'],
 };
 
+// Tells everyone on a shared island what's in the tank (see together.js).
+function tellTank(tower) {
+  tellIsland('t', { oil: tower.oil, kindled: tower.kindled });
+}
+
 // What's said as the oil climbs the pipe the first time, once this share of the strokes are done.
 const PUMP_NEWS = [
   [0.3, 'Oil is climbing the pipe. Don\'t stop.'],
@@ -162,6 +167,7 @@ function pourOil(game) {
   const poured = Math.min(survivor.pack.oil, Math.floor(TANK_HOLDS - tower.oil));
   survivor.pack.oil -= poured;
   tower.oil += poured;
+  tellTank(tower);
   burst(fx, tower.x + 1, tower.y + 0.5, 'water', 6);
   playSound('pour');
   floatText(fx, player.x, player.y - 3, `-${poured} ${ITEMS.oil.name}`, ITEMS.oil.color);
@@ -200,6 +206,7 @@ function kindle(game) {
   const { tower } = world;
   const first = !tower.kindled;
   tower.kindled = true;
+  tellTank(tower);
   setTower(world, 'lit');
   game.stairs = null;
   for (const creature of game.creatures) {
@@ -228,7 +235,7 @@ function updateTower(game, dt) {
   if (game.stairs) updateStairs(game);
   if (!towerBurning(world) || sky.darkness < LAMP_BURNS_DARKER) return;
   tower.oil = Math.max(0, tower.oil - dt / OIL_BURNS);
-  if (tower.oil > 0) return;
+  if (tower.oil > 0 || !worldIsMine()) return; // on a shared island, one phone says when it's run dry
   setTower(world, 'dark');
   showMessage(game, 'Far off, the light on the point gutters and goes out. They will be bolder now.');
   playSound('foghorn', { volume: 0.2 });
@@ -238,11 +245,13 @@ function updateStairs(game) {
   const { world, player, stairs } = game;
   const { tower } = world;
   const away = Math.hypot(player.x - (tower.x + 1), player.y - (tower.y + 1));
-  if (away > STAIRS_LEAVE || game.time - stairs.pumpedAt > STAIRS_PATIENCE) {
-    // You've left it alone. What came down is just part of the dark now (by day, it melts away).
+  // Somebody else got the lamp lit, on a shared island, or you've left it alone. What came down is
+  // just part of the dark now (by day, it melts away).
+  const lit = towerBurning(world);
+  if (lit || away > STAIRS_LEAVE || game.time - stairs.pumpedAt > STAIRS_PATIENCE) {
     for (const creature of game.creatures) creature.stairs = false;
     game.stairs = null;
-    showMessage(game, 'The stairs go quiet. For now.');
+    if (!lit) showMessage(game, 'The stairs go quiet. For now.');
     return;
   }
   if (game.time < stairs.nextAt) return;
