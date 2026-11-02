@@ -413,9 +413,19 @@ older one, and you'd need a new world from the menu to try this.)
 
 ## Playing together
 
-In the menu, **Play together** lets you **Start an island**, which gives you a five-letter code to
-share, or type someone's code and **Join**. There's nothing to sign up for. Up to eight people can be on
-an island. Your own island stays exactly as it was, and **Back to my own island** returns you to it.
+In the menu, **Play together** gives you three choices, and there's nothing to sign up for:
+
+- **Share this island** copies the island you're on, with everything you've built, so friends can join it.
+  You carry on from the same spot with the same pack, at the same time of day, and get a five-letter code
+  to share.
+- **Start a new island** makes a fresh one, with a code to share.
+- Type someone's code and **Join** theirs.
+
+Up to eight people can be on an island. **Back to my own island** returns you to your own, which stays
+exactly as it was. Sharing makes a copy, so from then on the two go their separate ways: what you build
+on the shared copy stays there, and your own island is there as it was when you copied it. To go back to
+a shared island, its code is still in the box. Friends who join a shared copy start with an empty pack,
+on a bedroll if you've built one, or in the cottage.
 
 **You share the island.** Chop a tree and it's gone for everyone. Walls, doors, floors, campfires and
 lamps stand for everyone, chests hold the same things for everyone, and anyone can water, harvest or
@@ -545,7 +555,7 @@ old copies they've kept.
 
 ## What's next
 
-Done lately, 2026-11-01: playing together, with a shared island and a shared night. Before that, lighting the lighthouse (find oil, force the door, survive the stairs, then
+Done lately, 2026-11-01: playing together, with a shared island, a shared night, and sharing an island you've already built up. Before that, lighting the lighthouse (find oil, force the door, survive the stairs, then
 keep it burning), and a rain barrel. Before that, your list of 2026-10-31 evening: building and gardening. The craft panel on tabs; a
 stone wall, a gate, a spiked barricade and wooden floors; **Repair** for clawed walls and fallen
 cabin logs; a spade to dig up bushes and stumps; and a garden of potatoes, pumpkins, berry bushes

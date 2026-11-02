@@ -760,6 +760,42 @@ is Claude's. Solo play is unchanged: nothing here sends or does anything without
   reconnecting, dawn, natural spawning, and leaving for your own island with nothing sent. **Not checked**:
   real phones on real networks, or more than two people.
 
+## Sharing your own island (built 2026-11-01, on the owner's PC)
+
+The owner chose this from the options offered ("Bring my own island"), and asked whether it would affect
+traveling to another island later. The design is Claude's:
+
+- **It's a copy.** **Share this island** (`shareIsland`) makes a new room from the island you're on. Your own
+  stays under `SAVE_KEY`, untouched, for **Back to my own island**, and the two go their separate ways. That
+  was the safe choice; the owner may want it to move instead, and that's a small change.
+- **The room is told** the seed, size, `clock` (`dayClock`) and `places` on `/new`, and sets `born` so the time
+  of day carries on. Saved rooms without `places` count as having them (they always did). `welcome` now says
+  `places`, and `enterIsland` builds from it, so old 192×128 and 384×256 islands can be shared.
+- **The changes**: `changesOnIsland` lists what isn't just the seed's doing, with the same keys as `tellIsland`.
+  `sendMyIsland` sends them in `upload` pages of `SHARE_PAGE_LENGTH` characters every `SHARE_PAGE_SECONDS`, then
+  `uploaded` with the count. The room stores them (`heardUpload`, `STORE_AT_ONCE` rows a go), and if the count
+  matches it opens the island and sends it all back (`heardUploaded`, `sendTheIsland`), exactly as to anyone
+  arriving. So from `ready` on it's an ordinary join: what you end up with is what your friend will get, and
+  a copy that went wrong never opens (`not-shared`). Nobody can join while it's arriving (`island.uploading`).
+  `UPLOAD_MOST`/`SHARE_MOST` (20,000 changes) cap it; over that the panel says so and you stay put.
+- **You**: `enterIsland` copies your own save under the room's key when `together.sharing`, so `loadGame` gives
+  you the same pack, spot, map and bed. `standWhereYouWere` runs after the island's changes are in, since a
+  tile you stand on may have held a tree on the bare island; this also fixes rejoining a shared island there.
+  Regrow timers aren't carried: `heardObject` starts them again.
+- **For boats, later**: this shouldn't get in the way. A room can now be made from any seed, age and list of
+  changes, which is most of what arriving at another island needs. If islands come in sets, `changesOnIsland`
+  would need running for each island you've been to. Nothing here assumes there's only one, except that a room
+  is one island: keep that in mind when deciding whether a group's islands are one room or several.
+- **Cost**: a copy writes one row per change (100,000 a day on the Free plan), so a 6,000-change island takes
+  6% of a day's writes. Measured locally: 6,001 changes took 1.3 s, round trip.
+- **Known gap**: each press of Share makes another room, and nothing cleans up rooms nobody returns to.
+- **Deploy the rooms before the game**: new game on old rooms would get a random seed and no upload step.
+- **Checked** with `servertest4` (scratch script) and two tabs in the browser pane, at `localhost:8000` and
+  `127.0.0.1:8000` so each has its own storage, which is the way to test a friend's first arrival: walls,
+  chest contents, a plant, a lamp, a barrel, a floor, a lit lighthouse, chopped trees, pack, spot, clock, map
+  and bed all came across, for a friend too; the two copies staying apart; coming back with the code; a
+  192×128 island with no places; 6,001 changes; too many; a wrong count. **Not checked**: real phones.
+
 ## Hard rules
 
 - **No build step, no dependencies, no ES modules.** Plain `<script>` files loaded in order from
@@ -808,7 +844,7 @@ is Claude's. Solo play is unchanged: nothing here sends or does anything without
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
 | `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `layoutMap`, `centreMap`, `zoomMap`, `panMap`, `setupMapGestures`, `drawMap`, `readCell`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`, `woundCreature` and `hurtCreature`. On a shared island, each is run by the phone of whoever it's after (see "The hunt" in together.js). |
-| `js/together.js` | Playing together: `together`, the panel (`setupTogether`, `openTogether`), the line (`connectTo`, `say`, `hear`, `lineLost`), `enterIsland`, `leaveIsland`, the island (`worldIsMine`, `worldTime`, `tellIsland`, `sendChanges`, `hearTheIsland`, `heardChange`, `applyChange`, `CHANGES`, `heardTicks`, `sendTicks`), the hunt (`HUNT_NEWS`, `heardHunt`, `turnsOnSomeoneElse`, `giveCreature`, `heardGive`, `creaturesLoseYou`, `heardHurt`, `heardBit`, `heardClawed`, `heardBang`, `stepTheirCreatures`), everyone else (`addOther`, `heardPlace`, `stepOther`), `togetherClock`, `updateTogether`, `whereIAm`. Drawn by `drawOtherPlayer` in render.js. |
+| `js/together.js` | Playing together: `together`, the panel (`setupTogether`, `openTogether`), the line (`connectTo`, `say`, `hear`, `lineLost`), `shareIsland`, `changesOnIsland`, `sendMyIsland`, `enterIsland`, `leaveIsland`, the island (`worldIsMine`, `worldTime`, `tellIsland`, `sendChanges`, `hearTheIsland`, `heardChange`, `applyChange`, `CHANGES`, `heardTicks`, `sendTicks`), the hunt (`HUNT_NEWS`, `heardHunt`, `turnsOnSomeoneElse`, `giveCreature`, `heardGive`, `creaturesLoseYou`, `heardHurt`, `heardBit`, `heardClawed`, `heardBang`, `stepTheirCreatures`), everyone else (`addOther`, `heardPlace`, `stepOther`), `togetherClock`, `updateTogether`, `whereIAm`. Drawn by `drawOtherPlayer` in render.js. |
 | `server/` | The rooms for playing together, run by Cloudflare: `src/index.js` (`Island`, a Durable Object per join code), `wrangler.toml`. Not part of the game, and not loaded by it. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |

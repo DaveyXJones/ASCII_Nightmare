@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&display=swap">
-    <link rel="stylesheet" href="css/style.css?v=17">
+    <link rel="stylesheet" href="css/style.css?v=18">
   </head>
   <body>
     <div class="game" id="game">
@@ -201,8 +201,11 @@
             <button type="button" id="together-close" class="button close" aria-label="Close">✕</button>
           </div>
           <div id="together-off" class="together-part">
-            <p class="tagline">Start a new island and share its code, or type a friend's code to join them. Your own island stays safe.</p>
-            <button type="button" id="together-start" class="button primary">Start an island</button>
+            <p class="tagline">Share a copy of this island, start a new one, or type a friend's code to join them. Your own island stays as it is.</p>
+            <div class="together-choices">
+              <button type="button" id="together-share" class="button primary">Share this island</button>
+              <button type="button" id="together-start" class="button">Start a new island</button>
+            </div>
             <form id="together-form" class="together-join">
               <input id="together-code" class="together-code" type="text" maxlength="5" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="CODE" aria-label="Island code">
               <button type="submit" class="button">Join</button>
@@ -240,28 +243,28 @@
          every change to the code or the styles. Browsers keep files for a while, and a new page with
          an old map.js still in the browser's memory is a broken game; a new number makes them all
          fetch fresh. -->
-    <script src="js/random.js?v=17"></script>
-    <script src="js/tiles.js?v=17"></script>
-    <script src="js/sprites.js?v=17"></script>
-    <script src="js/objects.js?v=17"></script>
-    <script src="js/world.js?v=17"></script>
-    <script src="js/places.js?v=17"></script>
-    <script src="js/night.js?v=17"></script>
-    <script src="js/weather.js?v=17"></script>
-    <script src="js/render.js?v=17"></script>
-    <script src="js/input.js?v=17"></script>
-    <script src="js/sound.js?v=17"></script>
-    <script src="js/survival.js?v=17"></script>
-    <script src="js/crafting.js?v=17"></script>
-    <script src="js/chest.js?v=17"></script>
-    <script src="js/fishing.js?v=17"></script>
-    <script src="js/garden.js?v=17"></script>
-    <script src="js/lighthouse.js?v=17"></script>
-    <script src="js/guns.js?v=17"></script>
-    <script src="js/map.js?v=17"></script>
-    <script src="js/creatures.js?v=17"></script>
-    <script src="js/save.js?v=17"></script>
-    <script src="js/together.js?v=17"></script>
-    <script src="js/game.js?v=17"></script>
+    <script src="js/random.js?v=18"></script>
+    <script src="js/tiles.js?v=18"></script>
+    <script src="js/sprites.js?v=18"></script>
+    <script src="js/objects.js?v=18"></script>
+    <script src="js/world.js?v=18"></script>
+    <script src="js/places.js?v=18"></script>
+    <script src="js/night.js?v=18"></script>
+    <script src="js/weather.js?v=18"></script>
+    <script src="js/render.js?v=18"></script>
+    <script src="js/input.js?v=18"></script>
+    <script src="js/sound.js?v=18"></script>
+    <script src="js/survival.js?v=18"></script>
+    <script src="js/crafting.js?v=18"></script>
+    <script src="js/chest.js?v=18"></script>
+    <script src="js/fishing.js?v=18"></script>
+    <script src="js/garden.js?v=18"></script>
+    <script src="js/lighthouse.js?v=18"></script>
+    <script src="js/guns.js?v=18"></script>
+    <script src="js/map.js?v=18"></script>
+    <script src="js/creatures.js?v=18"></script>
+    <script src="js/save.js?v=18"></script>
+    <script src="js/together.js?v=18"></script>
+    <script src="js/game.js?v=18"></script>
   </body>
 </html>
