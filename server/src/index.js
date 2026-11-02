@@ -3,9 +3,10 @@
 //
 // Each island people are playing on is one "room" (an Island, below), found by its join code. A room
 // remembers the island's seed, its size and when it began, keeps every change anyone has made to it,
-// and passes along where everyone is. It doesn't run the game: each phone does that, and one of them
-// at a time (the keeper) looks after whatever happens by itself, like plants growing. While nobody's
-// sending anything, Cloudflare lets the room sleep (hibernate) and doesn't charge for it.
+// and passes along where everyone is and what the things in the dark are up to. It doesn't run the
+// game: each phone does that, and one of them at a time (the keeper) looks after whatever happens by
+// itself, like plants growing. While nobody's sending anything, Cloudflare lets the room sleep
+// (hibernate) and doesn't charge for it.
 //
 // What people send is never trusted: only tidied-up copies of the fields below go on to anyone else.
 
@@ -30,6 +31,11 @@ const COLOR = /^#[0-9a-f]{6}$/;
 const NAME = /^[a-zA-Z0-9]{1,40}$/; // the name of a kind of object, item, tool or ground
 const WORLD = 'w:'; // the changes to the island are stored under this and their key
 const TICKS = 'ticks'; // the keeper's latest numbers, all in one row so they're cheap to store
+const CREATURES_SENT_MOST = 16; // how many creatures one phone can say it's running at once
+const CREATURE_ID_MOST = 2 ** 31; // a creature's number is below this
+const CREATURE_HP_MOST = 100; // hits it can take, and how much one hit can do: anything bigger is nonsense
+const DOINGS = new Set(['creep', 'lunge', 'run', 'claw', 'fade', 'lurk', 'hide']); // what a creature can be up to
+const PERSON_ID = /^[0-9a-f]{8}$/; // see crypto.randomUUID below
 
 // A look with only colors in it, or null if it isn't one.
 function tidyLook(look) {
@@ -42,10 +48,11 @@ function tidyLook(look) {
   return tidy;
 }
 
+const fits = (value) => Number.isFinite(value) && value >= 0 && value <= COORD_MOST;
+
 // Where someone is and what they're doing, with only what's expected in it, or null.
 function tidyPlace(message) {
   const { x, y, f, n, h } = message;
-  const fits = (value) => Number.isFinite(value) && value >= 0 && value <= COORD_MOST;
   if (!fits(x) || !fits(y) || !FACINGS.has(f) || !POSES.has(n)) return null;
   const held = typeof h === 'string' && h.length <= 2 ? h : null;
   return { x, y, f, n, h: held, k: message.k === true, l: message.l === true };
@@ -98,6 +105,51 @@ function tidyTicks(message, tiles) {
   if (number(message.oil) !== null) ticks.oil = message.oil;
   return ticks;
 }
+
+// One creature, as a phone says it: [its number, its kind, x, y, what it's doing, how solid it is, its
+// hp]. Null if it isn't one.
+function tidyCreature(row) {
+  if (!Array.isArray(row) || row.length !== 7) return null;
+  const [id, kind, x, y, doing, fade, hp] = row;
+  if (!Number.isInteger(id) || id < 0 || id >= CREATURE_ID_MOST) return null;
+  if (typeof kind !== 'string' || !NAME.test(kind) || !fits(x) || !fits(y) || !DOINGS.has(doing)) return null;
+  if (!Number.isFinite(fade) || fade < 0 || fade > 1 || !Number.isFinite(hp) || hp > CREATURE_HP_MOST) return null;
+  return [id, kind, x, y, doing, fade, hp];
+}
+
+// The creatures a phone says it's running (`c` on its `at` messages): a tidy list, or null for none.
+function tidyCreatures(rows) {
+  if (!Array.isArray(rows)) return null;
+  const tidy = rows.slice(0, CREATURES_SENT_MOST).map(tidyCreature).filter(Boolean);
+  return tidy.length ? tidy : null;
+}
+
+// News of the hunt: passed straight on and never kept, since by morning it won't matter. Each of these
+// returns a tidy copy to pass on, or null if it isn't what it should be. (See "The hunt" in js/together.js.)
+const HUNT_NEWS = {
+  // A creature's phone hands it to the phone of whoever it's turned on.
+  give({ to, c }) {
+    const creature = tidyCreature(c);
+    return creature && typeof to === 'string' && PERSON_ID.test(to) ? { to, c: creature } : null;
+  },
+  // Somebody's hurt a creature, from (x, y).
+  hurt({ i, d, x, y }) {
+    const fair = Number.isInteger(i) && i >= 0 && i < CREATURE_ID_MOST && Number.isFinite(d) && d > 0 && d <= CREATURE_HP_MOST;
+    return fair && fits(x) && fits(y) ? { i, d, x, y } : null;
+  },
+  // Something's bitten the sender, for this much.
+  bit({ n }) {
+    return Number.isFinite(n) && n > 0 && n <= CREATURE_HP_MOST ? { n } : null;
+  },
+  // A wall on tile `i` now has this many claw marks (0: it's been repaired).
+  claw({ i, n }, person) {
+    return Number.isInteger(i) && i >= 0 && i < person.tiles && number(n) !== null ? { i, n } : null;
+  },
+  // The sender fired a gun, at (tx, ty), from (x, y).
+  bang({ g, x, y, tx, ty }) {
+    return typeof g === 'string' && NAME.test(g) && [x, y, tx, ty].every(fits) ? { g, x, y, tx, ty } : null;
+  },
+};
 
 function send(socket, message) {
   try {
@@ -271,8 +323,14 @@ export class Island extends DurableObject {
       const place = tidyPlace(message);
       if (place) {
         person.place = place;
-        this.tellOthers(socket, { t: 'at', id: person.id, ...place });
+        const at = { t: 'at', id: person.id, ...place };
+        const creatures = tidyCreatures(message.c);
+        if (creatures) at.c = creatures;
+        this.tellOthers(socket, at);
       }
+    } else if (Object.keys(HUNT_NEWS).includes(message.t) && person.look) {
+      const news = HUNT_NEWS[message.t](message, person);
+      if (news) this.tellOthers(socket, { t: message.t, by: person.id, ...news });
     } else if (message.t === 'set' && person.look) {
       await this.heardChange(socket, person, message);
     } else if (message.t === 'ticks' && person.look && this.keeperId() === person.id) {
