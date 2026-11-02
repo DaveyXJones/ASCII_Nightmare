@@ -189,7 +189,7 @@ function startLife(x, y, facing) {
   };
   state.sky = skyAt(state.dayClock, state.world.seed);
   state.fx = { particles: [], floaters: [], shake: null };
-  state.creatures = [];
+  state.creatures = state.creatures.filter((creature) => creature.owner); // what's after others still is
   state.hunt = newHunt();
   state.weather = newWeather();
   state.weather.raining = state.sky.weather.rain > 0.15; // waking up in the rain isn't news
@@ -399,7 +399,10 @@ function faceToward(player, x, y) {
 // Health has run out. The player sinks to their knees and falls (see playerPose() in render.js)
 // while the screen darkens, and then the death screen comes up.
 function collapse() {
-  if (together.code) closeEverything(); // a shared island doesn't wait for your menu (see frame())
+  if (together.code) {
+    closeEverything(); // a shared island doesn't wait for your menu (see frame())
+    creaturesLoseYou(state);
+  }
   state.dropped = dropGuns(state);
   state.dying = { seconds: 0 };
   state.player.moving = false;

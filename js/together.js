@@ -10,7 +10,7 @@
 // the order the room saw them, so every phone ends up the same. Things that happen by themselves, like
 // plants growing and lamps going out, are worked out on every phone so they look right, but only one
 // phone at a time, the keeper (whoever's been there longest), says when they've happened
-// (worldIsMine). Things in the dark still only come for you on your own phone: that's the next job.
+// (worldIsMine). Things in the dark are shared too: see "The hunt", below.
 //
 // On your phone, a shared island only saves your own part: you, what you've seen, your bed (see saveKey
 // and saveGame in save.js).
@@ -38,6 +38,12 @@ const CHANGES_PER_SECOND = 15; // at most this many changes are sent each second
 const TICK_SECONDS = 30; // how often the keeper says how the plants, lamps and barrels are getting on
 const TICKS_MOST = 250; // ...about this many of each at most, to stay under the room's limit on a message
 const NEWS_REACH = 40; // somebody else's change further off than this, in tiles, makes no sound or splash
+const HAND_OVER_NEARER = 2.5; // someone else this many tiles nearer a creature than you, and it turns on them
+const HAND_OVER_WALLED = 10; // a creature with no way round to you counts you as this many tiles further off
+const HAND_OVER_SECONDS = 3; // after changing who it's after, it sticks with them for at least this long
+const HAND_OVER_GRACE = 1; // how long, after being handed over, one can be left off its new phone's list
+const THEIR_COMING_OUT = 0.5; // a creature first heard of while less solid than this has only just come out
+const SLAIN_SECONDS = 2; // something you've just seen killed stays dead this long, whatever late news says
 
 const together = {
   code: null, // the island you're on, or null when you're on your own
@@ -59,6 +65,7 @@ const together = {
   budget: 0, // how many changes can be sent right now (see sendChanges)
   tickIn: TICK_SECONDS, // seconds until the keeper next says how things are getting on
   ticked: null, // what it said last
+  slain: new Map(), // creatures just killed that the phone running them may not know about yet: id -> until when
 };
 
 // Things someone can be holding (TOOLS in crafting.js, and the rough tool). Anything else is ignored,
@@ -188,9 +195,13 @@ function hear(text) {
   else if (message.t === 'full') turnedAway('That island is full.');
   else if (message.t === 'joined') heardJoined(message);
   else if (message.t === 'left') heardLeft(message);
-  else if (message.t === 'at') heardPlace(together.others.get(message.id), message);
-  else if (message.t === 'look' && together.others.has(message.id)) {
+  else if (message.t === 'at') {
+    heardPlace(together.others.get(message.id), message);
+    if (huntIsHere()) heardHunt(message.id, message.c);
+  } else if (message.t === 'look' && together.others.has(message.id)) {
     together.others.get(message.id).look = cleanLook(message.look);
+  } else if (HUNT_NEWS[message.t] && huntIsHere()) {
+    HUNT_NEWS[message.t](message);
   }
   showTogether();
 }
@@ -235,6 +246,7 @@ function heardReady(message) {
 
 function heardJoined(message) {
   addOther(message);
+  together.sent = null; // say where you are and what's after you, so they know even if you're standing still
   showMessage(state, 'Somebody has come to the island.');
 }
 
@@ -280,6 +292,8 @@ function leaveIsland() {
   together.outbox.clear();
   together.waiting.clear();
   together.others.clear();
+  together.slain.clear();
+  state.creatures = state.creatures.filter((creature) => !creature.owner); // that hunt stays on that island
   if (!loadGame(state)) newGame(DEFAULT_SEED);
   snapCamera(state.world, state.player);
   showWorldButtons();
@@ -519,6 +533,301 @@ function togetherVisibility() {
   else if (!together.socket) connectTo(`/island/${together.code}`);
 }
 
+// ---- The hunt ----
+//
+// No one phone runs the night. Each creature is run by the phone of whoever it's after, exactly as it
+// would be alone (creatures.js), so what bites you, and your hit on what's after you, happen at once
+// with no waiting on the internet. That phone says where its creatures are (`c`, with where it says
+// you are), and everyone else's phone draws them gliding there. `owner` says who's running one: their
+// id, or null if it's you.
+//
+// If somebody else is nearer one, it turns on them, and its phone hands it over to theirs. If you go
+// down, what was after you turns on whoever's nearest. If somebody's phone goes away, what it was
+// running melts back into the dark, and more will come out.
+//
+// All of this is passed on by the room and never kept. By morning none of it matters.
+
+// What's heard about the hunt from the room, besides the `c` on `at`.
+const HUNT_NEWS = {
+  give: heardGive,
+  hurt: heardHurt,
+  bit: heardBit,
+  claw: heardClawed,
+  bang: heardBang,
+};
+
+// False until you're really on the island: between hearing from the room and being ready, the world
+// on your phone may still be your own.
+function huntIsHere() {
+  return Boolean(together.code) && !together.arriving;
+}
+
+// How many other people are within `reach` tiles of (at.x, at.y) and still on their feet.
+function peopleNearby(at, reach = GONE_DISTANCE) {
+  let count = 0;
+  for (const other of together.others.values()) {
+    if (other.pose !== 'fallen' && Math.hypot(other.toX - at.x, other.toY - at.y) <= reach) count++;
+  }
+  return count;
+}
+
+// The nearest person to a creature who's still on their feet: { id, away }, or null if there's nobody.
+function nearestOther(creature) {
+  let nearest = null;
+  for (const [id, other] of together.others) {
+    if (other.pose === 'fallen') continue;
+    const away = Math.hypot(other.toX - creature.x, other.toY - creature.y);
+    if (!nearest || away < nearest.away) nearest = { id, away };
+  }
+  return nearest;
+}
+
+// Other people's lit torches, for things in the dark to keep away from (see lightsToFear).
+function torchesOfOthers() {
+  const torches = [];
+  for (const other of together.others.values()) {
+    if (other.lit && other.pose !== 'fallen') {
+      torches.push({ x: other.toX, y: other.toY, reach: TOOLS.torch.light, torch: true });
+    }
+  }
+  return torches;
+}
+
+// One creature in as few characters as it can be. The room tidies these (tidyCreature, server/src/index.js).
+function creatureRow(creature) {
+  const { id, kind, x, y, hp } = creature;
+  const fade = Math.round(creature.fade * 10) / 10;
+  return [id, kind, hundredth(x), hundredth(y), creature.state, fade, hp];
+}
+
+// A position, in as few characters as still looks smooth.
+function hundredth(n) {
+  return Math.round(n * 100) / 100;
+}
+
+// A creature from a row somebody's phone sent, or null if it isn't one we can draw.
+function creatureFromRow([id, kind, x, y, doing, fade, hp]) {
+  const fair = Object.keys(CREATURES).includes(kind) && [id, x, y, fade, hp].every(Number.isFinite);
+  if (!fair) return null;
+  const creature = newCreature(kind, x, y, id);
+  creature.state = doing;
+  creature.fade = fade;
+  creature.hp = hp;
+  state.creatures.push(creature);
+  return creature;
+}
+
+// Checks whether something this phone is running should turn on somebody else, because they're nearer
+// (or it can't get to you, so they might as well be), and hands it over if so. Returns true if it did.
+// Something off the lighthouse's stairs stays after whoever's pumping.
+function turnsOnSomeoneElse(game, creature) {
+  if (together.others.size === 0 || !together.greeted || creature.stairs) return false;
+  if (creature.state !== 'creep' && creature.state !== 'lurk' && creature.state !== 'claw') return false;
+  if (game.time - creature.changedAt < HAND_OVER_SECONDS) return false;
+  const { player } = game;
+  const shutOut = stepsAt(Math.floor(creature.x), Math.floor(creature.y)) < 0;
+  const yours = Math.hypot(player.x - creature.x, player.y - creature.y) + (shutOut ? HAND_OVER_WALLED : 0);
+  const nearest = nearestOther(creature);
+  if (!nearest || nearest.away > yours - HAND_OVER_NEARER) return false;
+  giveCreature(game, creature, nearest.id);
+  return true;
+}
+
+// Hands something this phone is running to somebody else's. From here on it's only drawn here.
+function giveCreature(game, creature, to) {
+  if (creature.state !== 'lurk') creature.state = 'creep'; // they'll work out for themselves what it does next
+  say({ t: 'give', to, c: creatureRow(creature) });
+  creature.owner = to;
+  creature.toX = creature.x;
+  creature.toY = creature.y;
+  creature.changedAt = game.time;
+  creature.clawing = null;
+  creature.den = null;
+  creature.stairs = false;
+}
+
+// A creature's changed hands. If it's to you, this phone runs it from now on.
+function heardGive({ to, c }) {
+  if (slainJustNow(c[0])) return;
+  const creature = state.creatures.find((one) => one.id === c[0]) || creatureFromRow(c);
+  if (!creature) return;
+  const [, , x, y, doing, fade, hp] = c;
+  creature.owner = to === together.you ? null : to;
+  creature.changedAt = state.time;
+  creature.toX = x;
+  creature.toY = y;
+  creature.state = doing;
+  creature.fade = fade;
+  creature.hp = hp;
+  if (to !== together.you) return;
+  creature.x = x;
+  creature.y = y;
+  creature.timer = 0;
+  field.at = -Infinity; // the map of steps may not reach it yet
+  if (state.dead || state.dying) creaturesLoseYou(state); // you went down just as it was on its way to you
+}
+
+// You've gone down, and can't run anything until you're up again. Whatever was after you turns on
+// whoever's nearest, or slinks off if there's nobody within reach of it.
+function creaturesLoseYou(game) {
+  for (const creature of game.creatures) {
+    if (creature.owner) continue;
+    const nearest = creature.state === 'fade' ? null : nearestOther(creature);
+    if (nearest && nearest.away <= GONE_DISTANCE) giveCreature(game, creature, nearest.id);
+    else creature.gone = true;
+  }
+  game.creatures = game.creatures.filter((creature) => !creature.gone);
+}
+
+// What's listed by the phone running them: where they are now, and any new ones. Any it was running
+// and hasn't listed have gone.
+function heardHunt(owner, rows) {
+  if (!together.others.has(owner)) return;
+  const listed = new Set();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const [id, kind, x, y, doing, fade, hp] = row;
+    listed.add(id);
+    if (slainJustNow(id)) continue;
+    const known = state.creatures.find((one) => one.id === id);
+    if (known && !known.owner) continue; // it's been handed to you since they said this
+    const creature = known || creatureFromRow(row);
+    if (!creature) continue;
+    if (!known) heardComingOut(creature);
+    if (creature.state === 'lurk' && doing === 'lunge') heardSpring(creature);
+    creature.owner = owner;
+    creature.toX = x;
+    creature.toY = y;
+    creature.state = doing;
+    creature.fade = fade;
+    if (state.time - creature.hurtAt > 0.5) creature.hp = hp; // news of your own hit may not have got there yet
+  }
+  for (const creature of state.creatures) {
+    if (creature.owner !== owner || listed.has(creature.id)) continue;
+    // Just handed over? Its new phone may not have heard yet when it sent this.
+    if (state.time - creature.changedAt > HAND_OVER_GRACE) creature.gone = true;
+  }
+}
+
+// Something has come out of the dark on somebody else's phone. It sounds and warns as it would on yours,
+// but one you're only just hearing about that's been out a while (you've arrived, say) doesn't.
+function heardComingOut(creature) {
+  const { player, hunt } = state;
+  const kind = CREATURES[creature.kind];
+  const near = Math.hypot(creature.x - player.x, creature.y - player.y) <= GONE_DISTANCE;
+  if (creature.fade < THEIR_COMING_OUT && kind.sound) playSoundAt(state, kind.sound, creature.x, creature.y);
+  if (near && !hunt.seen[creature.kind]) {
+    hunt.seen[creature.kind] = true;
+    showMessage(state, kind.seen);
+  }
+}
+
+function heardSpring(creature) {
+  playSoundAt(state, CREATURES[creature.kind].spring, creature.x, creature.y);
+  burst(state.fx, creature.x, creature.y, 'grass', 6);
+}
+
+// A wound to a creature, by you. Everyone hears, and the phone running it does the rest.
+function tellWound(creature, damage, from) {
+  if (together.code) say({ t: 'hurt', i: creature.id, d: damage, x: from.x, y: from.y });
+}
+
+function heardHurt({ i, d, x, y }) {
+  const creature = state.creatures.find((one) => one.id === i);
+  if (creature) hurtCreature(state, creature, d, { x, y });
+}
+
+// A creature's been killed, but it's on somebody else's phone that may not have heard yet.
+function rememberSlain(game, creature) {
+  if (creature.owner) together.slain.set(creature.id, game.time + SLAIN_SECONDS);
+}
+
+function slainJustNow(id) {
+  const until = together.slain.get(id);
+  if (until === undefined) return false;
+  if (state.time < until) return true;
+  together.slain.delete(id);
+  return false;
+}
+
+// Something's bitten you: the others see and hear it, if they're near enough.
+function tellBitten(amount) {
+  if (together.code) say({ t: 'bit', n: amount });
+}
+
+function heardBit({ by, n }) {
+  const other = together.others.get(by);
+  if (!other) return;
+  other.hurtAt = state.time;
+  burst(state.fx, other.x, other.y - 1, 'shadow', 4);
+  floatText(state.fx, other.x, other.y - 3, `-${n}`, '#ff5a4e');
+  playSoundAt(state, 'bite', other.x, other.y);
+  if (!state.hunt.heardCry) {
+    state.hunt.heardCry = true;
+    showMessage(state, 'Somebody cries out in the dark.');
+  }
+}
+
+// Claw marks on a wall: on a shared island everyone sees them, and anyone can repair them.
+function tellClawed(index, scratches) {
+  if (state.world.shared) say({ t: 'claw', i: index, n: scratches });
+}
+
+function heardClawed({ i, n }) {
+  const { world, fx } = state;
+  const key = world.objects[i];
+  if (!key || !OBJECTS[key].claws) return;
+  if (n <= 0) {
+    world.clawed.delete(i);
+    return;
+  }
+  world.clawed.set(i, n);
+  const x = i % world.width;
+  const y = (i - x) / world.width;
+  if (Math.hypot(x + 0.5 - state.player.x, y + 0.5 - state.player.y) > NEWS_REACH) return;
+  fx.shake = { index: i, until: state.time + 0.18 };
+  burst(fx, x + 0.5, y + 0.5, OBJECTS[key].burst || 'wood', 3);
+  playSoundAt(state, 'claw', x + 0.5, y + 0.5);
+}
+
+// You've fired: everyone hears it, and sees the streak if it's on their screen.
+function tellShot(gun, from, shot) {
+  if (!together.code) return;
+  const [x, y, tx, ty] = [from.x, from.y, shot.x, shot.y].map(hundredth);
+  say({ t: 'bang', g: gun, x, y, tx, ty });
+}
+
+function heardBang({ by, g, x, y, tx, ty }) {
+  const gun = TOOLS[g] && TOOLS[g].gun;
+  if (!gun) return;
+  const other = together.others.get(by);
+  if (other) other.shot = { x: tx, y: ty, at: state.time };
+  playSoundAt(state, gun.sound, x, y);
+  hearShot(state, { x, y });
+}
+
+// Every frame: what other phones are running glides to where they last said it was. If whoever was
+// running one has gone, it melts away (though if they're only reconnecting, it's back on their next word).
+function stepTheirCreatures(game, dt) {
+  let anyGone = false;
+  for (const creature of game.creatures) {
+    if (creature.owner && !together.others.has(creature.owner)) {
+      creature.state = 'fade';
+      creature.fade -= dt / FADE_SECONDS;
+      if (creature.fade <= 0) creature.gone = true;
+    } else if (creature.owner) {
+      const dx = creature.toX - creature.x;
+      const dy = creature.toY - creature.y;
+      const away = Math.hypot(dx, dy);
+      const t = away > OTHER_JUMP ? 1 : 1 - Math.exp(-OTHER_FOLLOW * dt);
+      creature.x += dx * t;
+      creature.y += dy * t;
+      if (away <= OTHER_JUMP) creature.stride += away * t;
+    }
+    anyGone = anyGone || creature.gone;
+  }
+  if (anyGone) game.creatures = game.creatures.filter((creature) => !creature.gone);
+}
+
 // ---- Everyone else ----
 
 // Only colors that are really in LOOKS (sprites.js), whatever somebody's phone says.
@@ -535,6 +844,8 @@ function addOther({ id, look, place }) {
   other.held = null;
   other.hasTorch = false;
   other.lit = false;
+  other.hurtAt = -Infinity; // when something last bit them, in your seconds of play, to flash them red
+  other.shot = null; // their last gunshot: where it went and when, { x, y, at }, for its streak and flash
   together.others.set(id, other);
   if (place) {
     heardPlace(other, place);
@@ -546,6 +857,7 @@ function addOther({ id, look, place }) {
 // Where someone says they are now, and what they're up to.
 function heardPlace(other, place) {
   if (!other) return;
+  if (place.n === 'fallen' && other.pose !== 'fallen') showMessage(state, 'Somebody has fallen.');
   other.toX = place.x;
   other.toY = place.y;
   other.facing = FACINGS[place.f] ? place.f : 'down';
@@ -584,6 +896,7 @@ function updateTogether(game, dt) {
   if (!together.code) return;
   game.dayClock = togetherClock();
   for (const other of together.others.values()) stepOther(other, dt);
+  stepTheirCreatures(game, dt);
   sendChanges(dt);
   together.tickIn -= dt;
   if (together.tickIn <= 0) {
@@ -613,13 +926,17 @@ function updateTogether(game, dt) {
 function whereIAm(game) {
   const { player, survivor } = game;
   const pose = playerPose(game);
-  return {
-    x: Math.round(player.x * 100) / 100,
-    y: Math.round(player.y * 100) / 100,
+  const place = {
+    x: hundredth(player.x),
+    y: hundredth(player.y),
     f: player.facing,
     n: game.dead ? 'fallen' : pose.name === 'blink' ? 'stand' : pose.name,
     h: pose.held || null,
     k: Boolean(survivor.tools.torch),
     l: survivor.torchLeft > 0,
   };
+  // And what's after you (see "The hunt", above). Standing still with nothing after you sends nothing.
+  const mine = game.creatures.filter((creature) => !creature.owner && !creature.gone);
+  if (mine.length) place.c = mine.map(creatureRow);
+  return place;
 }

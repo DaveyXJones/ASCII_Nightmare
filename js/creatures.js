@@ -9,6 +9,10 @@
 //
 // To find their way to you round trees, rocks and walls they follow a map of steps that spreads
 // out from wherever you're standing (`field`), worked out a few times a second.
+//
+// On a shared island each one is run by the phone of whoever it's after, just as if they were alone,
+// and everyone else's phone only draws it (see "The hunt" in together.js). So nearly all of this file
+// only ever thinks about one person: "you".
 
 // The kinds of thing that come out at night. How many of each can be out at once is up to the moon
 // (`creatures` in MOONS, night.js).
@@ -121,6 +125,9 @@ const SPRING_RANGE = 2.4; // how close, in tiles, you can come to a lurker befor
 const DEN_REACH = 8; // how far, in tiles, a lurker looks for long grass to hide in again
 const DEN_AWAY = 5; // ...at least this far from you
 const HIDE_SECONDS = 6; // how long it tries to get there before it gives up and slinks off
+const COMPANY_EXTRA = 0.5; // on a shared island: how many more can be out near you, as a share of what the
+// moon allows, for each other person nearby. Company helps, but it draws them too.
+const CREATURE_IDS = 2 ** 31; // each one gets a random number below this, so phones can talk about it
 
 // The map of steps: for each tile around you, how many steps it is to get to you without going
 // through anything solid, or below 0 if there's no way (or the tile is solid itself).
@@ -137,7 +144,16 @@ const field = {
 // What a night's hunt has done so far: when night fell and when the next one comes out, and which
 // messages have shown, so each only shows once a night.
 function newHunt() {
-  return { nightAt: null, nextAt: null, seen: {}, bitten: false, clawed: false, sprung: false, spiked: false };
+  return {
+    nightAt: null,
+    nextAt: null,
+    seen: {},
+    bitten: false,
+    clawed: false,
+    sprung: false,
+    spiked: false,
+    heardCry: false, // somebody else has been bitten
+  };
 }
 
 function updateCreatures(game, dt) {
@@ -164,21 +180,29 @@ function updateCreatures(game, dt) {
     if (kind) comeOut(game, fears, kind);
   }
 
-  for (const creature of game.creatures) moveCreature(game, creature, dt, fears, night);
+  for (const creature of game.creatures) {
+    // Somebody else's phone is running this one, or it's about to be (see together.js).
+    if (creature.owner || turnsOnSomeoneElse(game, creature)) continue;
+    moveCreature(game, creature, dt, fears, night);
+  }
   keepApart(game, fears);
   game.creatures = game.creatures.filter((creature) => !creature.gone);
 }
 
-// Which kind comes out next: one that tonight's moon allows more of than are out now (fewer while
-// the lighthouse burns), and whose time has come (`after`). Picked at random if there's more than
-// one, or null if there's none.
+// Which kind comes out next: one that tonight's moon allows more of than are out around you now (fewer
+// while the lighthouse burns, more with company), and whose time has come (`after`). Picked at random
+// if there's more than one, or null if there's none.
 function kindToComeOut(game) {
+  const { player } = game;
   const allowed = game.sky.moon.creatures;
   const sinceNightfall = game.time - game.hunt.nightAt;
   const lit = towerBurning(game.world);
+  const company = 1 + COMPANY_EXTRA * peopleNearby(player);
   const ready = Object.keys(allowed).filter((kind) => {
-    const out = game.creatures.filter((c) => c.kind === kind && c.state !== 'fade').length;
-    const most = lit ? Math.ceil(allowed[kind] * CREATURES[kind].lit) : allowed[kind];
+    const out = game.creatures.filter((c) => (
+      c.kind === kind && c.state !== 'fade' && Math.hypot(c.x - player.x, c.y - player.y) <= GONE_DISTANCE
+    )).length;
+    const most = Math.ceil(allowed[kind] * company * (lit ? CREATURES[kind].lit : 1));
     return out < most && sinceNightfall >= CREATURES[kind].after;
   });
   return ready.length ? ready[Math.floor(Math.random() * ready.length)] : null;
@@ -191,11 +215,13 @@ function comeOut(game, fears, kind) {
   const type = CREATURES[kind];
   for (let tries = 0; tries < 20; tries++) {
     const angle = Math.random() * Math.PI * 2;
-    const distance = between(type.spawn || SPAWN_DISTANCE);
+    const range = type.spawn || SPAWN_DISTANCE;
+    const distance = between(range);
     const tx = Math.floor(player.x + Math.cos(angle) * distance);
     const ty = Math.floor(player.y + Math.sin(angle) * distance);
     if (!creatureCanStand(world, tx, ty) || inLight(fears, tx + 0.5, ty + 0.5, { fire: 1, torch: 1 })) continue;
     if (type.lurks && !groundAt(world, tx, ty).tall) continue;
+    if (peopleNearby({ x: tx + 0.5, y: ty + 0.5 }, range[0]) > 0) continue; // not right beside somebody else
     addCreature(game, kind, tx + 0.5, ty + 0.5);
     if (!game.hunt.seen[kind]) {
       game.hunt.seen[kind] = true;
@@ -208,7 +234,20 @@ function comeOut(game, fears, kind) {
 // Puts one on the island at (x, y), with the noise it makes as it comes out. Returns it.
 function addCreature(game, kind, x, y) {
   const type = CREATURES[kind];
-  const creature = {
+  const creature = newCreature(kind, x, y, Math.floor(Math.random() * CREATURE_IDS));
+  game.creatures.push(creature);
+  if (type.sound) playSoundAt(game, type.sound, x, y);
+  return creature;
+}
+
+function newCreature(kind, x, y, id) {
+  const type = CREATURES[kind];
+  return {
+    id, // its number, so phones can talk about it
+    owner: null, // on a shared island, who's running this one if it isn't you: their id (see together.js)
+    toX: x, // ...and where they last said it was, for it to glide to
+    toY: y,
+    changedAt: -Infinity, // when it last changed who it's after
     kind,
     x,
     y,
@@ -226,9 +265,6 @@ function addCreature(game, kind, x, y) {
     hurtAt: -Infinity,
     stairs: false, // true for one from the lighthouse's stairs: daylight doesn't send it off (lighthouse.js)
   };
-  game.creatures.push(creature);
-  if (type.sound) playSoundAt(game, type.sound, x, y);
-  return creature;
 }
 
 function moveCreature(game, creature, dt, fears, night) {
@@ -428,6 +464,7 @@ function scratch(game, creature, wall) {
   if (object.thorns) prick(game, creature, wall);
   if (scratches < object.claws) {
     world.clawed.set(wall.index, scratches);
+    tellClawed(wall.index, scratches);
     return;
   }
   setObject(world, wall.x, wall.y, null);
@@ -504,6 +541,7 @@ function bite(game, creature) {
   burst(game.fx, player.x, player.y - 1, 'shadow', 4);
   playSound('bite');
   buzz(80);
+  tellBitten(kind.bite);
   if (!game.hunt.bitten) {
     game.hunt.bitten = true;
     const advice = kind.fear.torch ? 'Get to the light.' : 'Hit back, or get to a fire.';
@@ -525,19 +563,31 @@ function hitCreature(game, creature) {
 // that hurt it) and runs, or comes apart if that was too much. From a hit (above), a shot (guns.js)
 // or spikes (prick, above).
 function woundCreature(game, creature, damage, from = game.player) {
+  tellWound(creature, damage, from);
+  buzz(20);
+  hurtCreature(game, creature, damage, from);
+}
+
+// What a wound does, whoever gave it: on a shared island this happens on every phone (see heardHurt
+// in together.js), so everyone sees it, though only the phone running it knocks it back.
+function hurtCreature(game, creature, damage, from) {
+  const { player } = game;
   const kind = CREATURES[creature.kind];
   creature.hp -= damage;
   creature.hurtAt = game.time;
   burst(game.fx, creature.x, creature.y - 1, 'shadow', 5);
-  buzz(20);
   if (creature.hp <= 0) {
     creature.gone = true;
+    rememberSlain(game, creature);
     burst(game.fx, creature.x, creature.y - 1, 'shadow', 14);
-    playSound('dissolve');
-    showMessage(game, `The ${kind.name.toLowerCase()} comes apart into smoke.`);
+    playSoundAt(game, 'dissolve', creature.x, creature.y);
+    if (Math.hypot(creature.x - player.x, creature.y - player.y) <= GONE_DISTANCE) {
+      showMessage(game, `The ${kind.name.toLowerCase()} comes apart into smoke.`);
+    }
     return;
   }
   playSoundAt(game, 'hit', creature.x, creature.y);
+  if (creature.owner) return;
   moveAway(game, creature, from.x, from.y, kind.knock);
   creature.state = 'run';
   creature.timer = kind.flinch;
@@ -556,10 +606,11 @@ function keepApart(game, fears) {
       const distance = Math.hypot(dx, dy);
       if (distance >= KEEP_APART || distance === 0) continue;
       const push = (KEEP_APART - distance) / 2 / distance;
-      if (!inLight(fears, one.x - dx * push, one.y - dy * push, CREATURES[one.kind].fear)) {
+      // Only ones this phone is running: somebody else's is wherever its phone says it is.
+      if (!one.owner && !inLight(fears, one.x - dx * push, one.y - dy * push, CREATURES[one.kind].fear)) {
         stepCreature(game, one, -dx * push, -dy * push);
       }
-      if (!inLight(fears, two.x + dx * push, two.y + dy * push, CREATURES[two.kind].fear)) {
+      if (!two.owner && !inLight(fears, two.x + dx * push, two.y + dy * push, CREATURES[two.kind].fear)) {
         stepCreature(game, two, dx * push, dy * push);
       }
     }
@@ -662,13 +713,14 @@ function stepsAt(tx, ty) {
 // ---- Light ----
 
 // Every light they might keep away from: the campfires and candles noted by mapSteps(), the
-// lighthouse while it burns (it's too far-reaching for mapSteps to find), and your torch (marked
-// `torch`, since a brute isn't afraid of it).
+// lighthouse while it burns (it's too far-reaching for mapSteps to find), and torches (marked `torch`,
+// since a brute isn't afraid of one): yours, and anyone else's on a shared island.
 function lightsToFear(game) {
   const reach = torchReach(game.survivor);
   const tower = towerLight(game.world);
-  if (reach <= 0 && !tower) return field.lights;
-  const lights = [...field.lights];
+  const theirs = torchesOfOthers();
+  if (reach <= 0 && !tower && theirs.length === 0) return field.lights;
+  const lights = [...field.lights, ...theirs];
   if (tower) lights.push(tower);
   if (reach > 0) lights.push({ x: game.player.x, y: game.player.y, reach, torch: true });
   return lights;

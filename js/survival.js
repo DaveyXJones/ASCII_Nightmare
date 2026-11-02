@@ -360,6 +360,7 @@ function repairWall(game, target) {
   }
   spend(survivor.pack, cost);
   world.clawed.delete(target.y * world.width + target.x);
+  tellClawed(target.y * world.width + target.x, 0);
   burst(fx, target.x + 0.5, target.y + 0.5, target.object.burst || 'wood', 8);
   playSound('build');
   floatText(fx, target.x + 0.5, target.y - 2, 'repaired', '#ffd75e');

@@ -211,6 +211,10 @@ function kindle(game) {
   game.stairs = null;
   for (const creature of game.creatures) {
     if (Math.hypot(creature.x - player.x, creature.y - player.y) > TOWER_REACH) continue;
+    if (creature.owner) {
+      woundCreature(game, creature, creature.hp); // somebody else's phone is running it: tell them
+      continue;
+    }
     creature.gone = true;
     burst(fx, creature.x, creature.y - 1, 'shadow', 14);
   }

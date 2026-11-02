@@ -104,23 +104,26 @@ function shoot(game, target) {
   game.shot = { x: creature.x, y: creature.y - 0.8, at: game.time };
   playSound(tool.gun.sound);
   buzz(60);
+  tellShot(key, player, game.shot);
   woundCreature(game, creature, tool.gun.damage);
-  hearShot(game);
+  hearShot(game, player);
   if (survivor.pack.bullets === 0) showMessage(game, 'That was your last bullet.');
 }
 
-// Everything out in the dark hears a shot.
-function hearShot(game) {
+// Everything out in the dark hears a shot from (from.x, from.y): yours, or someone else's on a shared
+// island (only the ones this phone is running need telling: the others' phones hear it too).
+function hearShot(game, from) {
   const { player, hunt } = game;
   for (const creature of game.creatures) {
-    if (creature.gone || Math.hypot(creature.x - player.x, creature.y - player.y) > BANG_REACH) continue;
+    if (creature.owner || creature.gone) continue;
+    if (Math.hypot(creature.x - from.x, creature.y - from.y) > BANG_REACH) continue;
     // Lurkers stop waiting in the grass and come for you, like the rest.
     if (creature.state === 'lurk' || creature.state === 'hide') {
       creature.state = 'creep';
       creature.den = null;
     }
   }
-  if (game.sky.phase !== 'night') return;
+  if (game.sky.phase !== 'night' || Math.hypot(player.x - from.x, player.y - from.y) > BANG_REACH) return;
   if (hunt.nextAt !== null) hunt.nextAt = Math.min(hunt.nextAt, game.time + BANG_SOONER);
   hushCrickets(game);
   if (!hunt.seen.bang) {

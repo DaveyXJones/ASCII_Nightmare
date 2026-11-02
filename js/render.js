@@ -328,7 +328,14 @@ function drawFrame(game) {
   drawParticles(game.fx);
   drawNight(game, range, inside);
   drawEyes(game);
-  if (game.shot && game.time - game.shot.at < SHOT_SECONDS) drawShot(game);
+  if (game.shot && game.time - game.shot.at < SHOT_SECONDS) {
+    drawShot(game, game.shot, view.heldAt || { x: screenX(player.x), y: screenY(player.y - 1.5) });
+  }
+  for (const other of together.others.values()) {
+    if (other.shot && game.time - other.shot.at < SHOT_SECONDS) {
+      drawShot(game, other.shot, { x: screenX(other.x), y: screenY(other.y - 1.5) });
+    }
+  }
   // Above the dark, so you can always see what the button will use and where you're building.
   if (game.target) drawTarget(game.target, game.time);
   if (game.buildSpot) drawBuildSpot(game);
@@ -1021,7 +1028,10 @@ function drawOtherPlayer(game, other) {
   } else if (other.pose === 'fallen') {
     sprite = pictures[other.facing === 'left' || other.facing === 'up' ? 'left' : 'right'].fallen;
   }
-  const image = spriteImage(sprite);
+  // A red flicker when something bites them, like yours (see hurtFlash).
+  const since = game.time - other.hurtAt;
+  const blink = reducedMotion.matches || Math.floor(since / HURT_BLINK_SECONDS) % 2 === 0;
+  const image = spriteImage(sprite, since < HURT_FLASH_SECONDS && blink ? HURT_COLOR : null);
   const left = Math.round(screenX(other.x) - image.width / 2);
   const top = Math.round(screenY(other.y) + view.th * 0.25) - image.height - lift;
   const ctx = view.ctx;
@@ -1316,8 +1326,11 @@ function findLights(game, range, inside) {
     }
   }
 
-  // Other people's torches, on a shared island.
+  // Other people's torches and gunshots, on a shared island.
   for (const other of together.others.values()) {
+    if (other.shot && game.time - other.shot.at < MUZZLE_FLASH_SECONDS && !reducedMotion.matches) {
+      lights.push({ x: other.x, y: other.y - 1, reach: MUZZLE_FLASH_REACH, strength: 1, warm: true });
+    }
     if (!other.lit) continue;
     const reach = TOOLS.torch.light;
     if (other.x < range.left - reach || other.x > range.right + reach) continue;
@@ -1574,9 +1587,7 @@ function drawFishingLine(game) {
 
 // A shot: a streak of light from the gun to what it hit, drawn in line characters that follow its
 // slant, fading fast, with a flash at the muzzle. Drawn above the dark: it's light itself.
-function drawShot(game) {
-  const { shot, player } = game;
-  const start = view.heldAt || { x: screenX(player.x), y: screenY(player.y - 1.5) };
+function drawShot(game, shot, start) {
   const endX = screenX(shot.x);
   const endY = screenY(shot.y);
   const dx = (endX - start.x) / view.tw;
