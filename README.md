@@ -416,13 +416,26 @@ older one, and you'd need a new world from the menu to try this.)
 In the menu, **Play together** lets you **Start an island**, which gives you a five-letter code to
 share, or type someone's code and **Join**. There's nothing to sign up for. Up to eight people can be on
 an island. Your own island stays exactly as it was, and **Back to my own island** returns you to it.
-What you do on a shared island is saved on your phone under its code, so you can come back to it.
 
-So far you can see each other walking about, in your own colors with your own torches, and you share
+**You share the island.** Chop a tree and it's gone for everyone. Walls, doors, floors, campfires and
+lamps stand for everyone, chests hold the same things for everyone, and anyone can water, harvest or
+fill what anyone else put there. The lighthouse is everyone's too: pour oil in together, and once it's
+lit, it's lit for the whole island. You see each other in your own colors with your own torches, under
 the same time of day, moon and weather. Other people show on your map as a blue `@`.
 
-**Not shared yet:** everything else. If you chop a tree, your friend still sees it standing, and
-things in the dark only come for you on your own screen. That's the next stage.
+**What's still your own:** your pack, your health and how much of the map you've seen. They're saved on
+your phone, and the island itself is kept online, so you can come back to it any time with its code.
+
+**A shared island doesn't stop for you.** Menus, the map and chests don't pause it there, so you can get
+bitten while you're reading a note. Dying wakes you straight away at whatever time it is, not the next
+morning.
+
+**Not shared yet:** things in the dark. They only come for you on your own screen, so you won't see what
+your friend is fighting, and claw marks on a wall only show on your own phone (though a wall they break
+is broken for everyone). That's the next stage.
+
+**While nobody's there, the island waits.** The clock keeps running, but plants don't grow and lamps
+don't burn until someone comes back. That's a later stage too.
 
 ## How it's put together
 
@@ -550,11 +563,9 @@ Ideas for next (Claude's suggestions):
 - **Something comes for the light.** On moonless nights, something climbs out of the sea and makes for
   the tower, so walls and spikes round it start to matter.
 
-**Playing together**, in stages. Stage one is built and open to everyone (see Playing together, above).
-Then:
+**Playing together**, in stages. Seeing each other and sharing the world are built (see Playing together,
+above). Then:
 
-2. A shared world: chopping, building and chests all shared, and menus that don't pause the game on a
-   shared island.
 3. Things in the dark that hunt everyone.
 4. An island that goes on while nobody's there: when someone comes back, the game works out what
    happened (plants grown, barrels filled, oil burnt), with no server needed around the clock.

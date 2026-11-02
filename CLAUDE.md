@@ -636,9 +636,7 @@ the rooms until midnight UTC; solo play doesn't touch them.
   (map.js) marks them, with a key line only while someone's here.
 - **The cost**, as my sums: at 5 updates a second a player-hour is 900 billed requests while walking, and
   nothing while still. Prices and limits as read on 2026-11-01 are in the brain, not here.
-- **Not shared yet**: objects, floors, chests, crops, barrels, the tower, creatures. Each phone still
-  runs its own. Panels still pause your own game. The print isn't compared, so two game versions that
-  build different islands from one seed wouldn't notice yet. Do these in stage two.
+- **Stage two** (below) shares the world, stops panels pausing it there, and compares the print.
 - **Going online**: `npx wrangler login` opened a Cloudflare page the owner allowed themselves. Cloudflare
   names a new account's workers.dev address after its email, so the name was changed to `daveyxjones`,
   their public GitHub name, before it went into this public code. The API won't rename: it's `DELETE` then
@@ -648,6 +646,65 @@ the rooms until midnight UTC; solo play doesn't touch them.
   reconnecting, leaving and coming back. A background tab gets no frames, so one tab was stepped by hand
   (`update(0.05); updateTogether(state, 0.05)`). Not checked: two real phones, or the phone's on-screen
   keyboard over the code box.
+
+## Playing together, stage two: a shared world (built 2026-11-01, on the owner's PC)
+
+The owner said "Start stage two". The design is Claude's:
+
+- **The room keeps the island.** Every change is a key and a value: a letter and a tile (`o` object, `g`
+  floor, `c` chest, `p` plant, `f` lamp fuel, `b` barrel; `CHANGES` in together.js, `tidyChange` in the
+  server), or `t` for the lighthouse's tank. It stores them under `w:` (one row each), and sends them all
+  to a newcomer in `world` pages, then `ready`. `o` remembers null, since "nothing there" differs from the
+  generated island; the rest delete their row. Changing an `o` deletes its tile's `c`, `p`, `f` and `b`,
+  as `setObject` does.
+- **Telling the room**: `setObject` calls `tellIsland` if `world.shared`, so nearly everything is shared
+  without knowing it, and the few things that don't go through it (`buildFloor`, `moveThing`, `waterPlant`,
+  `useBarrel`, `fillLamp`, `pourOil`, `kindle`, `grow`) call `tellIsland` themselves. On your own island it
+  does nothing. **Anything new that changes the world needs this**, as well as the `saveGame` note in World
+  model. `tellIsland` puts it in `together.outbox` (a newer change to one thing replaces an older), and
+  `sendChanges` sends `CHANGES_PER_SECOND` from `updateTogether`, so nothing's lost if the line drops.
+- **Hearing the room**: it sends every change to everyone, the sender too, and they're applied in the order
+  it saw them, which is what makes phones agree. `heardChange` skips a change while one of yours to the same
+  key is still on its way (`together.waiting`, `together.outbox`), since that's about to replace it.
+  `applyChange` turns `world.shared` off meanwhile, so what you hear isn't told back. `heardObject` sets up
+  what a new object needs (a chest, a lamp's fuel, a plant's numbers, a regrow timer), and with `live` makes
+  a sound and a burst near you and resets the creatures' map of steps. It closes a chest panel if that chest
+  has gone. Two people chopping one tree both get the wood; nobody minded that in a survival game.
+- **The keeper** (`keeperId` in the server: whoever's been there longest; `worldIsMine` in the game) is the
+  only phone that says when something happens by itself: a plant grows or wilts, a lamp or the lighthouse
+  runs dry, the rain douses a fire, a bush regrows, a tin washes up. Every phone still runs the numbers, so
+  the buttons and tints are right. Without this, phones would double up, and an old "it's ripe" could bring
+  back a plant someone had just harvested. Every `TICK_SECONDS` it sends those numbers (`sendTicks`), kept
+  in one row so they're cheap to store, and `heardTicks` lets a number that's gone up here stand, in case
+  it's a watering the keeper hadn't heard about. `worldIsMine` is true on your own island.
+- **A phone put away hangs up** (`togetherVisibility`), so the keeper is always one that's running; on
+  picking it up, it reconnects and gets the whole island again. The others see it leave.
+- **Shared islands don't pause**: `frame()` runs `update` on a shared island even with a panel open or in
+  portrait; `update` then skips movement and the action button (`free`). `collapse` closes every panel
+  (`closeEverything`), since dying could otherwise wait behind one. While dead, `frame()` still runs
+  `updateIsland`, so a dead keeper keeps the island going. Your own island pauses just as it always did.
+- **What each phone saves**: on a shared island `saveGame` leaves out the world's changes, and `loadGame`
+  only takes `damage`, `seen` and `bed` back, whatever a stage-one save held. Your survivor is your own.
+- **Others on your tile**: `buildProblem` refuses to build on someone (`otherOnTile`), and `movePlayer` lets
+  you walk out of something solid, on a shared island, in case it's built on you anyway.
+- **The print**: the first to arrive tells the room `world.print`, and `enterIsland` warns if yours differs.
+- **Time for waiting things**: `worldTime` is `dayClock` on a shared island, since everyone's `game.time`
+  differs. `regrowing` entries use it.
+- **Per phone still**: `damage` (swings, and pump strokes), `clawed`, `soaked`, `seen`, `bed`, creatures and
+  the stairs. A wall a creature breaks is shared, through `setObject`. Stage three shares the hunt.
+- **While nobody's there nothing runs**: the clock goes on, but plants, lamps and the tank wait. Stage four.
+- **Known gaps**: anyone with a code can wreck an island, and phones are trusted, so a cheat could send
+  anything `tidyChange` allows. No limit yet on how much one island stores. An island from stage one drops
+  what its phones saved locally, since the room never heard about it.
+- **Deploy the rooms before the game.** A new game on the old rooms would wait forever for `ready`. An old
+  game on the new rooms only misses what it doesn't know about.
+- **Checked** with `servertest2` (scratch script: changes kept, tidied, paged to newcomers, keeper handover,
+  numbers only from the keeper) and with two tabs in the browser pane, the second stepped by hand: chopping,
+  chests both ways, floors, lamps, barrels, a plant grown on the keeper and harvested by the other, keeper
+  handover, a change made offline, both changing one tile, walking out of a wall, a menu not pausing, dying
+  with a panel open, and your own island staying paused and unshared. Testing found one real bug: changes
+  sent the moment the line reopened arrived before `hi` and were lost (`together.greeted` now holds them
+  back). Not checked: real phones, a long session, or eight people.
 
 ## Hard rules
 
@@ -697,7 +754,7 @@ the rooms until midnight UTC; solo play doesn't touch them.
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
 | `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `layoutMap`, `centreMap`, `zoomMap`, `panMap`, `setupMapGestures`, `drawMap`, `readCell`). |
 | `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
-| `js/together.js` | Playing together: `together`, the panel (`setupTogether`, `openTogether`), the line (`connectTo`, `say`, `hear`, `lineLost`), `enterIsland`, `leaveIsland`, everyone else (`addOther`, `heardPlace`, `stepOther`), `togetherClock`, `updateTogether`, `whereIAm`. Drawn by `drawOtherPlayer` in render.js. |
+| `js/together.js` | Playing together: `together`, the panel (`setupTogether`, `openTogether`), the line (`connectTo`, `say`, `hear`, `lineLost`), `enterIsland`, `leaveIsland`, the island (`worldIsMine`, `worldTime`, `tellIsland`, `sendChanges`, `hearTheIsland`, `heardChange`, `applyChange`, `CHANGES`, `heardTicks`, `sendTicks`), everyone else (`addOther`, `heardPlace`, `stepOther`), `togetherClock`, `updateTogether`, `whereIAm`. Drawn by `drawOtherPlayer` in render.js. |
 | `server/` | The rooms for playing together, run by Cloudflare: `src/index.js` (`Island`, a Durable Object per join code), `wrangler.toml`. Not part of the game, and not loaded by it. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
@@ -749,7 +806,8 @@ the rooms until midnight UTC; solo play doesn't touch them.
   so a tab can hold twelve with a key each (the fullest, Build, has eleven).
   A tool's `power` multiplies swings for an action word (`toolPower`). Each tool needs a hidden
   `tool-<key>` slot in the pack in `index.html`, like each item's `count-<item>`.
-- The craft panel pauses the game (`state.paused`). The Craft and menu buttons act on `click`, not
+- The craft panel pauses the game (`state.paused`), except on a shared island, where it only stops you
+  acting (see "Playing together, stage two"). The Craft and menu buttons act on `click`, not
   `pointerdown`, so the tap that opens a panel can't land on the panel as it appears.
 - Build mode is `state.building` (a recipe key) and `state.buildSpot` (`{ x, y, problem }`,
   recomputed each update). The spot is the tile one past the front edge of the feet, so it never
