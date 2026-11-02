@@ -1,9 +1,9 @@
 // Playing together: other people on your island, over the internet.
 //
 // Each shared island is a "room" on a small server (the server/ folder), found by a five-letter code.
-// Start an island and you get a code to share; type someone's code and you're on theirs. There are no
-// accounts and no chat, so there's nothing to sign up for and nothing to moderate. Your own island is
-// kept safe, and you go back to it when you leave.
+// Share the island you're on (a copy), or start a new one, and you get a code to share; type someone's
+// code and you're on theirs. There are no accounts and no chat, so there's nothing to sign up for and
+// nothing to moderate. Your own island is kept safe, and you go back to it when you leave.
 //
 // You see each other and share the time of day and the island itself. Every change anyone makes is told
 // to the room (tellIsland), which keeps it and passes it on to everyone, and the changes are applied in
@@ -44,6 +44,9 @@ const HAND_OVER_SECONDS = 3; // after changing who it's after, it sticks with th
 const HAND_OVER_GRACE = 1; // how long, after being handed over, one can be left off its new phone's list
 const THEIR_COMING_OUT = 0.5; // a creature first heard of while less solid than this has only just come out
 const SLAIN_SECONDS = 2; // something you've just seen killed stays dead this long, whatever late news says
+const SHARE_MOST = 20000; // the most changes an island can have and still be copied to a room (see the server)
+const SHARE_PAGE_LENGTH = 12000; // copying an island sends its changes in pages of about this many characters
+const SHARE_PAGE_SECONDS = 0.05; // ...one every this many seconds, to stay under the room's limit
 
 const together = {
   code: null, // the island you're on, or null when you're on your own
@@ -66,6 +69,8 @@ const together = {
   tickIn: TICK_SECONDS, // seconds until the keeper next says how things are getting on
   ticked: null, // what it said last
   slain: new Map(), // creatures just killed that the phone running them may not know about yet: id -> until when
+  sharing: false, // true while your own island is being copied to a new room (see shareIsland)
+  shareTimer: null,
 };
 
 // Things someone can be holding (TOOLS in crafting.js, and the rough tool). Anything else is ignored,
@@ -83,6 +88,7 @@ function setupTogether(elements) {
   elements.together.addEventListener('click', (event) => {
     if (event.target === elements.together) closeTogether();
   });
+  elements.togetherShare.addEventListener('click', shareIsland);
   elements.togetherStart.addEventListener('click', () => {
     sayTogether('Making an island...');
     connectTo(`/new?size=${WORLD_SIZE.width}x${WORLD_SIZE.height}`);
@@ -135,6 +141,7 @@ function sayTogether(words) {
 function connectTo(path) {
   hangUp();
   together.greeted = false;
+  together.sharing = false;
   let socket;
   try {
     socket = new WebSocket(TOGETHER_SERVER + path);
@@ -153,6 +160,7 @@ function connectTo(path) {
 
 function hangUp() {
   clearTimeout(together.retryTimer);
+  clearTimeout(together.shareTimer);
   const socket = together.socket;
   together.socket = null;
   if (socket) socket.close();
@@ -167,6 +175,7 @@ function say(message) {
 // on meanwhile. Otherwise you were only trying to get on one, so say so.
 function lineLost() {
   together.socket = null;
+  clearTimeout(together.shareTimer);
   if (!together.code) {
     sayTogether('Can\'t reach the island. Check your connection and try again.');
     return;
@@ -193,6 +202,7 @@ function hear(text) {
   else if (message.t === 'keeper') together.keeper = message.id;
   else if (message.t === 'no-island') turnedAway('There\'s no island with that code.');
   else if (message.t === 'full') turnedAway('That island is full.');
+  else if (message.t === 'not-shared') turnedAway('Your island didn\'t copy across. Please try again.');
   else if (message.t === 'joined') heardJoined(message);
   else if (message.t === 'left') heardLeft(message);
   else if (message.t === 'at') {
@@ -221,6 +231,7 @@ function heardWelcome(welcome) {
   together.arriving = { welcome, part: [] };
   together.others.clear();
   for (const other of welcome.others) addOther(other);
+  if (together.sharing) sendMyIsland();
 }
 
 function heardPart(message) {
@@ -256,16 +267,85 @@ function heardLeft(message) {
 
 // ---- Coming and going ----
 
+// Copies the island you're on to a new room, so friends can join it with a code. It's a copy: your own
+// island stays as it is, for when you come back, and from now on the two go their separate ways.
+//
+// The room is told the seed, the size and the time of day, which is enough to build the island again.
+// Then it's sent everything that's changed (sendMyIsland), and sends it all back just as it would to
+// anyone arriving, so from there on this is the same as joining (heardReady, enterIsland).
+function shareIsland() {
+  const { world, dayClock } = state;
+  saveGame(state);
+  if (changesOnIsland(world).length > SHARE_MOST) {
+    sayTogether('So much has changed on this island that it\'s too big to copy.');
+    return;
+  }
+  sayTogether('Copying your island...');
+  const size = `${world.width}x${world.height}`;
+  connectTo(`/new?size=${size}&seed=${world.seed}&clock=${Math.floor(dayClock)}&places=${world.hasPlaces ? 1 : 0}`);
+  together.sharing = true;
+}
+
+// Everything about an island that isn't just how its seed built it, as changes for the room, with the
+// same keys as tellIsland (see CHANGES).
+function changesOnIsland(world) {
+  const changes = [];
+  for (let i = 0; i < world.objects.length; i++) {
+    if (world.objects[i] !== world.original[i]) changes.push([`o${i}`, world.objects[i]]);
+  }
+  for (const i of world.floors.keys()) changes.push([`g${i}`, world.ground[i]]);
+  for (const [i, chest] of world.chests) changes.push([`c${i}`, chest]);
+  for (const [i, crop] of world.crops) changes.push([`p${i}`, crop]);
+  for (const [i, left] of world.fuel) changes.push([`f${i}`, left]);
+  for (const [i, water] of world.barrels) changes.push([`b${i}`, water]);
+  if (world.tower) changes.push(['t', { oil: world.tower.oil, kindled: world.tower.kindled }]);
+  return changes;
+}
+
+// Sends the room all of your island's changes, a page at a time, then says how many that was.
+function sendMyIsland() {
+  const changes = changesOnIsland(state.world);
+  const pages = [];
+  let page = [];
+  let length = 0;
+  for (const change of changes) {
+    const words = JSON.stringify(change).length;
+    if (page.length && length + words > SHARE_PAGE_LENGTH) {
+      pages.push(page);
+      page = [];
+      length = 0;
+    }
+    page.push(change);
+    length += words;
+  }
+  if (page.length) pages.push(page);
+  const sendNext = () => {
+    const next = pages.shift();
+    if (next) {
+      say({ t: 'upload', part: next });
+      together.shareTimer = setTimeout(sendNext, SHARE_PAGE_SECONDS * 1000);
+    } else {
+      say({ t: 'uploaded', n: changes.length });
+    }
+  };
+  sendNext();
+}
+
 // You're on a shared island now. Your own island is saved first, and stays as it is.
 function enterIsland(welcome, part, ticks) {
   saveGame(state);
   together.code = welcome.code;
   remember(TOGETHER_KEY, welcome.code);
+  // Sharing your own island? You start there just as you are: same pack, same spot, same map.
+  if (together.sharing) remember(saveKey(), recall(SAVE_KEY));
+  together.sharing = false;
   // Been here before on this phone? Carry on. If not, wake up in the island's cottage.
   if (loadGame(state)) {
     hearTheIsland(part, ticks);
+    standWhereYouWere();
   } else {
-    state.world = generateWorld(welcome.seed, { width: welcome.width, height: welcome.height, places: true });
+    const island = { width: welcome.width, height: welcome.height, places: welcome.places !== false };
+    state.world = generateWorld(welcome.seed, island);
     hearTheIsland(part, ticks);
     state.lifeStarted = state.time;
     wakeUp();
@@ -280,6 +360,16 @@ function enterIsland(welcome, part, ticks) {
   showMessage(state, different
     ? 'This island was made by another version of the game, so things may have moved.'
     : `You're on island ${welcome.code}. Share the code from the menu.`);
+}
+
+// Puts you back where you were on this island. Before its changes came in, that spot may have looked
+// blocked (if you'd chopped down the tree there, say), which would have sent you to the cottage.
+function standWhereYouWere() {
+  const save = recall(saveKey());
+  const spot = save && !save.dead && save.print === state.world.print && save.player;
+  if (!spot || !Number.isFinite(spot.x) || !Number.isFinite(spot.y) || blockerFor(spot.x, spot.y)) return;
+  state.player.x = spot.x;
+  state.player.y = spot.y;
 }
 
 function leaveIsland() {

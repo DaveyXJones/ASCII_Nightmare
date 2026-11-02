@@ -875,9 +875,14 @@ button:focus-visible {
   display: none;
 }
 
+.together-choices,
 .together-join {
   display: flex;
   gap: 8px;
+}
+
+.together-choices .button {
+  flex: 1;
 }
 
 .together-code {

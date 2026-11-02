@@ -92,6 +92,7 @@ const elements = {
   togetherClose: document.getElementById('together-close'),
   togetherOff: document.getElementById('together-off'),
   togetherOn: document.getElementById('together-on'),
+  togetherShare: document.getElementById('together-share'),
   togetherStart: document.getElementById('together-start'),
   togetherForm: document.getElementById('together-form'),
   togetherCode: document.getElementById('together-code'),
