@@ -2,9 +2,10 @@
 // only talks to it over a WebSocket (see js/together.js). It can use `import`, unlike the game.
 //
 // Each island people are playing on is one "room" (an Island, below), found by its join code. A room
-// remembers the island's seed, its size and when it began, and passes along where everyone is. It
-// doesn't run the game: each phone does that. While nobody's sending anything, Cloudflare lets the
-// room sleep (hibernate) and doesn't charge for it.
+// remembers the island's seed, its size and when it began, keeps every change anyone has made to it,
+// and passes along where everyone is. It doesn't run the game: each phone does that, and one of them
+// at a time (the keeper) looks after whatever happens by itself, like plants growing. While nobody's
+// sending anything, Cloudflare lets the room sleep (hibernate) and doesn't charge for it.
 //
 // What people send is never trusted: only tidied-up copies of the fields below go on to anyone else.
 
@@ -17,11 +18,18 @@ const CODE_TRIES = 5; // how many new codes to try if one's already taken
 const SEED_MOST = 1000000; // seeds run from 0 up to this, like New world's in the game
 const SIZE_MOST = 2048; // the largest island anyone can ask for, along each side
 const COORD_MOST = 4096; // positions further out than this are nonsense
-const SENDS_PER_SECOND = 30; // anyone sending faster than this has the extra messages ignored
+const SENDS_PER_SECOND = 40; // anyone sending faster than this has the extra messages ignored
+const MESSAGE_MOST = 16000; // the longest message accepted, in characters (the keeper's `ticks` are the long ones)
+const PAGE_ENTRIES = 200; // a newcomer is sent the island's changes this many at a time
+const THINGS_IN_CHEST_MOST = 64;
+const NUMBER_MOST = 1000000; // seconds of growing, things in a chest: anything bigger is nonsense
 const POSES = new Set(['stand', 'blink', 'walk', 'windup', 'strike', 'crouch', 'fallen']);
 const FACINGS = new Set(['up', 'down', 'left', 'right']);
 const LOOK_PARTS = ['hat', 'hair', 'skin', 'shirt', 'trousers'];
 const COLOR = /^#[0-9a-f]{6}$/;
+const NAME = /^[a-zA-Z0-9]{1,40}$/; // the name of a kind of object, item, tool or ground
+const WORLD = 'w:'; // the changes to the island are stored under this and their key
+const TICKS = 'ticks'; // the keeper's latest numbers, all in one row so they're cheap to store
 
 // A look with only colors in it, or null if it isn't one.
 function tidyLook(look) {
@@ -41,6 +49,54 @@ function tidyPlace(message) {
   if (!fits(x) || !fits(y) || !FACINGS.has(f) || !POSES.has(n)) return null;
   const held = typeof h === 'string' && h.length <= 2 ? h : null;
   return { x, y, f, n, h: held, k: message.k === true, l: message.l === true };
+}
+
+const number = (value) => (Number.isFinite(value) && value >= 0 && value <= NUMBER_MOST ? value : null);
+
+function tidyCounts(counts) {
+  if (!counts || typeof counts !== 'object') return {};
+  const tidy = {};
+  for (const [name, count] of Object.entries(counts).slice(0, THINGS_IN_CHEST_MOST)) {
+    if (NAME.test(name) && Number.isInteger(count) && number(count) !== null) tidy[name] = count;
+  }
+  return tidy;
+}
+
+// A change to the island: its key says what it's a change to, and is a letter and a tile.
+//   o  what stands on the tile (null if nothing)      g  a floor laid there (null if taken up)
+//   c  what's in the chest there                      p  how the plant there is getting on
+//   f  a lamp's seconds of fuel                       b  a rain barrel's waterings
+// And `t` on its own is the lighthouse's tank. Returns the tidied value (null is a value, meaning
+// nothing there), or undefined if it isn't a change this room should keep.
+function tidyChange(key, value, tiles) {
+  if (key === 't') {
+    if (!value || number(value.oil) === null) return undefined;
+    return { oil: value.oil, kindled: value.kindled === true };
+  }
+  const match = typeof key === 'string' ? /^([ogcpfb])(\d{1,7})$/.exec(key) : null;
+  if (!match || Number(match[2]) >= tiles) return undefined;
+  const kind = match[1];
+  if (value === null) return null;
+  if (kind === 'o' || kind === 'g') return typeof value === 'string' && NAME.test(value) ? value : undefined;
+  if (kind === 'c') {
+    return value && typeof value === 'object' ? { items: tidyCounts(value.items), tools: tidyCounts(value.tools) } : undefined;
+  }
+  if (kind === 'p') {
+    if (!value || [value.grown, value.water, value.dry].some((n) => number(n) === null)) return undefined;
+    return { grown: value.grown, water: value.water, dry: value.dry };
+  }
+  return number(value) === null ? undefined : value;
+}
+
+// The keeper's numbers: [tile, ...numbers] for each plant, lamp and barrel, and the lighthouse's oil.
+function tidyTicks(message, tiles) {
+  const rows = (list, numbers) => (Array.isArray(list) ? list : []).filter((row) => (
+    Array.isArray(row) && row.length === numbers + 1 && Number.isInteger(row[0]) && row[0] >= 0 && row[0] < tiles &&
+    row.slice(1).every((n) => number(n) !== null)
+  ));
+  const ticks = { crops: rows(message.crops, 3), fuel: rows(message.fuel, 1), barrels: rows(message.barrels, 1) };
+  if (number(message.oil) !== null) ticks.oil = message.oil;
+  return ticks;
 }
 
 function send(socket, message) {
@@ -86,12 +142,37 @@ export class Island extends DurableObject {
     if (everyone.length > ISLAND_MOST) return this.turnAway(ours, 'full', answer);
 
     const id = crypto.randomUUID().slice(0, 8);
-    ours.serializeAttachment({ id, look: null, place: null, sends: 0, second: 0 });
+    ours.serializeAttachment({
+      id,
+      look: null,
+      place: null,
+      sends: 0,
+      second: 0,
+      since: Date.now(),
+      tiles: island.width * island.height,
+    });
     // Only people who've said what they look like count as here yet (see 'hi' below).
     const others = this.people(ours).filter((person) => person.look).map(otherFrom);
     send(ours, { t: 'welcome', id, code, seed: island.seed, width: island.width, height: island.height,
-      born: island.born, now: Date.now(), others });
+      born: island.born, now: Date.now(), print: island.print || null, others });
+    await this.sendTheIsland(ours);
     return answer;
+  }
+
+  // Everything that's changed on the island so far, a page at a time, then the keeper's latest numbers.
+  async sendTheIsland(socket) {
+    const rows = await this.ctx.storage.list({ prefix: WORLD });
+    let page = [];
+    for (const [key, value] of rows) {
+      page.push([key.slice(WORLD.length), value]);
+      if (page.length >= PAGE_ENTRIES) {
+        send(socket, { t: 'world', part: page });
+        page = [];
+      }
+    }
+    if (page.length) send(socket, { t: 'world', part: page });
+    const ticks = await this.ctx.storage.get(TICKS);
+    send(socket, { t: 'ready', ticks: ticks || null });
   }
 
   turnAway(socket, why, answer) {
@@ -111,8 +192,60 @@ export class Island extends DurableObject {
     }
   }
 
+  // The keeper: whoever's been here longest looks after what happens by itself on the island.
+  keeperId(leaving) {
+    let keeper = null;
+    for (const person of this.people(leaving)) {
+      if (person && person.look && (!keeper || person.since < keeper.since)) keeper = person;
+    }
+    return keeper ? keeper.id : null;
+  }
+
+  // A change to the island, kept and passed on to everyone, the sender too: everyone applying every
+  // change in the order the room saw them is what stops two phones ending up different.
+  async heardChange(socket, person, message) {
+    const value = tidyChange(message.k, message.v, person.tiles);
+    if (value === undefined) return;
+    const storage = this.ctx.storage;
+    const key = WORLD + message.k;
+    // Only `o` needs to remember "nothing": anything else missing just means there's nothing there.
+    if (value === null && message.k[0] !== 'o') await storage.delete(key);
+    else await storage.put(key, value);
+    // Whatever was on a tile takes its chest, its plant and so on with it (see setObject in world.js).
+    if (message.k[0] === 'o') {
+      const tile = message.k.slice(1);
+      await storage.delete(['c', 'p', 'f', 'b'].map((kind) => `${WORLD}${kind}${tile}`));
+    }
+    const change = { t: 'set', k: message.k, v: value, by: person.id };
+    send(socket, change);
+    this.tellOthers(socket, change);
+  }
+
+  async heardArrival(socket, person, message) {
+    const look = tidyLook(message.look);
+    if (!look) return;
+    const arriving = !person.look;
+    person.look = look;
+    if (message.t === 'hi') {
+      person.place = tidyPlace(message) || person.place;
+      // The first to arrive says what the island's fingerprint is, so a later visitor whose version
+      // of the game builds a different island from this seed can be told.
+      if (Number.isInteger(message.print)) {
+        const island = await this.ctx.storage.get('island');
+        if (island && !island.print) await this.ctx.storage.put('island', { ...island, print: message.print });
+      }
+    }
+    socket.serializeAttachment(person);
+    this.tellOthers(socket, arriving ? { t: 'joined', ...otherFrom(person) } : { t: 'look', id: person.id, look });
+    if (arriving) {
+      const keeper = { t: 'keeper', id: this.keeperId() };
+      send(socket, keeper);
+      this.tellOthers(socket, keeper);
+    }
+  }
+
   async webSocketMessage(socket, text) {
-    if (typeof text !== 'string' || text.length > 1000) return;
+    if (typeof text !== 'string' || text.length > MESSAGE_MOST) return;
     let message;
     try {
       message = JSON.parse(text);
@@ -131,24 +264,31 @@ export class Island extends DurableObject {
     }
 
     if (message.t === 'hi' || message.t === 'look') {
-      const look = tidyLook(message.look);
-      if (!look) return;
-      const arriving = !person.look;
-      person.look = look;
-      if (message.t === 'hi') person.place = tidyPlace(message) || person.place;
-      this.tellOthers(socket, arriving ? { t: 'joined', ...otherFrom(person) } : { t: 'look', id: person.id, look });
-    } else if (message.t === 'at' && person.look) {
+      await this.heardArrival(socket, person, message);
+      return;
+    }
+    if (message.t === 'at' && person.look) {
       const place = tidyPlace(message);
-      if (!place) return;
-      person.place = place;
-      this.tellOthers(socket, { t: 'at', id: person.id, ...place });
+      if (place) {
+        person.place = place;
+        this.tellOthers(socket, { t: 'at', id: person.id, ...place });
+      }
+    } else if (message.t === 'set' && person.look) {
+      await this.heardChange(socket, person, message);
+    } else if (message.t === 'ticks' && person.look && this.keeperId() === person.id) {
+      const ticks = tidyTicks(message, person.tiles);
+      await this.ctx.storage.put(TICKS, ticks);
+      this.tellOthers(socket, { t: 'ticks', ...ticks });
     }
     socket.serializeAttachment(person);
   }
 
   async webSocketClose(socket, code) {
     const person = socket.deserializeAttachment();
-    if (person && person.look) this.tellOthers(socket, { t: 'left', id: person.id });
+    if (person && person.look) {
+      this.tellOthers(socket, { t: 'left', id: person.id });
+      this.tellOthers(socket, { t: 'keeper', id: this.keeperId(socket) });
+    }
     try {
       socket.close(code === 1005 || code === 1006 ? 1000 : code, 'bye');
     } catch {
