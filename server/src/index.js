@@ -36,6 +36,9 @@ const CREATURE_ID_MOST = 2 ** 31; // a creature's number is below this
 const CREATURE_HP_MOST = 100; // hits it can take, and how much one hit can do: anything bigger is nonsense
 const DOINGS = new Set(['creep', 'lunge', 'run', 'claw', 'fade', 'lurk', 'hide']); // what a creature can be up to
 const PERSON_ID = /^[0-9a-f]{8}$/; // see crypto.randomUUID below
+const CLOCK_MOST = 10 ** 9; // the most seconds old an island brought here can be
+const UPLOAD_MOST = 20000; // the most changes an island brought here can have (the game checks this too)
+const STORE_AT_ONCE = 128; // the most rows Cloudflare will store in one go
 
 // A look with only colors in it, or null if it isn't one.
 function tidyLook(look) {
@@ -186,10 +189,20 @@ export class Island extends DurableObject {
       const [width, height] = (url.searchParams.get('size') || '').split('x').map(Number);
       const fits = (n) => Number.isInteger(n) && n >= 32 && n <= SIZE_MOST;
       if (!fits(width) || !fits(height)) return this.turnAway(ours, 'no-island', answer);
-      island = { code, seed: Math.floor(Math.random() * SEED_MOST), width, height, born: Date.now() };
+      island = { code, seed: Math.floor(Math.random() * SEED_MOST), width, height, born: Date.now(), places: true };
+      // Somebody's bringing their own island: the same seed, and the time of day it had got to. Nobody
+      // else can come until all its changes have arrived (see heardUpload).
+      if (url.searchParams.has('seed')) {
+        const seed = Number(url.searchParams.get('seed'));
+        const clock = Number(url.searchParams.get('clock'));
+        const fair = Number.isInteger(seed) && seed >= 0 && seed <= SEED_MOST && clock >= 0 && clock <= CLOCK_MOST;
+        if (!fair) return this.turnAway(ours, 'no-island', answer);
+        island = { ...island, seed, born: Date.now() - clock * 1000, places: url.searchParams.get('places') === '1' };
+        island.uploading = true;
+      }
       await this.ctx.storage.put('island', island);
     }
-    if (!island) return this.turnAway(ours, 'no-island', answer);
+    if (!island || (island.uploading && !creating)) return this.turnAway(ours, 'no-island', answer);
     const everyone = this.ctx.getWebSockets();
     if (everyone.length > ISLAND_MOST) return this.turnAway(ours, 'full', answer);
 
@@ -202,13 +215,46 @@ export class Island extends DurableObject {
       second: 0,
       since: Date.now(),
       tiles: island.width * island.height,
+      uploaded: island.uploading ? 0 : null, // while bringing an island here: how many changes have come
     });
     // Only people who've said what they look like count as here yet (see 'hi' below).
     const others = this.people(ours).filter((person) => person.look).map(otherFrom);
     send(ours, { t: 'welcome', id, code, seed: island.seed, width: island.width, height: island.height,
-      born: island.born, now: Date.now(), print: island.print || null, others });
-    await this.sendTheIsland(ours);
+      places: island.places !== false, born: island.born, now: Date.now(), print: island.print || null, others });
+    if (!island.uploading) await this.sendTheIsland(ours);
     return answer;
+  }
+
+  // Part of an island being brought here: changes, kept like any others, but with nobody to tell yet.
+  async heardUpload(person, part) {
+    if (!Array.isArray(part)) return;
+    person.uploaded += part.length;
+    if (person.uploaded > UPLOAD_MOST) return;
+    const rows = [];
+    for (const row of part) {
+      const [key, value] = Array.isArray(row) ? row : [];
+      const tidy = tidyChange(key, value, person.tiles);
+      if (tidy !== undefined && (tidy !== null || key[0] === 'o')) rows.push([WORLD + key, tidy]);
+    }
+    for (let n = 0; n < rows.length; n += STORE_AT_ONCE) {
+      await this.ctx.storage.put(Object.fromEntries(rows.slice(n, n + STORE_AT_ONCE)));
+    }
+  }
+
+  // That's all of it. If it all got here, the island's open, and it's sent back just as it would be to
+  // anyone arriving, which is also how the phone that brought it knows it's safely here.
+  async heardUploaded(socket, person, count) {
+    const island = await this.ctx.storage.get('island');
+    if (count !== person.uploaded || count > UPLOAD_MOST || !island) {
+      send(socket, { t: 'not-shared' });
+      socket.close(1000, 'not-shared');
+      return;
+    }
+    delete island.uploading;
+    await this.ctx.storage.put('island', island);
+    person.uploaded = null;
+    socket.serializeAttachment(person);
+    await this.sendTheIsland(socket);
   }
 
   // Everything that's changed on the island so far, a page at a time, then the keeper's latest numbers.
@@ -319,6 +365,12 @@ export class Island extends DurableObject {
       await this.heardArrival(socket, person, message);
       return;
     }
+    if (Number.isInteger(person.uploaded)) {
+      if (message.t === 'upload') await this.heardUpload(person, message.part);
+      socket.serializeAttachment(person);
+      if (message.t === 'uploaded') await this.heardUploaded(socket, person, message.n);
+      return;
+    }
     if (message.t === 'at' && person.look) {
       const place = tidyPlace(message);
       if (place) {
@@ -368,8 +420,8 @@ function roomFor(env, code) {
   return env.ISLANDS.get(env.ISLANDS.idFromName(code));
 }
 
-// Every request starts here: /new makes an island with a new code, and /island/CODE joins one. Both
-// are WebSockets; anything else just gets a line to say what this is.
+// Every request starts here: /new makes an island with a new code (or takes one somebody's bringing),
+// and /island/CODE joins one. Both are WebSockets; anything else just gets a line to say what this is.
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -377,10 +429,14 @@ export default {
     if (!isSocket) return new Response('ASCII Nightmare: the rooms for playing together.\n');
 
     if (url.pathname === '/new') {
-      const size = encodeURIComponent(url.searchParams.get('size') || '');
+      // The size, and if somebody's bringing their own island, its seed, its age and whether it has places.
+      const asked = new URLSearchParams({ new: '1' });
+      for (const name of ['size', 'seed', 'clock', 'places']) {
+        if (url.searchParams.has(name)) asked.set(name, url.searchParams.get(name));
+      }
       for (let tries = 0; tries < CODE_TRIES; tries++) {
         const code = newCode();
-        const answer = await roomFor(env, code).fetch(new Request(`https://island/${code}?new=1&size=${size}`, request));
+        const answer = await roomFor(env, code).fetch(new Request(`https://island/${code}?${asked}`, request));
         if (answer.status !== 409) return answer;
       }
       return new Response('No code free. Try again.', { status: 503 });
