@@ -430,9 +430,14 @@ your phone, and the island itself is kept online, so you can come back to it any
 bitten while you're reading a note. Dying wakes you straight away at whatever time it is, not the next
 morning.
 
-**Not shared yet:** things in the dark. They only come for you on your own screen, so you won't see what
-your friend is fighting, and claw marks on a wall only show on your own phone (though a wall they break
-is broken for everyone). That's the next stage.
+**You share the night, too.** Everyone sees the same things in the dark, and anything can turn on anyone:
+whatever you're nearest to comes for you. So you can run over and hit what's biting your friend, shoot it
+from across a field, or stand beside them with a lit torch, since light keeps things back whoever's
+holding it. You hear each other get bitten and see each other flicker red, a shot rings out for everyone
+and wakes whatever's listening, and claw marks show for everyone, so anyone can repair them. If you go
+down, whatever was after you turns on whoever's nearest. Company helps, but it draws them too: half as
+many again can be out near you for each other person close by. Spread out across the island, and each of
+you has your own night.
 
 **While nobody's there, the island waits.** The clock keeps running, but plants don't grow and lamps
 don't burn until someone comes back. That's a later stage too.
@@ -540,7 +545,7 @@ old copies they've kept.
 
 ## What's next
 
-Done lately, 2026-11-01: lighting the lighthouse (find oil, force the door, survive the stairs, then
+Done lately, 2026-11-01: playing together, with a shared island and a shared night. Before that, lighting the lighthouse (find oil, force the door, survive the stairs, then
 keep it burning), and a rain barrel. Before that, your list of 2026-10-31 evening: building and gardening. The craft panel on tabs; a
 stone wall, a gate, a spiked barricade and wooden floors; **Repair** for clawed walls and fallen
 cabin logs; a spade to dig up bushes and stumps; and a garden of potatoes, pumpkins, berry bushes
@@ -563,9 +568,8 @@ Ideas for next (Claude's suggestions):
 - **Something comes for the light.** On moonless nights, something climbs out of the sea and makes for
   the tower, so walls and spikes round it start to matter.
 
-**Playing together**, in stages. Seeing each other and sharing the world are built (see Playing together,
-above). Then:
+**Playing together**, in stages. Seeing each other, sharing the world and sharing the hunt are built (see
+Playing together, above). Then:
 
-3. Things in the dark that hunt everyone.
 4. An island that goes on while nobody's there: when someone comes back, the game works out what
    happened (plants grown, barrels filled, oil burnt), with no server needed around the clock.

@@ -636,7 +636,8 @@ the rooms until midnight UTC; solo play doesn't touch them.
   (map.js) marks them, with a key line only while someone's here.
 - **The cost**, as my sums: at 5 updates a second a player-hour is 900 billed requests while walking, and
   nothing while still. Prices and limits as read on 2026-11-01 are in the brain, not here.
-- **Stage two** (below) shares the world, stops panels pausing it there, and compares the print.
+- **Stage two** (below) shares the world, stops panels pausing it there, and compares the print. **Stage
+  three** (below that) shares the hunt.
 - **Going online**: `npx wrangler login` opened a Cloudflare page the owner allowed themselves. Cloudflare
   names a new account's workers.dev address after its email, so the name was changed to `daveyxjones`,
   their public GitHub name, before it went into this public code. The API won't rename: it's `DELETE` then
@@ -690,8 +691,8 @@ The owner said "Start stage two". The design is Claude's:
 - **The print**: the first to arrive tells the room `world.print`, and `enterIsland` warns if yours differs.
 - **Time for waiting things**: `worldTime` is `dayClock` on a shared island, since everyone's `game.time`
   differs. `regrowing` entries use it.
-- **Per phone still**: `damage` (swings, and pump strokes), `clawed`, `soaked`, `seen`, `bed`, creatures and
-  the stairs. A wall a creature breaks is shared, through `setObject`. Stage three shares the hunt.
+- **Per phone still**: `damage` (swings, and pump strokes), `soaked`, `seen`, `bed` and the stairs. Stage
+  three (below) shared the creatures and `clawed`.
 - **While nobody's there nothing runs**: the clock goes on, but plants, lamps and the tank wait. Stage four.
 - **Known gaps**: anyone with a code can wreck an island, and phones are trusted, so a cheat could send
   anything `tidyChange` allows. No limit yet on how much one island stores. An island from stage one drops
@@ -705,6 +706,59 @@ The owner said "Start stage two". The design is Claude's:
   with a panel open, and your own island staying paused and unshared. Testing found one real bug: changes
   sent the moment the line reopened arrived before `hi` and were lost (`together.greeted` now holds them
   back). Not checked: real phones, a long session, or eight people.
+
+## Playing together, stage three: a shared hunt (built 2026-11-01, on the owner's PC)
+
+The owner played stage two with their son, liked it, and chose this next ("Shared hunt first"). The design
+is Claude's. Solo play is unchanged: nothing here sends or does anything without `together.code`.
+
+- **No phone runs the whole night.** Each creature is run by the phone of whoever it's after, with the same
+  code as alone, so nearly all of creatures.js still only thinks about one "you". A bite on you and your hit
+  on what's after you are instant, with no internet in between. A keeper running everything would bite
+  people based on where they were a quarter of a second ago, at lunges of up to 9 tiles a second.
+- **`creature.owner`** is the id of the phone running it, or null if it's yours. One list, `state.creatures`,
+  holds both, so drawing, `findTarget`, `findShot` and the crickets needed no change. `updateCreatures` only
+  moves your own; `stepTheirCreatures` (from `updateTogether`, so it runs while dead too) glides the rest to
+  `toX`/`toY`, and melts any whose owner has gone. `keepApart` only pushes your own.
+- **Saying where they are**: `whereIAm` adds `c`, a list of `creatureRow`s (id, kind, x, y, state, fade, hp),
+  to the `at` message, so it costs no extra messages while walking, and standing still only sends while
+  something's moving. `heardHunt` updates or adds them, and drops any of that owner's it didn't list.
+  `heardJoined` clears `together.sent`, so a newcomer hears about a lurker sitting still.
+- **Turning on someone else** (`turnsOnSomeoneElse`, checked each update for your own in `creep`, `lurk` or
+  `claw`): if someone's `HAND_OVER_NEARER` tiles nearer, its phone sends `give`. A creature with no way to
+  you counts you as `HAND_OVER_WALLED` further off, so it leaves you behind your wall for someone it can
+  reach. `HAND_OVER_SECONDS` stops it flipping back at once. Two people shut in together will bounce one
+  between them every few seconds, which is harmless. Nobody's handed one that's lunging or running, and
+  `HAND_OVER_GRACE` covers its new phone not having heard yet. Stairs creatures stay with whoever's pumping.
+- **Going down**: `collapse` calls `creaturesLoseYou`: yours go to whoever's nearest within `GONE_DISTANCE`,
+  or vanish. `peopleNearby` and `nearestOther` skip anyone `fallen`. `startLife` keeps other people's.
+- **Wounds**: `woundCreature` is now `tellWound` plus `hurtCreature`. The room passes `hurt` to everyone, and
+  `hurtCreature` runs on every phone; only the one running it knocks it back. Whoever kills one on someone
+  else's phone remembers it in `together.slain` for `SLAIN_SECONDS`, so a late `at` can't bring it back.
+  `hp` in a row overrides yours, except just after a hit. `kindle` kills others' creatures this way.
+- **News** (`HUNT_NEWS` in both together.js and the server, relayed and never stored, so no storage costs):
+  `give`, `hurt`, `bit` (flickers them red in `drawOtherPlayer`, once a night "Somebody cries out"), `claw`
+  (`clawed` is shared this way; `tellClawed` with 0 is a repair, so anyone can mend it) and `bang` (sound,
+  `other.shot` for `drawShot` and the flash in `findLights`, `hearShot` from where it was fired). Falling
+  says "Somebody has fallen." (`heardPlace`). `huntIsHere` ignores it all between `welcome` and `ready`,
+  when your phone may still hold your own island.
+- **Light**: `lightsToFear` adds `torchesOfOthers`, so your torch holds things back from whoever's beside you.
+- **How many**: `kindToComeOut` counts what's within `GONE_DISTANCE` of you, whoever's running it, against the
+  moon's number times `1 + COMPANY_EXTRA` for each person nearby. Each phone has its own spawn timer, so
+  together they come out faster too. Apart, each of you has your own night. `comeOut` won't put one within
+  its nearest spawn distance of someone else. Checked: a half moon's 2 shades became 3 with two people.
+- **Deploy order** doesn't matter here: the old rooms strip `c` and ignore the news, so everyone just has
+  their own hunt, and an old game ignores what it doesn't know. Deploy the rooms first anyway.
+- **Known gaps**: if a phone drops, what it was running melts away (it comes back with the phone if it
+  reconnects, under its new id). A hit in the moment of a hand-over can be lost. Phones are trusted, so a
+  cheat could send anything the room's tidying allows. Two people pumping the lighthouse get a stairs each.
+- **Checked** with `servertest3` (scratch script: rows and news passed on, rubbish dropped, nothing kept, no
+  news before `hi`) and two tabs in the browser pane, one stepped with a `MessageChannel` loop since hidden
+  tabs get no frames. Seen working: creatures showing on both, hits and kills from the other phone with no
+  flicker back, hand-over by distance and on falling, the other's torch holding a shade at its edge (nearest
+  4.07 tiles, the edge being 4), bites, gunshots, claws and a repair, a wall broken, a phone leaving and
+  reconnecting, dawn, natural spawning, and leaving for your own island with nothing sent. **Not checked**:
+  real phones on real networks, or more than two people.
 
 ## Hard rules
 
@@ -753,8 +807,8 @@ The owner said "Start stage two". The design is Claude's:
 | `js/crafting.js` | `TOOLS`, `CRAFT_TABS`, `RECIPES`, costs (`canAfford`, `spend`, `toolPower`, `recipeNeed`), build mode (`findBuildSpot`, `build`, `buildFloor`, `keepClear`), the craft panel and its tabs. |
 | `js/chest.js` | `newChest`, the chest panel (`setupChest`, `openChest`, `closeChest`, `refreshChest`, `moveThing`, `moveAll`, `takeDownChest`). |
 | `js/map.js` | What you've seen (`markSeen`, `packSeen`/`unpackSeen` for saving) and the map panel (`setupMap`, `openMap`, `closeMap`, `layoutMap`, `centreMap`, `zoomMap`, `panMap`, `setupMapGestures`, `drawMap`, `readCell`). |
-| `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`. |
-| `js/together.js` | Playing together: `together`, the panel (`setupTogether`, `openTogether`), the line (`connectTo`, `say`, `hear`, `lineLost`), `enterIsland`, `leaveIsland`, the island (`worldIsMine`, `worldTime`, `tellIsland`, `sendChanges`, `hearTheIsland`, `heardChange`, `applyChange`, `CHANGES`, `heardTicks`, `sendTicks`), everyone else (`addOther`, `heardPlace`, `stepOther`), `togetherClock`, `updateTogether`, `whereIAm`. Drawn by `drawOtherPlayer` in render.js. |
+| `js/creatures.js` | `CREATURES` (shade, brute, lurker), the night's hunt (`updateCreatures`: coming out, creeping, lunging, biting, running, clawing walls, lurking and springing, fading at dawn), the map of steps (`field`, `mapSteps`, `stepsAt`), what they fear (`lightsToFear`, `inLight`), `hitCreature`, `woundCreature` and `hurtCreature`. On a shared island, each is run by the phone of whoever it's after (see "The hunt" in together.js). |
+| `js/together.js` | Playing together: `together`, the panel (`setupTogether`, `openTogether`), the line (`connectTo`, `say`, `hear`, `lineLost`), `enterIsland`, `leaveIsland`, the island (`worldIsMine`, `worldTime`, `tellIsland`, `sendChanges`, `hearTheIsland`, `heardChange`, `applyChange`, `CHANGES`, `heardTicks`, `sendTicks`), the hunt (`HUNT_NEWS`, `heardHunt`, `turnsOnSomeoneElse`, `giveCreature`, `heardGive`, `creaturesLoseYou`, `heardHurt`, `heardBit`, `heardClawed`, `heardBang`, `stepTheirCreatures`), everyone else (`addOther`, `heardPlace`, `stepOther`), `togetherClock`, `updateTogether`, `whereIAm`. Drawn by `drawOtherPlayer` in render.js. |
 | `server/` | The rooms for playing together, run by Cloudflare: `src/index.js` (`Island`, a Durable Object per join code), `wrangler.toml`. Not part of the game, and not loaded by it. |
 | `js/save.js` | localStorage: `remember`/`recall` (wrapped so a browser that won't store still plays), `recallLook`, `saveGame`/`loadGame` (the world as changes from its seed), `worldPrint`. |
 | `js/game.js` | `state`, player movement and collision, menus (and the Your look panel), collapse and death, HUD updates, the main loop. |
